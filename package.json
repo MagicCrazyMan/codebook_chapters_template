@@ -1,0 +1,30 @@
+{
+  "name": "webgl_examples",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "build": "npx ts-node-esm ./index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "parse-imports": "^1.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tsconfig/node18": "^1.0.1",
+    "@types/node": "^18.15.11",
+    "@types/prettier": "^2.7.2",
+    "@typescript-eslint/eslint-plugin": "^5.57.0",
+    "@typescript-eslint/parser": "^5.57.0",
+    "eslint": "^8.37.0",
+    "eslint-config-prettier": "^8.8.0",
+    "gl-matrix": "^3.4.3",
+    "prettier": "^2.8.7",
+    "tslib": "^2.5.0"
+  }
+}
