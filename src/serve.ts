@@ -208,8 +208,11 @@ export const serve = async () => {
     server?.on("close", resolve);
   });
 
-  watcher.close();
-  server.close();
+  await watcher.close();
+  await new Promise((resolve) => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    server!.close(resolve);
+  });
   distributionFs.rmdirSync(DISTRIBUTION_DIRECTORY_PATH, { recursive: true });
 
   log("server stopped");
