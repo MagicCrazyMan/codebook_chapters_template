@@ -1,79 +1,149 @@
-import { getCanvas, getCanvasResizeObserver, getWebGLContext, setupWebGL } from "../../libs/common";
+import {
+  getCanvas,
+  getCanvasResizeObserver,
+  getWebGLContext,
+  getWebGLCoordinateFromEvent,
+  setupWebGL,
+} from "../../libs/common";
 
-/**
- * Vertex shader code using `attribute`.
- */
-const vertexShaderCode = `
+const vertexShader = `
   attribute vec4 a_Position;
+  attribute vec4 a_Color;
+  varying vec4 v_FragColor;
+
   void main() {
     gl_Position = a_Position;
+    v_FragColor = a_Color;
     gl_PointSize = 5.0;
   }
 `;
-
-/**
- * Fragment shader code using `uniform`.
- */
-const fragmentShaderCode = `
+const fragmentShader = `
   precision mediump float;
-  uniform vec4 u_FragColor;
+  
+  uniform vec4 u_ColorMultiplier;
+  varying vec4 v_FragColor;
+
   void main() {
-    gl_FragColor = u_FragColor;
+    gl_FragColor = u_ColorMultiplier * v_FragColor;
   }
 `;
 
 const gl = getWebGLContext();
 const canvas = getCanvas();
-
-// Setups WebGL
 const program = setupWebGL(gl, [
-  { type: gl.VERTEX_SHADER, source: vertexShaderCode },
-  { type: gl.FRAGMENT_SHADER, source: fragmentShaderCode },
+  { source: vertexShader, type: gl.VERTEX_SHADER },
+  { source: fragmentShader, type: gl.FRAGMENT_SHADER },
 ]);
 
-// Gets attribute location
+// Allocates webgl buffer
+const glBuffer = gl.createBuffer();
+if (!glBuffer) throw new Error("Failed to create webgl buffer object");
+// Binds buffer to webgl
+gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
+
+// Gets attribute and uniform locations
 const aPosition = gl.getAttribLocation(program, "a_Position");
-if (aPosition < 0) new Error("Failed to get the pointer of a_Position");
-// Gets uniform location
-const uFragColor = gl.getUniformLocation(program, "u_FragColor");
-if (uFragColor === null) throw new Error("Failed to get the reference of u_Position");
+const aColor = gl.getAttribLocation(program, "a_Color");
+const uColorMultiplier = gl.getUniformLocation(program, "u_ColorMultiplier");
+// Tells webgl how to read data from buffer
+gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, Float32Array.BYTES_PER_ELEMENT * 5, 0);
+gl.vertexAttribPointer(
+  aColor,
+  3,
+  gl.FLOAT,
+  false,
+  Float32Array.BYTES_PER_ELEMENT * 5,
+  Float32Array.BYTES_PER_ELEMENT * 2
+);
+// Enables reading data from buffer for a_Position attribute
+gl.enableVertexAttribArray(aPosition);
+gl.enableVertexAttribArray(aColor);
 
-const maxPointSize = 400;
-/**@type {[number, number, number, number, number][]} */
-const points = [];
+/**
+ * Setups draw mode selector
+ */
+/**@enum {GLenum} */
+const Mode = {
+  Points: gl.POINTS,
+  Lines: gl.LINES,
+  LineLoop: gl.LINE_LOOP,
+  LineStrip: gl.LINE_STRIP,
+};
+const selector = document.getElementById("graphicType");
+let activeMode = Mode[selector.value];
+selector.addEventListener("change", (e) => {
+  activeMode = Mode[e.target.value];
+  render();
+});
+
+/**
+ * Setups clear
+ */
+const clear = document.getElementById("clear");
+clear.addEventListener("click", () => {
+  vertexSize = 0;
+  render();
+});
+
+/**
+ * Setups color multiplier
+ */
+gl.uniform4f(uColorMultiplier, 1, 1, 1, 1);
+const colorInputs = [
+  document.getElementById("colorr"),
+  document.getElementById("colorg"),
+  document.getElementById("colorb"),
+];
+colorInputs.forEach((selector) => {
+  selector.value = 1;
+  selector.addEventListener("change", () => {
+    gl.uniform4f(
+      uColorMultiplier,
+      colorInputs[0].value,
+      colorInputs[1].value,
+      colorInputs[2].value,
+      1
+    );
+    render();
+  });
+});
+
+/**
+ * Setups max vertex multiplier
+ */
+let maxVertexSize = 200;
+let vertexSize = 0;
+let arraybuffer = new Float32Array(5 * maxVertexSize);
+const vertexSizeInput = document.getElementById("vertexSize");
+vertexSizeInput.value = maxVertexSize;
+vertexSizeInput.addEventListener("change", () => {
+  maxVertexSize = vertexSizeInput.value;
+  arraybuffer = new Float32Array(5 * maxVertexSize);
+  vertexSize = 0;
+  render();
+});
+
+/**
+ * Setups coordinates updater
+ */
 const updatePoint = (e) => {
-  let clientX, clientY;
-  if (e instanceof MouseEvent) {
-    clientX = e.clientX;
-    clientY = e.clientY;
-  } else if (e instanceof TouchEvent) {
-    const item = e.touches.item(0);
-    if (!item) return;
-
-    clientX = item.clientX;
-    clientY = item.clientY;
+  const coordinate = getWebGLCoordinateFromEvent(e, canvas.width, canvas.height);
+  const color = [Math.random(), Math.random(), Math.random()];
+  // Flushes coordinate into array buffer
+  if (vertexSize >= maxVertexSize) {
+    arraybuffer.set(arraybuffer.slice(5), 0);
+    arraybuffer.set(coordinate, arraybuffer.length - 5);
+    arraybuffer.set(color, arraybuffer.length - 5 + 2);
   } else {
-    return;
+    arraybuffer.set(coordinate, vertexSize * 5);
+    arraybuffer.set(color, vertexSize * 5 + 2);
+    vertexSize++;
   }
-  // Calculates point coordinate under WebGL coordinate system
-  const halfWidth = canvas.width / 2;
-  const halfHeight = canvas.height / 2;
-  const x = (clientX - halfWidth) / halfWidth;
-  const y = (halfHeight - clientY) / halfHeight;
-
-  // Picks random color
-  const r = Math.random();
-  const g = Math.random();
-  const b = Math.random();
-
-  points.push([x, y, r, g, b]);
-  if (points.length > maxPointSize) {
-    points.shift();
-  }
+  // Flushes array buffer to webgl buffer
+  gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
 
   render();
 };
-
 canvas.addEventListener("mousemove", updatePoint);
 canvas.addEventListener("touchmove", (e) => {
   e.preventDefault(); // disable scroll event
@@ -82,14 +152,7 @@ canvas.addEventListener("touchmove", (e) => {
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
-  points.forEach(([x, y, r, g, b]) => {
-    // Transfer point coordinate to attribute
-    gl.vertexAttrib3f(aPosition, x, y, 0.0);
-    // Transfer color to uniform
-    gl.uniform4f(uFragColor, r, g, b, 1.0);
-    // draw point
-    gl.drawArrays(gl.POINTS, 0, 1);
-  });
+  gl.drawArrays(activeMode, 0, vertexSize);
 };
 
 getCanvasResizeObserver(render);

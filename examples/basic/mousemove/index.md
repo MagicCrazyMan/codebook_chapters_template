@@ -1,3 +1,3 @@
 Draw points by moving your mouse over the canvas panel. _(for mobile user, hold on and move over canvas panel)_
 
-Point coordinates and colors are transfer to WebGL via `attribute` and `uniform` qualifier.
+In this example, we use buffer to store incremental data, `attribute` to pass vertex coordinate and color to vertex shader, and then `varying` interpolates vertex color in-pixels from vertex shader to fragment shader while drawing graphics. At last, a color multiplier define by `uniform` multiples the `varying` interpolated color in fragment shader to get the final color.

@@ -100,7 +100,7 @@ const rightRender = () => {
     gl.FLOAT,
     false,
     Float32Array.BYTES_PER_ELEMENT * 5,
-    Float32Array.BYTES_PER_ELEMENT * 6
+    Float32Array.BYTES_PER_ELEMENT * (6 + 2)
   );
   gl.enableVertexAttribArray(aPositionLeft);
   gl.enableVertexAttribArray(aColorRight);

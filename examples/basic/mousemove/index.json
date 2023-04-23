@@ -1,5 +1,5 @@
 {
-  "title": "Draw Points on Mouse Moving",
-  "intro": "Draw points on mouse moving with WebGL using attribute and varying parameters",
+  "title": "Draw on Mouse Moving",
+  "intro": "Draw points or lines on mouse moving using multiple WebGL features",
   "zIndex": 6
 }

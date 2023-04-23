@@ -41,32 +41,6 @@ gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
 
 /**
- * Setups draw mode selector
- */
-/**@enum {GLenum} */
-const Mode = {
-  Points: gl.POINTS,
-  Lines: gl.LINES,
-  LineLoop: gl.LINE_LOOP,
-  LineStrip: gl.LINE_STRIP,
-};
-const selector = document.getElementById("selector");
-let activeMode = Mode[selector.value];
-selector.addEventListener("change", (e) => {
-  activeMode = Mode[e.target.value];
-  render();
-});
-
-/**
- * Setups clear
- */
-const clear = document.getElementById("clear");
-clear.addEventListener("click", () => {
-  pointSize = 0;
-  render();
-});
-
-/**
  * Setups coordinates updater
  */
 const maxPointSize = 200;
@@ -74,7 +48,7 @@ let pointSize = 0;
 const arraybuffer = new Float32Array(2 * maxPointSize);
 const updatePoint = (e) => {
   const coordinate = getWebGLCoordinateFromEvent(e, canvas.width, canvas.height);
-  // Flushes coordinate into array buffer
+  // Adds coordinate into array buffer
   if (pointSize >= maxPointSize) {
     arraybuffer.set(arraybuffer.slice(2), 0);
     arraybuffer.set(coordinate, arraybuffer.length - 2);
@@ -82,7 +56,7 @@ const updatePoint = (e) => {
     arraybuffer.set(coordinate, pointSize * 2);
     pointSize++;
   }
-  // Flushes array buffer to webgl buffer
+  // Transfers data from array buffer to webgl buffer
   gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
 
   render();
@@ -95,7 +69,7 @@ canvas.addEventListener("touchmove", (e) => {
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.drawArrays(activeMode, 0, pointSize);
+  gl.drawArrays(gl.POINTS, 0, pointSize);
 };
 
 getCanvasResizeObserver(render);
