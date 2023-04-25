@@ -3,7 +3,7 @@ import {
   getCanvasResizeObserver,
   getWebGLContext,
   getWebGLCoordinateFromEvent,
-  setupWebGL,
+  bindWebGLProgram,
 } from "../../libs/common";
 
 const vertexShader = `
@@ -22,7 +22,7 @@ const fragmentShader = `
 
 const gl = getWebGLContext();
 const canvas = getCanvas();
-const program = setupWebGL(gl, [
+const program = bindWebGLProgram(gl, [
   { source: vertexShader, type: gl.VERTEX_SHADER },
   { source: fragmentShader, type: gl.FRAGMENT_SHADER },
 ]);

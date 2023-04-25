@@ -3,7 +3,7 @@ import {
   getCanvasResizeObserver,
   getWebGLContext,
   getWebGLCoordinateFromEvent,
-  setupWebGL,
+  bindWebGLProgram,
 } from "../../libs/common";
 
 const vertexShader = `
@@ -30,7 +30,7 @@ const fragmentShader = `
 
 const gl = getWebGLContext();
 const canvas = getCanvas();
-const program = setupWebGL(gl, [
+const program = bindWebGLProgram(gl, [
   { source: vertexShader, type: gl.VERTEX_SHADER },
   { source: fragmentShader, type: gl.FRAGMENT_SHADER },
 ]);
@@ -71,7 +71,7 @@ const Mode = {
 };
 const selector = document.getElementById("graphicType");
 let activeMode = Mode[selector.value];
-selector.addEventListener("change", (e) => {
+selector.addEventListener("input", (e) => {
   activeMode = Mode[e.target.value];
   render();
 });
@@ -96,7 +96,7 @@ const colorInputs = [
 ];
 colorInputs.forEach((selector) => {
   selector.value = 1;
-  selector.addEventListener("change", () => {
+  selector.addEventListener("input", () => {
     gl.uniform4f(
       uColorMultiplier,
       colorInputs[0].value,
@@ -114,12 +114,17 @@ colorInputs.forEach((selector) => {
 let maxVertexSize = 200;
 let vertexSize = 0;
 let arraybuffer = new Float32Array(5 * maxVertexSize);
-const vertexSizeInput = document.getElementById("vertexSize");
-vertexSizeInput.value = maxVertexSize;
-vertexSizeInput.addEventListener("change", () => {
-  maxVertexSize = vertexSizeInput.value;
+const maxVertexSizeInput = document.getElementById("maxVertexSize");
+maxVertexSizeInput.value = maxVertexSize;
+maxVertexSizeInput.addEventListener("change", () => {
+  const oldArraybuffer = arraybuffer;
+  const oldVertexSize = vertexSize;
+
+  maxVertexSize = maxVertexSizeInput.value;
+  vertexSize = Math.min(maxVertexSize, oldVertexSize);
   arraybuffer = new Float32Array(5 * maxVertexSize);
-  vertexSize = 0;
+  arraybuffer.set(oldArraybuffer.slice((oldVertexSize - vertexSize) * 5, oldVertexSize * 5));
+  gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
   render();
 });
 

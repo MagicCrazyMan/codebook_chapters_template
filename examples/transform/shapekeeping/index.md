@@ -1,0 +1,1 @@
+In all previous chapters, object deformation happens if width and height of canvas are not equals. This example show how to use scale matrix to keep the shape of objects.

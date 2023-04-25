@@ -119,7 +119,7 @@ export const createProgram = (gl, shaders) => {
  * @param {CompileShader[]} codes Shader codes
  * @returns {WebGLProgram} WebGL2 program
  */
-export const setupWebGL = (gl, codes) => {
+export const bindWebGLProgram = (gl, codes) => {
   // Compile shader codes
   const shaders = codes.map(({ type, source }) => compileShader(gl, type, source));
   // Creates program
@@ -168,14 +168,14 @@ export const getWebGLCoordinateFromEvent = (e, width, height) => {
 };
 
 /**
- * Creates and binds buffer to WebGL, 
+ * Creates and binds buffer to WebGL,
  * and enable buffer for each incoming attribute parameters
  * @param {WebGL2RenderingContext} gl WebGL2 context
  * @param {WebGLProgram} program WebGL program
- * @param {string[]} attributeNames Attribute names
+ * @param {string[]} [attributeNames] Attribute names
  * @return {number[]} Locations of each attribute
  */
-export const bingWebGLBuffer = (gl, program, attributeNames) => {
+export const bindWebGLBuffer = (gl, program, attributeNames = []) => {
   const buffer = gl.createBuffer();
   if (buffer === null) throw new Error("Failed to create WebGL2 buffer");
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
