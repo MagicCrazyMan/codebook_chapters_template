@@ -1,8 +1,8 @@
 import {
-  bingWebGLBuffer,
+  bindWebGLBuffer,
   getCanvasResizeObserver,
   getWebGLContext,
-  setupWebGL,
+  bindWebGLProgram,
 } from "../../libs/common";
 
 const vertexShader = `
@@ -18,11 +18,11 @@ const fragmentShader = `
 `;
 
 const gl = getWebGLContext();
-const program = setupWebGL(gl, [
+const program = bindWebGLProgram(gl, [
   { source: vertexShader, type: gl.VERTEX_SHADER },
   { source: fragmentShader, type: gl.FRAGMENT_SHADER },
 ]);
-const [aPosition] = bingWebGLBuffer(gl, program, ["a_Position"]);
+const [aPosition] = bindWebGLBuffer(gl, program, ["a_Position"]);
 gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
 /**
@@ -36,7 +36,7 @@ const Mode = {
 };
 const selector = document.getElementById("selector");
 let activeMode = Mode[selector.value];
-selector.addEventListener("change", (e) => {
+selector.addEventListener("input", (e) => {
   activeMode = Mode[e.target.value];
   render();
 });

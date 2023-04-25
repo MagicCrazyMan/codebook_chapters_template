@@ -1,8 +1,0 @@
-.container {
-  margin: 1rem;
-  width: fit-content;
-}
-
-body[dark-theme="true"] label {
-  color: white;
-}
