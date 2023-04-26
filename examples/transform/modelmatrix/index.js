@@ -9,9 +9,10 @@ import {
 const vertexShader = `
   attribute vec4 a_Position;
   uniform mat4 u_ModelMatrix;
+  uniform mat4 u_ShapeKeepingMatrix;
   
   void main() {
-    gl_Position = u_ModelMatrix * a_Position;
+    gl_Position = u_ShapeKeepingMatrix * u_ModelMatrix * a_Position;
   }
 `;
 const fragmentShader = `
@@ -40,6 +41,16 @@ gl.bufferData(
   gl.STATIC_DRAW
 );
 gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+
+/**
+ * Setups shape keeping matrix
+ */
+const uShapeKeepingMatrix = gl.getUniformLocation(program, "u_ShapeKeepingMatrix");
+gl.uniformMatrix4fv(
+  uShapeKeepingMatrix,
+  false,
+  mat4.fromScaling(mat4.create(), vec3.fromValues(1, gl.canvas.width / gl.canvas.height, 1))
+);
 
 /**
  * Setups rotation matrix
@@ -80,38 +91,47 @@ const scaleInputs = [
  */
 const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const setModelMatrix = () => {
-  const matrix = mat4.create();
-
-  // multiply scale matrix, with shape keeping
-  const width = gl.canvas.width;
-  const height = gl.canvas.height;
-  mat4.scale(
-    matrix,
-    matrix,
-    vec3.fromValues(
-      scaleInputs[0].value,
-      (width / height) * scaleInputs[1].value,
-      scaleInputs[2].value
-    )
-  );
+  const modelMatrix = mat4.identity(mat4.create());
 
   // multiply translation matrix
   mat4.translate(
-    matrix,
-    matrix,
+    modelMatrix,
+    modelMatrix,
     vec3.fromValues(
       translationInputs[0].value,
       translationInputs[1].value,
       translationInputs[2].value
     )
   );
-
   // multiply rotation matrix
-  mat4.rotateZ(matrix, matrix, glMatrix.toRadian(rotationInputs[0].value));
-  mat4.rotateY(matrix, matrix, glMatrix.toRadian(rotationInputs[1].value));
-  mat4.rotateX(matrix, matrix, glMatrix.toRadian(rotationInputs[2].value));
+  mat4.rotateZ(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[0].value));
+  mat4.rotateY(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[1].value));
+  mat4.rotateX(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[2].value));
+  // multiply scale matrix
+  mat4.scale(
+    modelMatrix,
+    modelMatrix,
+    vec3.fromValues(scaleInputs[0].value, scaleInputs[1].value, scaleInputs[2].value)
+  );
 
-  gl.uniformMatrix4fv(uModelMatrix, false, matrix);
+  // code commented below do the same job
+  // mat4.fromRotationTranslationScale(
+  //   modelMatrix,
+  //   quat.fromEuler(
+  //     quat.create(),
+  //     rotationInputs[2].value,
+  //     rotationInputs[1].value,
+  //     rotationInputs[0].value
+  //   ),
+  //   vec3.fromValues(
+  //     translationInputs[0].value,
+  //     translationInputs[1].value,
+  //     translationInputs[2].value
+  //   ),
+  //   vec3.fromValues(scaleInputs[0].value, scaleInputs[1].value, scaleInputs[2].value)
+  // );
+
+  gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 };
 setModelMatrix();
 
@@ -121,7 +141,11 @@ const render = () => {
 };
 
 getCanvasResizeObserver(() => {
-  setModelMatrix();
+  gl.uniformMatrix4fv(
+    uShapeKeepingMatrix,
+    false,
+    mat4.fromScaling(mat4.create(), vec3.fromValues(1, gl.canvas.width / gl.canvas.height, 1))
+  );
   render();
 });
 render();
