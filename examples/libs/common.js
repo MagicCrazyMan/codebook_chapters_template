@@ -3,7 +3,10 @@
  * @returns {HTMLCanvasElement} canvas element
  */
 export const getCanvas = () => {
-  return document.getElementById("canvas");
+  const canvas = document.getElementById("canvas");
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  return canvas;
 };
 
 /**

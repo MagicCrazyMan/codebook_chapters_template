@@ -1,0 +1,24 @@
+<form class="control-item" oninput="dpsOutput.value=dps.value">
+  <div>
+    <label class="dark-color">-3600</label>
+    <input type="range" min="-3600" max="3600" value="1800" id="dps" />
+    <label class="dark-color">3600</label>
+  </div>
+  <div>
+    <label class="dark-color">current degree per second: <output name="dpsOutput" for="dps">1800</output></label>
+  </div>
+</form>
+
+<form class="control-item" oninput="fpsOutput.value=fps.value">
+  <div>
+    <label class="dark-color">0</label>
+    <input type="range" min="0" max="480" value="60" id="fps" />
+    <label class="dark-color">480</label>
+  </div>
+  <div>
+    <label class="dark-color">current frame per second: <output name="fpsOutput" for="fps">60</output></label>
+  </div>
+  <div>
+    <label class="dark-color">actual fps: <span id="actualFPS"></span> </label>
+  </div>
+</form>
