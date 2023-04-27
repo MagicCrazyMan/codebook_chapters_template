@@ -108,7 +108,7 @@ const shapeKeepingMatrix = mat4.create();
 const viewMatrix = mat4.create();
 const modelMatrix = mat4.create();
 const modelViewMatrix = mat4.create();
-const uViewModelMatrix = gl.getUniformLocation(program, "u_ModelViewMatrix");
+const uModelViewMatrix = gl.getUniformLocation(program, "u_ModelViewMatrix");
 const setModelViewMatrix = () => {
   // Calculates shape keeping matrix
   mat4.fromScaling(shapeKeepingMatrix, vec3.fromValues(1, gl.canvas.width / gl.canvas.height, 1));
@@ -142,7 +142,7 @@ const setModelViewMatrix = () => {
   mat4.multiply(modelViewMatrix, modelViewMatrix, viewMatrix);
   mat4.multiply(modelViewMatrix, modelViewMatrix, modelMatrix);
 
-  gl.uniformMatrix4fv(uViewModelMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(uModelViewMatrix, false, modelViewMatrix);
 };
 [
   ...rotationInputs,
