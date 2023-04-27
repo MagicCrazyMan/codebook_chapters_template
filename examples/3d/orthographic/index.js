@@ -12,9 +12,10 @@ const vertexShader = `
   varying vec4 v_Color;
 
   uniform mat4 u_ModelViewMatrix;
+  uniform mat4 u_ProjectionMatrix;
 
   void main() {
-    gl_Position = u_ModelViewMatrix * a_Position;
+    gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * a_Position;
     v_Color = a_Color;
   }
 `;
@@ -158,13 +159,46 @@ const setModelViewMatrix = () => {
   });
 });
 setModelViewMatrix();
+getCanvasResizeObserver(() => {
+  setModelViewMatrix();
+  render();
+});
+
+/**
+ * Setups orthographic projection
+ */
+const projectionInputs = [
+  document.getElementById("left"),
+  document.getElementById("right"),
+  document.getElementById("bottom"),
+  document.getElementById("top"),
+  document.getElementById("near"),
+  document.getElementById("far"),
+];
+const projectionMatrix = mat4.create();
+const uProjectionMatrix = gl.getUniformLocation(program, "u_ProjectionMatrix");
+const setProjectionMatrix = () => {
+  mat4.ortho(
+    projectionMatrix,
+    parseFloat(projectionInputs[0].value),
+    parseFloat(projectionInputs[1].value),
+    parseFloat(projectionInputs[2].value),
+    parseFloat(projectionInputs[3].value),
+    parseFloat(projectionInputs[4].value),
+    parseFloat(projectionInputs[5].value)
+  );
+  gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+};
+projectionInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setProjectionMatrix();
+    render();
+  });
+});
+setProjectionMatrix();
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLES, 0, 9);
 };
-getCanvasResizeObserver(() => {
-  setModelViewMatrix();
-  render();
-});
 render();
