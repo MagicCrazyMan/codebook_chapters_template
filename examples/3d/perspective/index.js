@@ -1,4 +1,4 @@
-import { mat4, quat, vec3 } from "gl-matrix";
+import { mat4, quat, vec3, glMatrix } from "gl-matrix";
 import {
   bindWebGLBuffer,
   bindWebGLProgram,
@@ -12,9 +12,10 @@ const vertexShader = `
   varying vec4 v_Color;
 
   uniform mat4 u_ModelViewMatrix;
+  uniform mat4 u_ProjectionMatrix;
 
   void main() {
-    gl_Position = u_ModelViewMatrix * a_Position;
+    gl_Position = u_ProjectionMatrix * u_ModelViewMatrix * a_Position;
     v_Color = a_Color;
   }
 `;
@@ -41,35 +42,59 @@ const [aPosition, aColor] = bindWebGLBuffer(gl, program, ["a_Position", "a_Color
 gl.bufferData(
   gl.ARRAY_BUFFER,
   new Float32Array([
-    // triangle 0 vertices
-                       0,                  0.5, -0.4,
-    -0.43301270189221935, -0.24999999999999997, -0.4,
-     0.43301270189221935, -0.24999999999999997, -0.4,
-    // triangle 1 vertices
-                       0,                 -0.5, -0.2,
-     0.43301270189221935,  0.24999999999999997, -0.2,
-    -0.43301270189221935,  0.24999999999999997, -0.2,
-    // triangle 2 vertices
-                       0,                  0.5,  0.0,
-    -0.43301270189221935, -0.24999999999999997,  0.0,
-     0.43301270189221935, -0.24999999999999997,  0.0,
-     // triangle 0 color, green
-     1.0, 0.4, 0.4,
+    // triangle left 0 vertices
+    -0.75,  1.0, -4.0,
+    -1.25, -1.0, -4.0,
+    -0.25, -1.0, -4.0,
+    // triangle left 1 vertices
+    -0.75,  1.0, -2.0,
+    -1.25, -1.0, -2.0,
+    -0.25, -1.0, -2.0,
+    // triangle left 2 vertices
+    -0.75,  1.0,  0.0,
+    -1.25, -1.0,  0.0,
+    -0.25, -1.0,  0.0,
+    // triangle right 0 vertices
+     0.75,  1.0, -4.0,
+     1.25, -1.0, -4.0,
+     0.25, -1.0, -4.0,
+    // triangle right 1 vertices
+     0.75,  1.0, -2.0,
+     1.25, -1.0, -2.0,
+     0.25, -1.0, -2.0,
+    // triangle right 2 vertices
+     0.75,  1.0,  0.0,
+     1.25, -1.0,  0.0,
+     0.25, -1.0,  0.0,
+     // triangle left 0 color, green
      0.4, 1.0, 0.4,
      0.4, 1.0, 0.4,
-     // triangle 1 color, yellow
      1.0, 0.4, 0.4,
+     // triangle left 1 color, yellow
      1.0, 1.0, 0.4,
      1.0, 1.0, 0.4,
-     // triangle 2 color, blue
      1.0, 0.4, 0.4,
+     // triangle left 2 color, blue
      0.4, 0.4, 1.0,
      0.4, 0.4, 1.0,
+     1.0, 0.4, 0.4,
+     // triangle right 0 color, green
+     0.4, 1.0, 0.4,
+     0.4, 1.0, 0.4,
+     1.0, 0.4, 0.4,
+     // triangle right 1 color, yellow
+     1.0, 1.0, 0.4,
+     1.0, 1.0, 0.4,
+     1.0, 0.4, 0.4,
+     // triangle right 2 color, blue
+     0.4, 0.4, 1.0,
+     0.4, 0.4, 1.0,
+     1.0, 0.4, 0.4,
   ]),
   gl.STATIC_DRAW
 );
 gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
-gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, Float32Array.BYTES_PER_ELEMENT * 27);
+gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, Float32Array.BYTES_PER_ELEMENT * 54);
 
 /**
  * Setups model view matrix
@@ -104,14 +129,11 @@ const upInputs = [
   document.getElementById("upY"),
   document.getElementById("upZ"),
 ];
-const shapeKeepingMatrix = mat4.create();
 const viewMatrix = mat4.create();
 const modelMatrix = mat4.create();
 const modelViewMatrix = mat4.create();
 const uViewModelMatrix = gl.getUniformLocation(program, "u_ModelViewMatrix");
 const setModelViewMatrix = () => {
-  // Calculates shape keeping matrix
-  mat4.fromScaling(shapeKeepingMatrix, vec3.fromValues(1, gl.canvas.width / gl.canvas.height, 1));
   // Calculates view matrix
   mat4.lookAt(
     viewMatrix,
@@ -138,7 +160,6 @@ const setModelViewMatrix = () => {
 
   // Calculates all in one view model matrix
   mat4.identity(modelViewMatrix);
-  mat4.multiply(modelViewMatrix, modelViewMatrix, shapeKeepingMatrix);
   mat4.multiply(modelViewMatrix, modelViewMatrix, viewMatrix);
   mat4.multiply(modelViewMatrix, modelViewMatrix, modelMatrix);
 
@@ -159,12 +180,40 @@ const setModelViewMatrix = () => {
 });
 setModelViewMatrix();
 
+/**
+ * Setups orthographic projection
+ */
+const projectionInputs = [
+  document.getElementById("fov"),
+  document.getElementById("near"),
+  document.getElementById("far"),
+];
+const projectionMatrix = mat4.create();
+const uProjectionMatrix = gl.getUniformLocation(program, "u_ProjectionMatrix");
+const setProjectionMatrix = () => {
+  mat4.perspective(
+    projectionMatrix,
+    glMatrix.toRadian(parseFloat(projectionInputs[0].value)),
+    gl.canvas.width / gl.canvas.height,
+    parseFloat(projectionInputs[1].value),
+    parseFloat(projectionInputs[2].value)
+  );
+  gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
+};
+projectionInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setProjectionMatrix();
+    render();
+  });
+});
+setProjectionMatrix();
+
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.drawArrays(gl.TRIANGLES, 0, 9);
+  gl.drawArrays(gl.TRIANGLES, 0, 18);
 };
 getCanvasResizeObserver(() => {
-  setModelViewMatrix();
+  setProjectionMatrix();
   render();
 });
 render();
