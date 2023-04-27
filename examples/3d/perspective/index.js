@@ -132,7 +132,7 @@ const upInputs = [
 const viewMatrix = mat4.create();
 const modelMatrix = mat4.create();
 const modelViewMatrix = mat4.create();
-const uViewModelMatrix = gl.getUniformLocation(program, "u_ModelViewMatrix");
+const uModelViewMatrix = gl.getUniformLocation(program, "u_ModelViewMatrix");
 const setModelViewMatrix = () => {
   // Calculates view matrix
   mat4.lookAt(
@@ -163,7 +163,7 @@ const setModelViewMatrix = () => {
   mat4.multiply(modelViewMatrix, modelViewMatrix, viewMatrix);
   mat4.multiply(modelViewMatrix, modelViewMatrix, modelMatrix);
 
-  gl.uniformMatrix4fv(uViewModelMatrix, false, modelViewMatrix);
+  gl.uniformMatrix4fv(uModelViewMatrix, false, modelViewMatrix);
 };
 [
   ...rotationInputs,
@@ -181,7 +181,7 @@ const setModelViewMatrix = () => {
 setModelViewMatrix();
 
 /**
- * Setups orthographic projection
+ * Setups perspective projection
  */
 const projectionInputs = [
   document.getElementById("fov"),
