@@ -4,22 +4,18 @@ import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../.
 const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
-  attribute vec3 a_Normal; // normal for this vertex
+  attribute vec4 a_Normal;
   uniform mat4 u_MvpMatrix;
-  uniform vec3 u_LightColor; // light color
-  uniform vec3 u_LightDirection; // light direction
+  uniform mat4 u_NormalMatrix;
+  uniform vec3 u_LightDirection;
 
   varying vec4 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    // normalize the normal vector
-    vec3 normal = normalize(a_Normal);
-    // calculate dot product of light direction and normal vector to get the angle of incidence
-    float nDotL = max(dot(u_LightDirection, normal), 0.0);
-    // calculate final diffuse color
-    vec3 diffuse = vec3(a_Color) * u_LightColor * nDotL;
-    v_Color = vec4(diffuse, a_Color.a);
+    vec4 normal = u_NormalMatrix * a_Normal;
+    float nDotL = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
+    v_Color = vec4(a_Color.xyz * nDotL, a_Color.a);
   }
 `;
 const fragmentShader = `
@@ -38,32 +34,52 @@ const program = bindWebGLProgram(gl, [
 ]);
 
 /**
- * Setups model view projection matrix
+ * Setups mvp and normal matrix
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
-const setMvpMatrix = () => {
-  const projectionMatrix = mat4.perspective(
-    mat4.create(),
+const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
+const rps = glMatrix.toRadian(20); // Radian Per Second
+let lastAnimationTime = 0;
+let currentRotation = 0;
+const modelMatrix = mat4.create();
+const viewMatrix = mat4.lookAt(
+  mat4.create(),
+  vec3.fromValues(3, 3, 7),
+  vec3.fromValues(0, 0, 0),
+  vec3.fromValues(0, 1, 0)
+);
+const projectionMatrix = mat4.create();
+const mvpMatrix = mat4.create();
+const normalMatrix = mat4.create();
+const setProjectionMatrix = () => {
+  mat4.perspective(
+    projectionMatrix,
     glMatrix.toRadian(30),
     gl.canvas.width / gl.canvas.height,
     1,
     100
   );
-  const viewMatrix = mat4.lookAt(
-    mat4.create(),
-    vec3.fromValues(3, 3, 7),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 1, 0)
-  );
-  const mvpMatrix = mat4.create();
+};
+const setModelMatrix = (time) => {
+  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
+  mat4.fromYRotation(modelMatrix, currentRotation);
+  lastAnimationTime = time;
+};
+const setMvpMatrix = () => {
+  mat4.identity(mvpMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, projectionMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, viewMatrix);
+  mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
-setMvpMatrix();
+const setNormalMatrix = () => {
+  mat4.invert(normalMatrix, modelMatrix);
+  mat4.transpose(normalMatrix, normalMatrix);
+  gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
+};
 getCanvasResizeObserver(() => {
-  setMvpMatrix();
-  render();
+  setProjectionMatrix();
+  render(lastAnimationTime);
 });
 
 /**
@@ -88,8 +104,8 @@ gl.enableVertexAttribArray(uNormals);
 /**
  * Setups diffuse light
  */
-const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-gl.uniform3f(uLightColor, 1.0, 1.0, 1.0); // sets light color
+// const uLightColor = gl.getUniformLocation(program, "u_LightColor");
+// gl.uniform3f(uLightColor, 1.0, 1.0, 1.0); // sets light color
 const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
 const lightDirection = vec3.fromValues(0.5, 3.0, 4.0); // sets light direction
 vec3.normalize(lightDirection, lightDirection); // must normalize the light direction
@@ -151,8 +167,14 @@ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 gl.enable(gl.DEPTH_TEST);
-const render = () => {
+const render = (time) => {
+  setModelMatrix(time);
+  setMvpMatrix();
+  setNormalMatrix();
+
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
+
+  requestAnimationFrame(render);
 };
-render();
+render(0);
