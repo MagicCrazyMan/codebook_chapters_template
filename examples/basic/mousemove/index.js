@@ -117,13 +117,12 @@ let arraybuffer = new Float32Array(5 * maxVertexSize);
 const maxVertexSizeInput = document.getElementById("maxVertexSize");
 maxVertexSizeInput.value = maxVertexSize;
 maxVertexSizeInput.addEventListener("change", () => {
-  const oldArraybuffer = arraybuffer;
   const oldVertexSize = vertexSize;
 
   maxVertexSize = maxVertexSizeInput.value;
   vertexSize = Math.min(maxVertexSize, oldVertexSize);
   arraybuffer = new Float32Array(5 * maxVertexSize);
-  arraybuffer.set(oldArraybuffer.slice((oldVertexSize - vertexSize) * 5, oldVertexSize * 5));
+  arraybuffer.set(arraybuffer.slice((oldVertexSize - vertexSize) * 5, oldVertexSize * 5));
   gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
   render();
 });

@@ -45,7 +45,7 @@ selector.addEventListener("input", (e) => {
  * Setups buffer data
  */
 const buffer = new Float32Array([-0.5, 0.5, -0.25, -0.5, 0, 0.5, 0.25, -0.5, 0.5, 0.5, 0.75, -0.5]);
-gl.bufferData(gl.ARRAY_BUFFER, buffer, gl.DYNAMIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER, buffer, gl.STATIC_DRAW);
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
