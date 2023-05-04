@@ -16,9 +16,9 @@ const vertexShader = `
     // normalize the normal vector
     vec3 normal = normalize(a_Normal);
     // calculate dot product of light direction and normal vector to get the angle of incidence
-    float nDotL = max(dot(u_LightDirection, normal), 0.0);
+    float incidenceAngle = max(dot(u_LightDirection, normal), 0.0);
     // calculate final diffuse color
-    vec3 diffuse = vec3(a_Color) * u_LightColor * nDotL;
+    vec3 diffuse = vec3(a_Color) * u_LightColor * incidenceAngle;
     v_Color = vec4(diffuse, a_Color.a);
   }
 `;
@@ -86,10 +86,33 @@ gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
 
 /**
- * Setups diffuse light
+ * Setups diffuse light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-gl.uniform3f(uLightColor, 1.0, 1.0, 1.0); // sets light color
+const inputs = [
+  document.getElementById("colorR"),
+  document.getElementById("colorG"),
+  document.getElementById("colorB"),
+];
+inputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setLightColor();
+    render();
+  });
+});
+const setLightColor = () => {
+  gl.uniform3f(
+    uLightColor,
+    parseFloat(inputs[0].value),
+    parseFloat(inputs[1].value),
+    parseFloat(inputs[2].value)
+  );
+};
+setLightColor();
+
+/**
+ * Setups diffuse light direction
+ */
 const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
 const lightDirection = vec3.fromValues(0.5, 3.0, 4.0); // sets light direction
 vec3.normalize(lightDirection, lightDirection); // must normalize the light direction

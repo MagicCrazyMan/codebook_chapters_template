@@ -9,6 +9,7 @@ const vertexShader = `
   uniform mat4 u_NormalMatrix;
   uniform vec3 u_LightColor;
   uniform vec3 u_LightDirection;
+  uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
 
@@ -16,7 +17,7 @@ const vertexShader = `
     gl_Position = u_MvpMatrix * a_Position;
     vec4 normal = u_NormalMatrix * a_Normal;
     float incidenceAngle = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
-    v_Color = vec4(a_Color.xyz * u_LightColor * incidenceAngle, a_Color.a);
+    v_Color = vec4(a_Color.xyz * (u_LightColor * incidenceAngle + u_AmbientLight), a_Color.a);
   }
 `;
 const fragmentShader = `
@@ -106,26 +107,26 @@ gl.enableVertexAttribArray(uNormals);
  * Setups diffuse light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const inputs = [
-  document.getElementById("colorR"),
-  document.getElementById("colorG"),
-  document.getElementById("colorB"),
+const diffuseInputs = [
+  document.getElementById("diffuseColorR"),
+  document.getElementById("diffuseColorG"),
+  document.getElementById("diffuseColorB"),
 ];
-inputs.forEach((input) => {
+diffuseInputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setLightColor();
+    setDiffuseLightColor();
     render(lastAnimationTime);
   });
 });
-const setLightColor = () => {
+const setDiffuseLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(inputs[0].value),
-    parseFloat(inputs[1].value),
-    parseFloat(inputs[2].value)
+    parseFloat(diffuseInputs[0].value),
+    parseFloat(diffuseInputs[1].value),
+    parseFloat(diffuseInputs[2].value)
   );
 };
-setLightColor();
+setDiffuseLightColor();
 
 /**
  * Setups diffuse light direction
@@ -134,6 +135,31 @@ const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
 const lightDirection = vec3.fromValues(0.5, 3.0, 4.0); // sets light direction
 vec3.normalize(lightDirection, lightDirection); // must normalize the light direction
 gl.uniform3fv(uLightDirection, lightDirection);
+
+/**
+ * Setups ambient light
+ */
+const uAmbientLight = gl.getUniformLocation(program, "u_AmbientLight");
+const ambientInputs = [
+  document.getElementById("ambientColorR"),
+  document.getElementById("ambientColorG"),
+  document.getElementById("ambientColorB"),
+];
+ambientInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setAmbientLightColor();
+    render(lastAnimationTime);
+  });
+});
+const setAmbientLightColor = () => {
+  gl.uniform3f(
+    uAmbientLight,
+    parseFloat(ambientInputs[0].value),
+    parseFloat(ambientInputs[1].value),
+    parseFloat(ambientInputs[2].value)
+  );
+};
+setAmbientLightColor();
 
 /**
  * Setups cube
