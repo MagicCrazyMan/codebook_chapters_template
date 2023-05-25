@@ -42,7 +42,10 @@ const inputs = [
   document.getElementById("ty"),
   document.getElementById("tz"),
 ];
-const setTranslationMatrix = (tx, ty, tz) => {
+const setTranslationMatrix = () => {
+  const tx = parseFloat(inputs[0].value);
+  const ty = parseFloat(inputs[1].value);
+  const tz = parseFloat(inputs[2].value);
   // IMPORTANT, in webgl, matrix data orders in COLUMN major
   // prettier-ignore
   gl.uniformMatrix4fv(uTranslation, false, [
@@ -54,11 +57,11 @@ const setTranslationMatrix = (tx, ty, tz) => {
 };
 inputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setTranslationMatrix(inputs[0].value, inputs[1].value, inputs[2].value);
+    setTranslationMatrix();
     render();
   });
 });
-setTranslationMatrix(inputs[0].value, inputs[1].value, inputs[2].value);
+setTranslationMatrix();
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);

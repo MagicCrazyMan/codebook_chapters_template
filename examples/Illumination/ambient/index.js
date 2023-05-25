@@ -64,6 +64,7 @@ const setProjectionMatrix = () => {
 };
 const setModelMatrix = (time) => {
   currentRotation += ((time - lastAnimationTime) / 1000) * rps;
+  currentRotation %= 2 * Math.PI;
   mat4.fromYRotation(modelMatrix, currentRotation);
   lastAnimationTime = time;
 };

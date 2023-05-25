@@ -98,20 +98,24 @@ const setModelMatrix = () => {
     modelMatrix,
     modelMatrix,
     vec3.fromValues(
-      translationInputs[0].value,
-      translationInputs[1].value,
-      translationInputs[2].value
+      parseFloat(translationInputs[0].value),
+      parseFloat(translationInputs[1].value),
+      parseFloat(translationInputs[2].value)
     )
   );
   // multiply rotation matrix
-  mat4.rotateZ(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[0].value));
-  mat4.rotateY(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[1].value));
-  mat4.rotateX(modelMatrix, modelMatrix, glMatrix.toRadian(rotationInputs[2].value));
+  mat4.rotateZ(modelMatrix, modelMatrix, glMatrix.toRadian(parseFloat(rotationInputs[0].value)));
+  mat4.rotateY(modelMatrix, modelMatrix, glMatrix.toRadian(parseFloat(rotationInputs[1].value)));
+  mat4.rotateX(modelMatrix, modelMatrix, glMatrix.toRadian(parseFloat(rotationInputs[2].value)));
   // multiply scale matrix
   mat4.scale(
     modelMatrix,
     modelMatrix,
-    vec3.fromValues(scaleInputs[0].value, scaleInputs[1].value, scaleInputs[2].value)
+    vec3.fromValues(
+      parseFloat(scaleInputs[0].value),
+      parseFloat(scaleInputs[1].value),
+      parseFloat(scaleInputs[2].value)
+    )
   );
 
   // code commented below do the same job
@@ -119,16 +123,20 @@ const setModelMatrix = () => {
   //   modelMatrix,
   //   quat.fromEuler(
   //     quat.create(),
-  //     rotationInputs[2].value,
-  //     rotationInputs[1].value,
-  //     rotationInputs[0].value
+  //     parseFloat(rotationInputs[2].value),
+  //     parseFloat(rotationInputs[1].value),
+  //     parseFloat(rotationInputs[0].value)
   //   ),
   //   vec3.fromValues(
-  //     translationInputs[0].value,
-  //     translationInputs[1].value,
-  //     translationInputs[2].value
+  //     parseFloat(translationInputs[0].value),
+  //     parseFloat(translationInputs[1].value),
+  //     parseFloat(translationInputs[2].value)
   //   ),
-  //   vec3.fromValues(scaleInputs[0].value, scaleInputs[1].value, scaleInputs[2].value)
+  //   vec3.fromValues(
+  //     parseFloat(scaleInputs[0].value),
+  //     parseFloat(scaleInputs[1].value),
+  //     parseFloat(scaleInputs[2].value)
+  //   )
   // );
 
   gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);

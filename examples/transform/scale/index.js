@@ -37,7 +37,10 @@ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0.5, -0.5, -0.5, 0.5, -0.5])
  * Setups rotation inputs
  */
 const uScale = gl.getUniformLocation(program, "u_Scale");
-const setRotationAngles = (sx, sy, sz) => {
+const setRotationAngles = () => {
+  const sx = parseFloat(inputs[0].value);
+  const sy = parseFloat(inputs[1].value);
+  const sz = parseFloat(inputs[2].value);
   // prettier-ignore
   gl.uniformMatrix4fv(uScale, false, [
     sx, 0,  0, 0,
@@ -53,11 +56,11 @@ const inputs = [
 ];
 inputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setRotationAngles(inputs[0].value, inputs[1].value, inputs[2].value);
+    setRotationAngles();
     render();
   });
 });
-setRotationAngles(inputs[0].value, inputs[1].value, inputs[2].value);
+setRotationAngles();
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
