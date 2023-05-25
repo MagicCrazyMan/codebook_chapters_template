@@ -6,17 +6,23 @@ const vertexShader = `
   attribute vec4 a_Color;
   attribute vec4 a_Normal;
   uniform mat4 u_MvpMatrix;
+  uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
   uniform vec3 u_LightColor;
-  uniform vec3 u_LightDirection;
+  uniform vec3 u_LightPosition;
+  uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    vec4 normal = u_NormalMatrix * a_Normal;
-    float incidenceAngle = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
-    v_Color = vec4(a_Color.xyz * u_LightColor * incidenceAngle, a_Color.a);
+    vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    vec4 vertexPosition = u_ModelMatrix * a_Position;
+    vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));
+    float incidenceAngle = max(dot(lightDirection, normal), 0.0);
+    vec3 diffuse = u_LightColor * a_Color.rgb * incidenceAngle;
+    vec3 ambient = u_AmbientLight * a_Color.rgb;
+    v_Color = vec4(diffuse + ambient, a_Color.a);
   }
 `;
 const fragmentShader = `
@@ -38,6 +44,7 @@ const program = bindWebGLProgram(gl, [
  * Setups mvp and normal matrix
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
+const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;
@@ -65,7 +72,7 @@ const setModelMatrix = (time) => {
   currentRotation += ((time - lastAnimationTime) / 1000) * rps;
   currentRotation %= 2 * Math.PI;
   mat4.fromYRotation(modelMatrix, currentRotation);
-  lastAnimationTime = time;
+  gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 };
 const setMvpMatrix = () => {
   mat4.identity(mvpMatrix);
@@ -107,34 +114,57 @@ gl.enableVertexAttribArray(uNormals);
  * Setups diffuse light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const inputs = [
-  document.getElementById("colorR"),
-  document.getElementById("colorG"),
-  document.getElementById("colorB"),
+const diffuseInputs = [
+  document.getElementById("diffuseColorR"),
+  document.getElementById("diffuseColorG"),
+  document.getElementById("diffuseColorB"),
 ];
-inputs.forEach((input) => {
+diffuseInputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setLightColor();
+    setDiffuseLightColor();
     render(lastAnimationTime);
   });
 });
-const setLightColor = () => {
+const setDiffuseLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(inputs[0].value),
-    parseFloat(inputs[1].value),
-    parseFloat(inputs[2].value)
+    parseFloat(diffuseInputs[0].value),
+    parseFloat(diffuseInputs[1].value),
+    parseFloat(diffuseInputs[2].value)
   );
 };
-setLightColor();
+setDiffuseLightColor();
 
 /**
- * Setups diffuse light direction
+ * Setups diffuse light position
  */
-const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
-const lightDirection = vec3.fromValues(0.5, 3.0, 4.0); // sets light direction
-vec3.normalize(lightDirection, lightDirection); // must normalize the light direction
-gl.uniform3fv(uLightDirection, lightDirection);
+const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
+gl.uniform3f(uLightPosition, 0.0, 3.0, 4.0);
+
+/**
+ * Setups ambient light
+ */
+const uAmbientLight = gl.getUniformLocation(program, "u_AmbientLight");
+const ambientInputs = [
+  document.getElementById("ambientColorR"),
+  document.getElementById("ambientColorG"),
+  document.getElementById("ambientColorB"),
+];
+ambientInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setAmbientLightColor();
+    render(lastAnimationTime);
+  });
+});
+const setAmbientLightColor = () => {
+  gl.uniform3f(
+    uAmbientLight,
+    parseFloat(ambientInputs[0].value),
+    parseFloat(ambientInputs[1].value),
+    parseFloat(ambientInputs[2].value)
+  );
+};
+setAmbientLightColor();
 
 /**
  * Setups cube
@@ -194,12 +224,13 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 gl.enable(gl.DEPTH_TEST);
 const render = (time) => {
   setModelMatrix(time);
-  setMvpMatrix();
   setNormalMatrix();
+  setMvpMatrix();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
 
   requestAnimationFrame(render);
+  lastAnimationTime = time;
 };
 render(0);

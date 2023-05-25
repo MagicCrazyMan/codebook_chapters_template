@@ -99,9 +99,9 @@ colorInputs.forEach((selector) => {
   selector.addEventListener("input", () => {
     gl.uniform4f(
       uColorMultiplier,
-      colorInputs[0].value,
-      colorInputs[1].value,
-      colorInputs[2].value,
+      parseFloat(colorInputs[0].value),
+      parseFloat(colorInputs[1].value),
+      parseFloat(colorInputs[2].value),
       1
     );
     render();
@@ -111,15 +111,14 @@ colorInputs.forEach((selector) => {
 /**
  * Setups max vertex multiplier
  */
-let maxVertexSize = 200;
+const maxVertexSizeInput = document.getElementById("maxVertexSize");
+let maxVertexSize = parseInt(maxVertexSizeInput.value);
 let vertexSize = 0;
 let arraybuffer = new Float32Array(5 * maxVertexSize);
-const maxVertexSizeInput = document.getElementById("maxVertexSize");
-maxVertexSizeInput.value = maxVertexSize;
 maxVertexSizeInput.addEventListener("change", () => {
   const oldVertexSize = vertexSize;
 
-  maxVertexSize = maxVertexSizeInput.value;
+  maxVertexSize = parseInt(maxVertexSizeInput.value);
   vertexSize = Math.min(maxVertexSize, oldVertexSize);
   arraybuffer = new Float32Array(5 * maxVertexSize);
   arraybuffer.set(arraybuffer.slice((oldVertexSize - vertexSize) * 5, oldVertexSize * 5));

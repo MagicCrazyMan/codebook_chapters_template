@@ -34,9 +34,9 @@ gl.bufferData(
  * Setups DPS(Degree Per Second) input
  */
 const dpsInput = document.getElementById("dps");
-let degreePerSecond = dpsInput.value;
+let degreePerSecond = parseFloat(dpsInput.value);
 dpsInput.addEventListener("input", () => {
-  degreePerSecond = dpsInput.value;
+  degreePerSecond = parseFloat(dpsInput.value);
 });
 
 /**
@@ -44,9 +44,9 @@ dpsInput.addEventListener("input", () => {
  */
 let lastTime = null;
 const fpsInput = document.getElementById("fps");
-let framePerSecond = fpsInput.value;
+let framePerSecond = parseFloat(fpsInput.value);
 fpsInput.addEventListener("input", () => {
-  framePerSecond = fpsInput.value;
+  framePerSecond = parseFloat(fpsInput.value);
 });
 // Calculate actual fps
 let renderedFrames = 0;

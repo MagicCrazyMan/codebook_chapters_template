@@ -52,22 +52,27 @@ gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.STATIC_DRAW);
 /**
  * Setups rotation inputs
  */
-const uRotationAngles = gl.getUniformLocation(program, "u_RotationAngles");
-const setRotationAngles = (yaw, pitch, roll) => {
-  gl.uniform3f(uRotationAngles, yaw, pitch, roll);
-};
 const inputs = [
   document.getElementById("yaw"),
   document.getElementById("pitch"),
   document.getElementById("roll"),
 ];
+const uRotationAngles = gl.getUniformLocation(program, "u_RotationAngles");
+const setRotationAngles = () => {
+  gl.uniform3f(
+    uRotationAngles,
+    parseFloat(inputs[0].value),
+    parseFloat(inputs[1].value),
+    parseFloat(inputs[2].value)
+  );
+};
 inputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setRotationAngles(inputs[0].value, inputs[1].value, inputs[2].value);
+    setRotationAngles();
     render();
   });
 });
-setRotationAngles(inputs[0].value, inputs[1].value, inputs[2].value);
+setRotationAngles();
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
