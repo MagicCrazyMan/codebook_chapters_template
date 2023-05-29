@@ -14,33 +14,33 @@ import {
 } from "./index.js";
 
 /**
- * Example introduction
+ * Chapter introduction
  */
-type ExampleIntroduction = {
+type ChapterIntroduction = {
   zIndex?: number;
   title?: string;
   intro?: string;
 };
 
 /**
- * Example descriptor type
+ * Chapter descriptor type
  */
-enum ExampleDescriptorType {
+enum ChapterDescriptorType {
   Instance = 0,
   Directory = 1,
 }
 
 /**
- * Example descriptor
+ * Chapter descriptor
  */
-type ExampleDescriptor = ExampleInstance | ExampleDirectory;
+type ChapterDescriptor = ChapterInstance | ChapterDirectory;
 
 /**
- * Example instance
+ * Chapter instance
  */
-type ExampleInstance = {
+type ChapterInstance = {
   zIndex?: number;
-  type: ExampleDescriptorType.Instance;
+  type: ChapterDescriptorType.Instance;
   entry: string;
   libs: [];
   title?: string;
@@ -52,13 +52,13 @@ type ExampleInstance = {
 };
 
 /**
- * Example directory
+ * Chapter directory
  */
-type ExampleDirectory = {
+type ChapterDirectory = {
   zIndex?: number;
-  type: ExampleDescriptorType.Directory;
+  type: ChapterDescriptorType.Directory;
   entry: string;
-  children: ExampleDescriptor[];
+  children: ChapterDescriptor[];
   title?: string;
   intro?: string;
 };
@@ -68,24 +68,24 @@ type ExampleDirectory = {
  */
 type Prelude = {
   imports: Record<string, string>;
-  descriptors: ExampleDescriptor[];
+  descriptors: ChapterDescriptor[];
 };
 
 /**
  * Reads introduction json file
- * @param path Path of example instance directory
- * @returns ExampleIntroduction
+ * @param path Path of chapter instance directory
+ * @returns ChapterIntroduction
  */
 const readIntroduction = (path: string) => {
   // read introduction
   const introPath = join(path, INTRODUCTION_FILENAME);
   if (distributionFs.existsSync(introPath)) {
     if (distributionFs.lstatSync(introPath).isFile()) {
-      return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ExampleIntroduction;
+      return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ChapterIntroduction;
     }
   }
 
-  return {} as ExampleIntroduction;
+  return {} as ChapterIntroduction;
 };
 
 /**
@@ -149,10 +149,10 @@ const collectLocalImports = async (fullPath: string) => {
 };
 
 /**
- * Resolve example instance
+ * Resolve chapter instance
  * @param entry Entry name
  * @param fullPath Full path of entry directory
- * @returns Example instance
+ * @returns Chapter instance
  */
 const resolveInstance = async (entry: string, fullPath: string) => {
   // read introduction
@@ -166,7 +166,7 @@ const resolveInstance = async (entry: string, fullPath: string) => {
 
   return {
     zIndex,
-    type: ExampleDescriptorType.Instance,
+    type: ChapterDescriptorType.Instance,
     entry,
     libs,
     title: title ?? entry,
@@ -175,29 +175,29 @@ const resolveInstance = async (entry: string, fullPath: string) => {
     hasStylesheet,
     hasDescription,
     hasPreviewImage,
-  } as ExampleInstance;
+  } as ChapterInstance;
 };
 
 /**
- * Resolve example directory
+ * Resolve chapter directory
  * @param entry Entry name
  * @param fullPath Full path of entry directory
  * @param isRoot Is root directory, if it is root directory, LIBS_DIRECTORY_NAME will be ignored
- * @returns Example instance
+ * @returns Chapter instance
  */
 const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean) => {
   // read introduction
   const { title, intro, zIndex } = readIntroduction(fullPath);
 
   // iterate entries and resolve
-  const children: ExampleDescriptor[] = [];
+  const children: ChapterDescriptor[] = [];
   for (const subentry of distributionFs.readdirSync(fullPath)) {
     if (isRoot && subentry === LIBS_DIRECTORY_NAME) continue;
     if (!distributionFs.lstatSync(join(fullPath, subentry)).isDirectory()) continue;
 
     const isInstance = distributionFs.existsSync(join(fullPath, subentry, JAVASCRIPT_FILENAME));
 
-    let child: ExampleDescriptor;
+    let child: ChapterDescriptor;
     if (isInstance) {
       child = await resolveInstance(subentry, join(fullPath, subentry));
     } else {
@@ -219,8 +219,8 @@ const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean
       return result;
     },
     {
-      zIndexChildren: [] as ExampleDescriptor[],
-      nonZIndexChildren: [] as ExampleDescriptor[],
+      zIndexChildren: [] as ChapterDescriptor[],
+      nonZIndexChildren: [] as ChapterDescriptor[],
     }
   );
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -229,12 +229,12 @@ const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean
 
   return {
     zIndex: zIndex,
-    type: ExampleDescriptorType.Directory,
+    type: ChapterDescriptorType.Directory,
     entry,
     children: sortedChildren,
     title: title ?? entry,
     intro,
-  } as ExampleDirectory;
+  } as ChapterDirectory;
 };
 
 /**

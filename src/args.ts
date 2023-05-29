@@ -1,7 +1,7 @@
 import commandLineArgs, { OptionDefinition } from "command-line-args";
 
 const optionDefinitions: OptionDefinition[] = [
-  { name: "src", alias: "s", type: String, defaultValue: "./examples" },
+  { name: "src", alias: "s", type: String, defaultValue: "./chapters" },
   { name: "dist", alias: "d", type: String, defaultValue: "./dist" },
   { name: "serve", type: Boolean, defaultValue: false },
   { name: "server_address", type: String, defaultValue: "127.0.0.1" },

@@ -11,7 +11,7 @@ export const sourceFs = fs;
 // Filesystem for distribution directory
 export const distributionFs = (options.serve ? memfs : fs) as typeof fs;
 
-// Root directory of examples
+// Root directory of chapters
 export const SOURCE_DIRECTORY_PATH = resolvePath(options.src);
 // Distribution directory in memory file system
 const MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH = "/dist";
@@ -35,7 +35,7 @@ export const PREVIEW_IMAGE_FILENAME = "index.png";
 export const LIBS_DIRECTORY_NAME = "libs";
 
 /**
- * Build all examples
+ * Build all chapters
  */
 export const build = async () => {
   if (
