@@ -16,8 +16,8 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     vec4 normal = u_NormalMatrix * a_Normal;
-    float incidenceAngle = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
-    v_Color = vec4(a_Color.xyz * (u_LightColor * incidenceAngle + u_AmbientLight), a_Color.a);
+    float incidence = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
+    v_Color = vec4(a_Color.xyz * (u_LightColor * incidence + u_AmbientLight), a_Color.a);
   }
 `;
 const fragmentShader = `

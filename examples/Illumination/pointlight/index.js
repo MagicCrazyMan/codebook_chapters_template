@@ -16,12 +16,19 @@ const vertexShader = `
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
+    // gets transformed normal, and normalize it
     vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    // calculates vertex position in world coordinates system
     vec4 vertexPosition = u_ModelMatrix * a_Position;
+    // calculates light direction by subtract light position and vertex position, and normalize it
     vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));
-    float incidenceAngle = max(dot(lightDirection, normal), 0.0);
-    vec3 diffuse = u_LightColor * a_Color.rgb * incidenceAngle;
+    // calculates incidence between light direction and normal
+    float incidence = max(dot(lightDirection, normal), 0.0);
+    // calculates diffuse light color
+    vec3 diffuse = u_LightColor * a_Color.rgb * incidence;
+    // calculates ambient light color
     vec3 ambient = u_AmbientLight * a_Color.rgb;
+    // combine diffuse and ambient light color
     v_Color = vec4(diffuse + ambient, a_Color.a);
   }
 `;
@@ -52,7 +59,7 @@ let currentRotation = 0;
 const modelMatrix = mat4.create();
 const viewMatrix = mat4.lookAt(
   mat4.create(),
-  vec3.fromValues(3, 3, 7),
+  vec3.fromValues(6, 6, 14),
   vec3.fromValues(0, 0, 0),
   vec3.fromValues(0, 1, 0)
 );
@@ -139,7 +146,7 @@ setDiffuseLightColor();
  * Setups diffuse light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 0.0, 3.0, 4.0);
+gl.uniform3f(uLightPosition, 2.3, 4.0, 3.5);
 
 /**
  * Setups ambient light
@@ -178,12 +185,12 @@ setAmbientLightColor();
  */
 // prettier-ignore
 const vertices = new Float32Array([
-  1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0,  // v0-v1-v2-v3 front
-  1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0,  // v0-v3-v4-v5 right
-  1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
- -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0,  // v1-v6-v7-v2 left
- -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0,  // v7-v4-v3-v2 down
-  1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0   // v4-v7-v6-v5 back
+  2.0, 2.0, 2.0,  -2.0, 2.0, 2.0,  -2.0,-2.0, 2.0,   2.0,-2.0, 2.0,  // v0-v1-v2-v3 front
+  2.0, 2.0, 2.0,   2.0,-2.0, 2.0,   2.0,-2.0,-2.0,   2.0, 2.0,-2.0,  // v0-v3-v4-v5 right
+  2.0, 2.0, 2.0,   2.0, 2.0,-2.0,  -2.0, 2.0,-2.0,  -2.0, 2.0, 2.0,  // v0-v5-v6-v1 up
+ -2.0, 2.0, 2.0,  -2.0, 2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0,-2.0, 2.0,  // v1-v6-v7-v2 left
+ -2.0,-2.0,-2.0,   2.0,-2.0,-2.0,   2.0,-2.0, 2.0,  -2.0,-2.0, 2.0,  // v7-v4-v3-v2 down
+  2.0,-2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0, 2.0,-2.0,   2.0, 2.0,-2.0   // v4-v7-v6-v5 back
 ]);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
