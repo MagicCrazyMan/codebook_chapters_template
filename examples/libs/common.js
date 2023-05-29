@@ -1,6 +1,6 @@
 /**
  * Gets canvas element
- * @returns {HTMLCanvasElement} canvas element
+ * @returns {HTMLCanvasElement} Canvas element
  */
 export const getCanvas = () => {
   const canvas = document.getElementById("canvas");
@@ -42,9 +42,9 @@ export const getWebGLContext = () => {
   const gl = canvas.getContext("webgl2", {
     preserveDrawingBuffer: true,
   });
-  if (!gl) {
+  if (!gl)
     throw new Error("Failed to initialize WebGL. Your browser or machine may not support it.");
-  }
+
   return gl;
 };
 
@@ -83,9 +83,7 @@ export const compileShader = (gl, type, source) => {
 export const createProgram = (gl, shaders) => {
   // create program
   const program = gl.createProgram();
-  if (!program) {
-    throw new Error("Failed to create WebGL2 program.");
-  }
+  if (!program) throw new Error("Failed to create WebGL2 program.");
 
   // attach shaders
   shaders.forEach((shader) => {
@@ -137,9 +135,9 @@ export const bindWebGLProgram = (gl, codes) => {
 /**
  * Calculates coordinate under WebGL coordinate system by offset x, offset y and canvas size
  * @param {number} clientX Client X
- * @param {number} clientY Clint Y
- * @param {number} width canvas width
- * @param {number} height canvas height
+ * @param {number} clientY Client Y
+ * @param {number} width Canvas width
+ * @param {number} height Canvas height
  * @returns {[number, number]} Coordinate under WebGL coordinate system
  */
 export const getWebGLCoordinateFromMousePosition = (clientX, clientY, width, height) => {
@@ -151,8 +149,8 @@ export const getWebGLCoordinateFromMousePosition = (clientX, clientY, width, hei
 /**
  * Calculates coordinate under WebGL coordinate system from touch or mouse event and canvas size
  * @param {MouseEvent | TouchEvent} e Touch or mouse event
- * @param {number} width canvas width
- * @param {number} height canvas height
+ * @param {number} width Canvas width
+ * @param {number} height Canvas height
  * @returns {[number, number]} Coordinate under WebGL coordinate system
  */
 export const getWebGLCoordinateFromEvent = (e, width, height) => {
@@ -165,6 +163,8 @@ export const getWebGLCoordinateFromEvent = (e, width, height) => {
     if (!item) return;
     clientX = item.clientX;
     clientY = item.clientY;
+  } else {
+    throw new Error("Unsupported event type");
   }
 
   return getWebGLCoordinateFromMousePosition(clientX, clientY, width, height);
