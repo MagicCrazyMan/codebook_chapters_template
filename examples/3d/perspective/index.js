@@ -19,8 +19,11 @@ const vertexShader = `
     v_Color = a_Color;
   }
 `;
-const fragmentShader = `  
-  precision mediump float;
+const fragmentShader = `
+  #ifdef GL_ES
+    precision mediump float;
+  #endif
+
   varying vec4 v_Color;
 
   void main() {

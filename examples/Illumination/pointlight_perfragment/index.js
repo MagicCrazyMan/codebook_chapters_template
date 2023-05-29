@@ -22,7 +22,9 @@ const vertexShader = `
   }
 `;
 const fragmentShader = `
-  precision mediump float;
+  #ifdef GL_ES
+    precision mediump float;
+  #endif
 
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
