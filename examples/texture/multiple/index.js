@@ -18,7 +18,10 @@ const vertexShader = `
   }
 `;
 const fragmentShader = `
-  precision mediump float;
+  #ifdef GL_ES
+    precision mediump float;
+  #endif
+
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
   varying vec2 v_TexCoord;
