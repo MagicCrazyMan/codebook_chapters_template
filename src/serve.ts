@@ -200,7 +200,8 @@ export const serve = async () => {
   });
 
   log(
-    "server start serving on: " + chalk.greenBright(`http://127.0.0.1:${LISTEN_PORT}${BASE_URL}`)
+    "server start serving on: " +
+      chalk.greenBright(`http://${LISTEN_ADDRESS}:${LISTEN_PORT}${BASE_URL}`)
   );
 
   await new Promise((resolve) => {
