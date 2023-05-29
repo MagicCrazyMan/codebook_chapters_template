@@ -25,7 +25,7 @@ type SSEMessage = {
 };
 
 // Server listen address
-const LISTEN_ADDRESS = options.server_listen;
+const LISTEN_ADDRESS = options.server_address;
 // Server listen port
 const LISTEN_PORT = options.server_port;
 // Server base URL
