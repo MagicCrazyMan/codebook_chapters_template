@@ -39,12 +39,10 @@ export const LIBS_DIRECTORY_NAME = "libs";
  */
 export const build = async () => {
   if (
-    distributionFs.existsSync(DISTRIBUTION_DIRECTORY_PATH) &&
-    distributionFs.lstatSync(DISTRIBUTION_DIRECTORY_PATH).isDirectory()
+    distributionFs.lstatSync(DISTRIBUTION_DIRECTORY_PATH, { throwIfNoEntry: false })?.isDirectory()
   ) {
     distributionFs.rmdirSync(DISTRIBUTION_DIRECTORY_PATH, { recursive: true });
   }
-
   distributionFs.mkdirSync(DISTRIBUTION_DIRECTORY_PATH);
   copyDirectory();
   await resolvePrelude();

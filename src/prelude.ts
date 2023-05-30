@@ -79,10 +79,8 @@ type Prelude = {
 const readIntroduction = (path: string) => {
   // read introduction
   const introPath = join(path, INTRODUCTION_FILENAME);
-  if (distributionFs.existsSync(introPath)) {
-    if (distributionFs.lstatSync(introPath).isFile()) {
-      return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ChapterIntroduction;
-    }
+  if (distributionFs.lstatSync(introPath, { throwIfNoEntry: false })?.isFile()) {
+    return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ChapterIntroduction;
   }
 
   return {} as ChapterIntroduction;

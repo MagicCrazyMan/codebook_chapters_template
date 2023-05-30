@@ -83,7 +83,7 @@ const requestStatic = async (
 ) => {
   const filePath = join(DISTRIBUTION_DIRECTORY_PATH, ctx.path.slice(BASE_URL.length));
   const exists = await new Promise((resolve) => {
-    resolve(distributionFs.existsSync(filePath) && distributionFs.lstatSync(filePath).isFile());
+    resolve(distributionFs.lstatSync(filePath, { throwIfNoEntry: false })?.isFile());
   });
 
   if (!exists) ctx.throw(404);
