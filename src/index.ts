@@ -85,8 +85,7 @@ const getDefaultHint = () =>
  */
 const loadHint = () => {
   const hintFilePath = join(SOURCE_DIRECTORY_PATH, HINT_FILENAME);
-  const stat = sourceFs.lstatSync(hintFilePath);
-  if (!stat.isFile()) {
+  if (!sourceFs.lstatSync(hintFilePath, { throwIfNoEntry: false })?.isFile()) {
     return getDefaultHint();
   }
 
