@@ -45,7 +45,7 @@ export const build = async () => {
   if (
     distributionFs.lstatSync(DISTRIBUTION_DIRECTORY_PATH, { throwIfNoEntry: false })?.isDirectory()
   ) {
-    distributionFs.rmSync(DISTRIBUTION_DIRECTORY_PATH, { recursive: true });
+    distributionFs.rmdirSync(DISTRIBUTION_DIRECTORY_PATH, { recursive: true });
   }
   distributionFs.mkdirSync(DISTRIBUTION_DIRECTORY_PATH);
 
