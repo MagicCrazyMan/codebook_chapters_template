@@ -1,13 +1,13 @@
-import { dirname, extname, join, resolve as resolvePath } from "node:path";
+import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
 import parseImports from "parse-imports";
 import imports from "./imports.json" assert { type: "json" };
 import {
   DESCRIPTION_FILENAME,
   DISTRIBUTION_DIRECTORY_PATH,
+  DISTRIBUTION_PRELUDE_FILENAME,
   HTML_FILENAME,
   INTRODUCTION_FILENAME,
   JAVASCRIPT_FILENAME,
-  LIBS_DIRECTORY_NAME,
   PREVIEW_IMAGE_FILENAME,
   STYLESHEET_FILENAME,
   distributionFs,
@@ -73,12 +73,12 @@ type Prelude = {
 
 /**
  * Reads introduction json file
- * @param path Path of chapter instance directory
+ * @param entry Entry
  * @returns ChapterIntroduction
  */
-const readIntroduction = (path: string) => {
+const readIntroduction = (entry: string) => {
   // read introduction
-  const introPath = join(path, INTRODUCTION_FILENAME);
+  const introPath = join(DISTRIBUTION_DIRECTORY_PATH, entry, INTRODUCTION_FILENAME);
   if (distributionFs.lstatSync(introPath, { throwIfNoEntry: false })?.isFile()) {
     return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ChapterIntroduction;
   }
@@ -96,14 +96,16 @@ const normalizeJavascriptExtension = (filename: string) =>
 
 /**
  * Recursively collects local lib.
- * @param fullPath Full path of entry directory
+ * @param entry Entry
  * @returns collection of local libs
  */
-const collectLocalImports = async (fullPath: string) => {
+const collectLocalImports = async (entry: string) => {
+  const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
+
   const scripts = [
     {
-      code: distributionFs.readFileSync(join(fullPath, JAVASCRIPT_FILENAME), "utf-8"),
-      fullPath: join(fullPath, JAVASCRIPT_FILENAME),
+      code: distributionFs.readFileSync(join(entryFullPath, JAVASCRIPT_FILENAME), "utf-8"),
+      fullPath: join(entryFullPath, JAVASCRIPT_FILENAME),
     },
   ];
 
@@ -148,24 +150,25 @@ const collectLocalImports = async (fullPath: string) => {
 
 /**
  * Resolve chapter instance
- * @param entry Entry name
- * @param fullPath Full path of entry directory
+ * @param entry Entry
  * @returns Chapter instance
  */
-const resolveInstance = async (entry: string, fullPath: string) => {
-  // read introduction
-  const { title, intro, zIndex } = readIntroduction(fullPath);
+const resolveInstance = async (entry: string) => {
+  const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
 
-  const hasHTML = distributionFs.existsSync(join(fullPath, HTML_FILENAME));
-  const hasStylesheet = distributionFs.existsSync(join(fullPath, STYLESHEET_FILENAME));
-  const hasDescription = distributionFs.existsSync(join(fullPath, DESCRIPTION_FILENAME));
-  const hasPreviewImage = distributionFs.existsSync(join(fullPath, PREVIEW_IMAGE_FILENAME));
-  const libs = await collectLocalImports(fullPath);
+  // read introduction
+  const { title, intro, zIndex } = readIntroduction(entry);
+
+  const hasHTML = distributionFs.existsSync(join(entryFullPath, HTML_FILENAME));
+  const hasStylesheet = distributionFs.existsSync(join(entryFullPath, STYLESHEET_FILENAME));
+  const hasDescription = distributionFs.existsSync(join(entryFullPath, DESCRIPTION_FILENAME));
+  const hasPreviewImage = distributionFs.existsSync(join(entryFullPath, PREVIEW_IMAGE_FILENAME));
+  const libs = await collectLocalImports(entry);
 
   return {
     zIndex,
     type: ChapterDescriptorType.Instance,
-    entry,
+    entry: basename(entry),
     libs,
     title: title ?? entry,
     intro,
@@ -178,28 +181,35 @@ const resolveInstance = async (entry: string, fullPath: string) => {
 
 /**
  * Resolve chapter directory
- * @param entry Entry name
- * @param fullPath Full path of entry directory
- * @param isRoot Is root directory, if it is root directory, LIBS_DIRECTORY_NAME will be ignored
+ * @param entry Entry
+ * @param copyonlyDirectories Directories that only copy
  * @returns Chapter instance
  */
-const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean) => {
+const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
+  const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
+
   // read introduction
-  const { title, intro, zIndex } = readIntroduction(fullPath);
+  const { title, intro, zIndex } = readIntroduction(entry);
 
   // iterate entries and resolve
   const children: ChapterDescriptor[] = [];
-  for (const subentry of distributionFs.readdirSync(fullPath)) {
-    if (isRoot && subentry === LIBS_DIRECTORY_NAME) continue;
-    if (!distributionFs.lstatSync(join(fullPath, subentry)).isDirectory()) continue;
+  for (const subentry of distributionFs.readdirSync(entryFullPath)) {
+    // not resolve copyonly directories
+    const subentryRelativePath = join(entry, subentry);
+    if (copyonlyDirectories.some((path) => path === subentryRelativePath)) continue;
 
-    const isInstance = distributionFs.existsSync(join(fullPath, subentry, JAVASCRIPT_FILENAME));
+    // not resolve non-directory entries
+    const subentryFullPath = join(entryFullPath, subentry);
+    if (!distributionFs.lstatSync(subentryFullPath, { throwIfNoEntry: false })?.isDirectory())
+      continue;
 
+    // check if entry is instance
+    const isInstance = distributionFs.existsSync(join(subentryFullPath, JAVASCRIPT_FILENAME));
     let child: ChapterDescriptor;
     if (isInstance) {
-      child = await resolveInstance(subentry, join(fullPath, subentry));
+      child = await resolveInstance(subentryRelativePath);
     } else {
-      child = await resolveDirectory(subentry, join(fullPath, subentry), false);
+      child = await resolveDirectory(copyonlyDirectories, subentryRelativePath);
     }
 
     children.push(child);
@@ -228,7 +238,7 @@ const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean
   return {
     zIndex: zIndex,
     type: ChapterDescriptorType.Directory,
-    entry,
+    entry: basename(entry),
     children: sortedChildren,
     title: title ?? entry,
     intro,
@@ -237,17 +247,17 @@ const resolveDirectory = async (entry: string, fullPath: string, isRoot: boolean
 
 /**
  * Resolve prelude information.
+ * @param copyonlyDirectories Directories that only copy
  */
-export const resolvePrelude = async () => {
-  const descriptors = (await resolveDirectory("", resolvePath(DISTRIBUTION_DIRECTORY_PATH), true))
-    .children;
+export const resolvePrelude = async (copyonlyDirectories: string[]) => {
+  const descriptors = (await resolveDirectory(copyonlyDirectories)).children;
   const prelude: Prelude = {
     descriptors,
     imports,
   };
 
   distributionFs.writeFileSync(
-    join(DISTRIBUTION_DIRECTORY_PATH, INTRODUCTION_FILENAME),
+    join(DISTRIBUTION_DIRECTORY_PATH, DISTRIBUTION_PRELUDE_FILENAME),
     JSON.stringify(prelude),
     "utf-8"
   );
