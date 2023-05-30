@@ -5,6 +5,8 @@ import { basename } from "path";
 import { options } from "./args.js";
 import { resolvePrelude } from "./prelude.js";
 import { serve } from "./serve.js";
+import { log } from "./log.js";
+import chalk from "chalk";
 
 // Filesystem for source directory
 export const sourceFs = fs;
@@ -146,5 +148,7 @@ const copyDirectory = (copyonlyDirectories: string[]) => {
 if (options.serve) {
   await serve();
 } else {
+  log(chalk.greenBright("Start building..."));
   await build();
+  log(chalk.greenBright("Build finished"));
 }
