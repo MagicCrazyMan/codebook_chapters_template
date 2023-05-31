@@ -1,0 +1,1 @@
+Rotate arm1 with `←` and `→` keys and arm2 with `↑` and `↓` keys. (If not work, click canvas panel and retry)
