@@ -4,7 +4,7 @@ import chokidar from "chokidar";
 import { IncomingMessage, Server, ServerResponse } from "http";
 import Koa, { ParameterizedContext } from "koa";
 import mime from "mime-types";
-import { extname, join } from "path";
+import { extname, join, posix } from "path";
 import { PassThrough } from "stream";
 import { options } from "./args.js";
 import {
@@ -34,6 +34,8 @@ const BASE_URL = options.server_base_url.startsWith("/")
   : `/${options.server_base_url}`;
 // Server-Side Event path
 const SSE_PATH = "/sse";
+// Server-Side Event full path
+const SSE_FULL_PATH = posix.join(BASE_URL, SSE_PATH);
 
 /**
  * Sends SSE message
@@ -122,12 +124,11 @@ const createServer = () => {
   // dispatch requests
   koa.use(async (ctx, next) => {
     const path = ctx.path;
-    if (path.startsWith(BASE_URL)) {
-      if (path === join(BASE_URL, SSE_PATH)) {
-        await requestSSE(ctx, sseStreams);
-      } else {
-        await requestStatic(ctx);
-      }
+
+    if (path === SSE_FULL_PATH) {
+      await requestSSE(ctx, sseStreams);
+    } else if (path.startsWith(BASE_URL)) {
+      await requestStatic(ctx);
     } else {
       ctx.throw(404);
     }
