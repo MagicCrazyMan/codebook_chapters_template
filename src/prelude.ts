@@ -6,6 +6,7 @@ import {
   DISTRIBUTION_DIRECTORY_PATH,
   DISTRIBUTION_PRELUDE_FILENAME,
   HTML_FILENAME,
+  Hint,
   INTRODUCTION_FILENAME,
   JAVASCRIPT_FILENAME,
   PREVIEW_IMAGE_FILENAME,
@@ -247,9 +248,9 @@ const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
 
 /**
  * Resolve prelude information.
- * @param copyonlyDirectories Directories that only copy
+ * @param hint Hint information
  */
-export const resolvePrelude = async (copyonlyDirectories: string[]) => {
+export const resolvePrelude = async ({ copyonlyDirectories }: Hint) => {
   const descriptors = (await resolveDirectory(copyonlyDirectories)).children;
   const prelude: Prelude = {
     descriptors,

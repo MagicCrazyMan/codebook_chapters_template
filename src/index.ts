@@ -49,9 +49,9 @@ export const build = async () => {
   }
   distributionFs.mkdirSync(DISTRIBUTION_DIRECTORY_PATH);
 
-  const { copyonlyDirectories } = loadHint();
-  copyDirectory(copyonlyDirectories);
-  await resolvePrelude(copyonlyDirectories);
+  const hint = loadHint();
+  copyDirectory(hint);
+  await resolvePrelude(hint);
 };
 
 // Filenames that allow to copy outside limitless directories
@@ -67,7 +67,7 @@ export const COPYABLE_FILENAMES = [
 /**
  * Hint information
  */
-type Hint = {
+export type Hint = {
   copyonlyDirectories: string[];
 };
 
@@ -107,9 +107,9 @@ type Entry = {
 
 /**
  * Copies files from source directory to distribution directory
- * @param copyonlyDirectories Directories that only copy
+ * @param hint Hint information
  */
-const copyDirectory = (copyonlyDirectories: string[]) => {
+const copyDirectory = ({ copyonlyDirectories }: Hint) => {
   const entries: Entry[] = sourceFs.readdirSync(SOURCE_DIRECTORY_PATH).map(
     (entry) =>
       ({
