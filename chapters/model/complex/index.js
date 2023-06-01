@@ -247,11 +247,11 @@ class ModelRender {
 
   /**
    * Render current frame
-   * @param {number} time Current render time
+   * @param {number} renderTime Current render time
    * @param {boolean} updateView Recalculate view projection matrix
    * @returns
    */
-  render(time = this.lastRenderTime, updateView = false) {
+  render(renderTime = this.lastRenderTime, updateView = false) {
     if (!this.gl) return;
 
     if (!this.initialized) {
@@ -275,7 +275,7 @@ class ModelRender {
       const component = components.shift();
 
       const verticesBuffer = component.getVerticesBuffer(this.gl);
-      const modelMatrix = component.getModelMatrix(time, this.lastRenderTime);
+      const modelMatrix = component.getModelMatrix(renderTime, this.lastRenderTime);
 
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, verticesBuffer);
       this.gl.vertexAttribPointer(this.aPosition, 3, this.gl.FLOAT, false, 0, 0);
@@ -293,7 +293,7 @@ class ModelRender {
       components.push(...component.getChildrenComponents());
     }
 
-    this.lastRenderTime = time;
+    this.lastRenderTime = renderTime;
     requestAnimationFrame(this.render.bind(this));
   }
 }
