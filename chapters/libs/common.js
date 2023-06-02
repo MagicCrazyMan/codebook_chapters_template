@@ -171,6 +171,28 @@ export const getWebGLCoordinateFromEvent = (e, width, height) => {
 };
 
 /**
+ * Gets coordinate under canvas coordinate system from touch or mouse event
+ * @param {MouseEvent | TouchEvent} e Touch or mouse event
+ * @returns {[number, number]} Coordinate under canvas coordinate system
+ */
+export const getCanvasCoordinateFromEvent = (e) => {
+  let clientX, clientY;
+  if (e instanceof MouseEvent) {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  } else if (e instanceof TouchEvent) {
+    const item = e.touches.item(0);
+    if (!item) return;
+    clientX = item.clientX;
+    clientY = item.clientY;
+  } else {
+    throw new Error("Unsupported event type");
+  }
+
+  return [clientX, clientY];
+};
+
+/**
  * Creates and binds buffer to WebGL,
  * and enable buffer for each incoming attribute parameters
  * @param {WebGL2RenderingContext} gl WebGL2 context

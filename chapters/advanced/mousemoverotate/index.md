@@ -1,1 +1,1 @@
-Hold `LMB` on canvas panel, and move mouse to rotate the cube.
+Hold `LMB` or `Touch & Hold Screen` on canvas panel, and move mouse to rotate the cube.

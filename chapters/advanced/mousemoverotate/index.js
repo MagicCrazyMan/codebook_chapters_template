@@ -2,6 +2,7 @@ import { glMatrix, mat4, vec3 } from "gl-matrix";
 import {
   bindWebGLProgram,
   getCanvas,
+  getCanvasCoordinateFromEvent,
   getCanvasResizeObserver,
   getWebGLContext,
 } from "../../libs/common";
@@ -155,29 +156,44 @@ setProjMatrix();
  */
 const ANGLE_PER_PIXELS = glMatrix.toRadian(0.5);
 let dragging = false;
-let previousPosition = [];
+let previousPosition;
 const canvas = getCanvas();
-canvas.addEventListener("mousedown", ({ x, y }) => {
+const startDrag = (e) => {
+  const coordinate = getCanvasCoordinateFromEvent(e);
   dragging = true;
-  previousPosition[0] = x;
-  previousPosition[1] = y;
-});
-canvas.addEventListener("mouseup", () => {
+  previousPosition = coordinate;
+};
+const stopDrag = () => {
   dragging = false;
-  previousPosition.length = 0;
-});
-canvas.addEventListener("mousemove", ({ x, y }) => {
+  previousPosition = undefined;
+};
+const drag = (e) => {
   if (!dragging) return;
 
+  const position = getCanvasCoordinateFromEvent(e);
   const [ox, oy] = previousPosition;
-  mat4.rotateY(modelMatrix, modelMatrix, (x - ox) * ANGLE_PER_PIXELS);
-  mat4.rotateX(modelMatrix, modelMatrix, (y - oy) * ANGLE_PER_PIXELS);
+  mat4.rotateY(modelMatrix, modelMatrix, (position[0] - ox) * ANGLE_PER_PIXELS);
+  mat4.rotateX(modelMatrix, modelMatrix, (position[1] - oy) * ANGLE_PER_PIXELS);
 
-  previousPosition[0] = x;
-  previousPosition[1] = y;
+  previousPosition = position;
 
   setMvpMatrix();
   render();
+};
+canvas.addEventListener("mousedown", startDrag);
+canvas.addEventListener("mouseup", stopDrag);
+canvas.addEventListener("mousemove", drag);
+canvas.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  startDrag(e);
+});
+canvas.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  stopDrag(e);
+});
+canvas.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  drag(e);
 });
 
 const render = () => {
