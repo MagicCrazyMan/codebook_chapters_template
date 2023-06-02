@@ -1,0 +1,1 @@
+In this case, when we try to pick an object from WebGL, we tell WebGL program to draw everything in red color via `u_Clicked` uniform. After finishing draw, we read the color of the pixel at the mouse position. If the color is red, we know that the object is picked. Otherwise, the object is not picked.

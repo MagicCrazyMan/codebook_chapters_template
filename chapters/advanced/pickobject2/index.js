@@ -11,17 +11,12 @@ const vertexShader = `
   attribute vec4 a_Color;
 
   uniform mat4 u_MvpMatrix;
-  uniform bool u_Clicked;
 
   varying vec4 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    if (u_Clicked) {
-      v_Color = vec4(1.0, 0.0, 0.0, 1.0);
-    } else {
-      v_Color = a_Color;
-    }
+    v_Color = a_Color;
   }
 `;
 const fragmentShader = `
@@ -44,7 +39,6 @@ const program = bindWebGLProgram(gl, [
 ]);
 const aPosition = gl.getAttribLocation(program, "a_Position");
 const aColor = gl.getAttribLocation(program, "a_Color");
-const uClicked = gl.getUniformLocation(program, "u_Clicked");
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
 
 /**
@@ -141,20 +135,20 @@ const canvas = getCanvas();
 const pickLabel = document.getElementById("pickLabel");
 const pixels = new Uint8Array(4);
 const pick = ({ x, y }) => {
-  // set to clicked state and render
-  gl.uniform1i(uClicked, 1);
+  // Sets clear color to transparent and render
+  gl.clearColor(0.0, 0.0, 0.0, 0.0);
   render();
   // read pixel color at mouse position
   gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  // test whether pixel color is red
-  if (pixels[0] === 255 && pixels[1] === 0 && pixels[2] === 0 && pixels[3] === 255) {
+  // test whether pixel color is not completely transparent
+  if (pixels[0] !== 0 || pixels[1] !== 0 || pixels[2] !== 0 || pixels[3] !== 0) {
     pickLabel.innerText = "Picked A Cube";
   } else {
     pickLabel.innerText = "Not Picked Anything";
   }
 
   // reset and render
-  gl.uniform1i(uClicked, 0);
+  gl.clearColor(0.0, 0.0, 0.0, 0.0); 
   render();
 };
 canvas.addEventListener("click", pick);

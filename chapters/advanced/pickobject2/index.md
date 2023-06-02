@@ -1,0 +1,3 @@
+In this case, we use another way to test whether a cube is picked. We don't need to tell WebGL program to draw objects in any specified color, instead, we set `clearColor` of WebGL to transparent and then draw everything normally. After finishing draw, we still read the color of the pixel at the mouse position. If the color is not completely transparent, we know that the object is picked. Otherwise, the object is not picked.
+
+> You may notice that, we still use `gl.clearColor(0.0, 0.0, 0.0, 0.0)` after finishing picking test. It is because that i want to keep the background of the canvas always to be transparent to make the whole webpage elegant. In any other program, clear color can be any other color you want after finishing picking test.
