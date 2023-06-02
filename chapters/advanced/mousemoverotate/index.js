@@ -1,5 +1,10 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../libs/common";
+import {
+  bindWebGLProgram,
+  getCanvas,
+  getCanvasResizeObserver,
+  getWebGLContext,
+} from "../../libs/common";
 
 const vertexShader = `
   attribute vec4 a_Position;
@@ -123,25 +128,19 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
  * Setups model view projection matrix
  */
 const projMatrix = mat4.create();
-const viewMatrix = mat4.create();
+const viewMatrix = mat4.lookAt(
+  mat4.create(),
+  vec3.fromValues(5, 3, 5),
+  vec3.fromValues(0, 0, 0),
+  vec3.fromValues(0, 1, 0)
+);
 const modelMatrix = mat4.create();
 const mvpMatrix = mat4.create();
-const rotation = [0, 0, 0];
-const setMvpMatrix = () => {
+const setProjMatrix = () => {
   mat4.perspective(projMatrix, glMatrix.toRadian(30), gl.canvas.width / gl.canvas.height, 1, 100);
-  mat4.lookAt(
-    viewMatrix,
-    vec3.fromValues(5, 3, 5),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 1, 0)
-  );
-
-  const [x, y, z] = rotation;
-  mat4.identity(modelMatrix);
-  mat4.rotateX(modelMatrix, modelMatrix, x);
-  mat4.rotateY(modelMatrix, modelMatrix, y);
-  mat4.rotateZ(modelMatrix, modelMatrix, z);
-
+  setMvpMatrix();
+};
+const setMvpMatrix = () => {
   mat4.identity(mvpMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, projMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, viewMatrix);
@@ -149,7 +148,37 @@ const setMvpMatrix = () => {
 
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
-setMvpMatrix();
+setProjMatrix();
+
+/**
+ * Setups mouse move
+ */
+const ANGLE_PER_PIXELS = glMatrix.toRadian(0.5);
+let dragging = false;
+let previousPosition = [];
+const canvas = getCanvas();
+canvas.addEventListener("mousedown", ({ x, y }) => {
+  dragging = true;
+  previousPosition[0] = x;
+  previousPosition[1] = y;
+});
+canvas.addEventListener("mouseup", () => {
+  dragging = false;
+  previousPosition.length = 0;
+});
+canvas.addEventListener("mousemove", ({ x, y }) => {
+  if (!dragging) return;
+
+  const [ox, oy] = previousPosition;
+  mat4.rotateY(modelMatrix, modelMatrix, (x - ox) * ANGLE_PER_PIXELS);
+  mat4.rotateX(modelMatrix, modelMatrix, (y - oy) * ANGLE_PER_PIXELS);
+
+  previousPosition[0] = x;
+  previousPosition[1] = y;
+
+  setMvpMatrix();
+  render();
+});
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -158,6 +187,6 @@ const render = () => {
 render();
 
 getCanvasResizeObserver(() => {
-  setMvpMatrix();
+  setProjMatrix();
   render();
 });

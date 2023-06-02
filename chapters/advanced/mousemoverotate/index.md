@@ -1,0 +1,1 @@
+Hold `LMB` on canvas panel, and move mouse to rotate the cube.

@@ -61,8 +61,8 @@ const updatePoint = (e) => {
 
   render();
 };
-canvas.addEventListener("mousemove", updatePoint);
-canvas.addEventListener("touchmove", (e) => {
+document.addEventListener("mousemove", updatePoint);
+document.addEventListener("touchmove", (e) => {
   e.preventDefault(); // disable scroll event
   updatePoint(e);
 });
