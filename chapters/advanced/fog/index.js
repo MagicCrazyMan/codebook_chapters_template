@@ -121,9 +121,11 @@ const setFogDistance = () => {
 };
 fogStartInput.addEventListener("input", () => {
   setFogDistance();
+  render();
 });
 fogOffsetInput.addEventListener("input", () => {
   setFogDistance();
+  render();
 });
 setFogDistance();
 
@@ -157,10 +159,7 @@ setProjMatrix();
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
-
-  requestAnimationFrame(render);
 };
-requestAnimationFrame(render);
 
 getCanvasResizeObserver(() => {
   setProjMatrix();
