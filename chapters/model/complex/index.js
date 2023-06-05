@@ -32,9 +32,11 @@ class ModelRender {
    * @private
    */
   fragmentShaderSource = `
-      #ifdef GL_ES
-        precision mediump float;
-      #endif
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+      #else
+    precision mediump float;
+  #endif
     
       vec3 lightPosition = vec3(10.0, 25.0, 10.0);
       vec3 lightColor = vec3(1.0, 1.0, 1.0);
