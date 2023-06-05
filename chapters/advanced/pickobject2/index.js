@@ -139,7 +139,7 @@ const pick = ({ x, y }) => {
   gl.clearColor(0.0, 0.0, 0.0, 0.0);
   render();
   // read pixel color at mouse position
-  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
   // test whether pixel color is not completely transparent
   if (pixels[0] !== 0 || pixels[1] !== 0 || pixels[2] !== 0 || pixels[3] !== 0) {
     pickLabel.innerText = "Picked A Cube";
@@ -148,7 +148,7 @@ const pick = ({ x, y }) => {
   }
 
   // reset and render
-  gl.clearColor(0.0, 0.0, 0.0, 0.0); 
+  gl.clearColor(0.0, 0.0, 0.0, 0.0);
   render();
 };
 canvas.addEventListener("click", pick);
