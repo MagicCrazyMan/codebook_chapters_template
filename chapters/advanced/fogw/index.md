@@ -1,0 +1,1 @@
+In WebGL, `W` component of the transformed `gl_Position`(`ModelViewProjectionMatrix * VertexPosition`) actually refers to the distance from view(camera) to vertex position. Thus, it is possible to calculate fog factor using `W` component directly to reduce unnecessary computation. So in this chapter, we shows how to calculate fog factor using `W` component. 
