@@ -1,1 +1,3 @@
 In this case, when we try to pick an object from WebGL, we tell WebGL program to draw everything in red color via `u_Clicked` uniform. After finishing draw, we read the color of the pixel at the mouse position. If the color is red, we know that the object is picked. Otherwise, the object is not picked.
+
+> When using `gl.readPixels`, we need to flip the y coordinate of the mouse position since `x` and `y` parameters in `gl.readPixels` refer to lower-left corner of the canvas.

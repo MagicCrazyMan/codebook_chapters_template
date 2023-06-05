@@ -9,18 +9,21 @@ import {
 const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
+  attribute float a_Face;
 
   uniform mat4 u_MvpMatrix;
   uniform bool u_Clicked;
+  uniform int u_PickedFace;
 
   varying vec4 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     if (u_Clicked) {
-      v_Color = vec4(1.0, 0.0, 0.0, 1.0);
+      v_Color = vec4(a_Color.rgb, a_Face / 255.0);
     } else {
-      v_Color = a_Color;
+      // Display white color if face is picked
+      v_Color = (int(a_Face) == u_PickedFace) ? vec4(1.0) : a_Color;
     }
   }
 `;
@@ -44,8 +47,10 @@ const program = bindWebGLProgram(gl, [
 ]);
 const aPosition = gl.getAttribLocation(program, "a_Position");
 const aColor = gl.getAttribLocation(program, "a_Color");
-const uClicked = gl.getUniformLocation(program, "u_Clicked");
+const aFace = gl.getAttribLocation(program, "a_Face");
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
+const uPickedFace = gl.getUniformLocation(program, "u_PickedFace");
+const uClicked = gl.getUniformLocation(program, "u_Clicked");
 
 /**
  * Setups vertices and texture coords
@@ -79,12 +84,26 @@ const colors = new Float32Array([
   1.0, 1.0, 0.4,  1.0, 1.0, 0.4,  1.0, 1.0, 0.4,  1.0, 1.0, 0.4,  // v1-v6-v7-v2 left(yellow)
   1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  // v7-v4-v3-v2 bottom(white)
   0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0   // v4-v7-v6-v5 back(cyan)
-])
+]);
 const colorsBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
 gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aColor);
+// prettier-ignore
+const faces = new Uint8Array([
+  1, 1, 1, 1,  // v0-v1-v2-v3 front
+  2, 2, 2, 2,  // v0-v3-v4-v5 right
+  3, 3, 3, 3,  // v0-v5-v6-v1 up
+  4, 4, 4, 4,  // v1-v6-v7-v2 left
+  5, 5, 5, 5,  // v7-v4-v3-v2 bottom
+  6, 6, 6, 6   // v4-v7-v6-v5 back
+]);
+const facesBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, facesBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, faces, gl.STATIC_DRAW);
+gl.vertexAttribPointer(aFace, 1, gl.UNSIGNED_BYTE, false, 0, 0);
+gl.enableVertexAttribArray(aFace);
 // prettier-ignore
 const indices = new Uint8Array([
    0,  1,  2,  0,  2,  3,    // front
@@ -110,8 +129,8 @@ const viewMatrix = mat4.lookAt(
 );
 const modelMatrix = mat4.create();
 const mvpMatrix = mat4.create();
-let lastRenderTime = 0;
 const ANGLE_PER_SECOND = glMatrix.toRadian(20);
+let lastRenderTime = 0;
 const setModelMatrix = (renderTime = lastRenderTime) => {
   const offset = ANGLE_PER_SECOND * ((renderTime - lastRenderTime) / 1000);
   mat4.rotateY(modelMatrix, modelMatrix, offset);
@@ -144,23 +163,26 @@ const pick = ({ x, y }) => {
   // set to clicked state and render
   gl.uniform1i(uClicked, 1);
   render();
-  // read pixel color at mouse position
+
+  // read pixel color
   gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  // test whether pixel color is red
-  if (pixels[0] === 255 && pixels[1] === 0 && pixels[2] === 0 && pixels[3] === 255) {
-    pickLabel.innerText = "Picked A Cube";
+  console.log(pixels);
+  // get face index from alpha component of the pixel color
+  const face = pixels[3];
+  if (face !== 0) {
+    pickLabel.innerText = `Picked Cube Face ${face}`;
   } else {
     pickLabel.innerText = "Not Picked Anything";
   }
 
-  // reset and render
   gl.uniform1i(uClicked, 0);
+  gl.uniform1i(uPickedFace, face);
   render();
 };
 canvas.addEventListener("click", pick);
 
-const render = (time) => {
-  setModelMatrix(time);
+const render = (renderTime) => {
+  setModelMatrix(renderTime);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
