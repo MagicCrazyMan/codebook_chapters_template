@@ -28,8 +28,10 @@ const vertexShader = `
   }
 `;
 const fragmentShader = `
-  #ifdef GL_ES
-    precision mediump float; 
+  #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float; 
+  #else
+    precision mediump float;
   #endif
 
   varying vec4 v_Color;
@@ -166,7 +168,6 @@ const pick = ({ x, y }) => {
 
   // read pixel color
   gl.readPixels(x, gl.canvas.height - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  console.log(pixels);
   // get face index from alpha component of the pixel color
   const face = pixels[3];
   if (face !== 0) {

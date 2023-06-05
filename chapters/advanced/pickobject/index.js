@@ -25,8 +25,10 @@ const vertexShader = `
   }
 `;
 const fragmentShader = `
-  #ifdef GL_ES
-    precision mediump float; 
+  #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float; 
+  #else
+    precision mediump float;
   #endif
 
   varying vec4 v_Color;

@@ -31,7 +31,9 @@ const initLeft = () => {
   }
 `;
   const fragmentShader = `
-  #ifdef GL_ES
+  #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+  #else
     precision mediump float;
   #endif
 
@@ -61,7 +63,7 @@ const initRight = () => {
   }
 `;
   const fragmentShader = `
-  precision mediump float;
+  precision highp float;
   varying vec4 v_Color;
   void main() {
     gl_FragColor = v_Color;
