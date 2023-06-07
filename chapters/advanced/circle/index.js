@@ -81,7 +81,7 @@ const projMatrix = mat4.create();
 const mvpMatrix = mat4.create();
 const setProjMatrix = () => {
   const aspect = gl.canvas.width / gl.canvas.height;
-  mat4.ortho(projMatrix, -1, 1, -aspect, aspect, 1, 100);
+  mat4.ortho(projMatrix, -aspect, aspect, -1, 1, 1, 100);
   setMvpMatrix();
 };
 const setMvpMatrix = () => {
