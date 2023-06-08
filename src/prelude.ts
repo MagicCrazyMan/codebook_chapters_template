@@ -1,6 +1,5 @@
 import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
 import parseImports from "parse-imports";
-import imports from "./imports.json" assert { type: "json" };
 import {
   DESCRIPTION_FILENAME,
   DISTRIBUTION_DIRECTORY_PATH,
@@ -182,11 +181,11 @@ const resolveInstance = async (entry: string) => {
 
 /**
  * Resolve chapter directory
- * @param entry Entry
- * @param copyonlyDirectories Directories that only copy
+ * @param entry Entry, relative path
+ * @param noResolves Directories that only copy
  * @returns Chapter instance
  */
-const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
+const resolveDirectory = async (noResolves: string[], entry = "") => {
   const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
 
   // read introduction
@@ -195,12 +194,11 @@ const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
   // iterate entries and resolve
   const children: ChapterDescriptor[] = [];
   for (const subentry of distributionFs.readdirSync(entryFullPath)) {
-    // not resolve copyonly directories
-    const subentryRelativePath = join(entry, subentry);
-    if (copyonlyDirectories.some((path) => path === subentryRelativePath)) continue;
+    // not resolve directories
+    const subentryFullPath = join(entryFullPath, subentry);
+    if (noResolves.some((path) => subentryFullPath.startsWith(path))) continue;
 
     // not resolve non-directory entries
-    const subentryFullPath = join(entryFullPath, subentry);
     if (!distributionFs.lstatSync(subentryFullPath, { throwIfNoEntry: false })?.isDirectory())
       continue;
 
@@ -208,9 +206,9 @@ const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
     const isInstance = distributionFs.existsSync(join(subentryFullPath, JAVASCRIPT_FILENAME));
     let child: ChapterDescriptor;
     if (isInstance) {
-      child = await resolveInstance(subentryRelativePath);
+      child = await resolveInstance(join(entry, subentry));
     } else {
-      child = await resolveDirectory(copyonlyDirectories, subentryRelativePath);
+      child = await resolveDirectory(noResolves, join(entry, subentry));
     }
 
     children.push(child);
@@ -250,8 +248,8 @@ const resolveDirectory = async (copyonlyDirectories: string[], entry = "") => {
  * Resolve prelude information.
  * @param hint Hint information
  */
-export const resolvePrelude = async ({ copyonlyDirectories }: Hint) => {
-  const descriptors = (await resolveDirectory(copyonlyDirectories)).children;
+export const resolvePrelude = async ({ noResolvesInDistribution, imports }: Hint) => {
+  const descriptors = (await resolveDirectory(noResolvesInDistribution)).children;
   const prelude: Prelude = {
     descriptors,
     imports,

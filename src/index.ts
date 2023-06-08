@@ -21,6 +21,7 @@ const MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH = "/dist";
 export const DISTRIBUTION_DIRECTORY_PATH = options.serve
   ? MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH
   : resolve(options.dist);
+
 // Source directory hint JSON filename
 export const HINT_FILENAME = "index.json";
 // Javascript filename
@@ -50,7 +51,7 @@ export const build = async () => {
   distributionFs.mkdirSync(DISTRIBUTION_DIRECTORY_PATH);
 
   const hint = loadHint();
-  copyDirectory(hint);
+  copyChapters(hint);
   await resolvePrelude(hint);
 };
 
@@ -64,11 +65,9 @@ export const COPYABLE_FILENAMES = [
   PREVIEW_IMAGE_FILENAME,
 ];
 
-/**
- * Hint information
- */
-export type Hint = {
-  copyonlyDirectories: string[];
+type RawHint = {
+  noResolves?: string[];
+  imports?: Record<string, string>;
 };
 
 /**
@@ -77,8 +76,18 @@ export type Hint = {
  */
 const getDefaultHint = () =>
   ({
-    copyonlyDirectories: [],
-  } as Hint);
+    noResolves: [],
+    imports: {},
+  } as Required<RawHint>);
+
+/**
+ * Hint information
+ */
+export type Hint = {
+  noResolvesInSource: string[];
+  noResolvesInDistribution: string[];
+  imports: Record<string, string>;
+};
 
 /**
  * Gets hint information from source directory,
@@ -86,47 +95,43 @@ const getDefaultHint = () =>
  * @returns Hint information
  */
 const loadHint = () => {
+  const rawHint = getDefaultHint();
+
   const hintFilePath = join(SOURCE_DIRECTORY_PATH, HINT_FILENAME);
-  if (!sourceFs.lstatSync(hintFilePath, { throwIfNoEntry: false })?.isFile()) {
-    return getDefaultHint();
+  if (sourceFs.lstatSync(hintFilePath, { throwIfNoEntry: false })?.isFile()) {
+    Object.assign(rawHint, JSON.parse(sourceFs.readFileSync(hintFilePath, "utf-8")) as RawHint);
   }
 
-  let hint = JSON.parse(sourceFs.readFileSync(hintFilePath, "utf-8")) as Hint;
-  hint = {
-    ...getDefaultHint(),
-    ...hint,
-  };
+  const hint = {
+    noResolvesInSource: rawHint.noResolves.map((path) => join(SOURCE_DIRECTORY_PATH, path)),
+    noResolvesInDistribution: rawHint.noResolves.map((path) =>
+      join(DISTRIBUTION_DIRECTORY_PATH, path)
+    ),
+    imports: rawHint.imports,
+  } as Hint;
 
   return hint;
 };
 
-type Entry = {
-  entry: string;
-  copyonly: boolean;
-};
-
 /**
- * Copies files from source directory to distribution directory
+ * Copies chapter files from source directory to distribution directory
  * @param hint Hint information
  */
-const copyDirectory = ({ copyonlyDirectories }: Hint) => {
-  const entries: Entry[] = sourceFs.readdirSync(SOURCE_DIRECTORY_PATH).map(
-    (entry) =>
-      ({
-        entry,
-        copyonly: copyonlyDirectories.some((path) => entry === path),
-      } as Entry)
-  );
+const copyChapters = ({ noResolvesInSource }: Hint) => {
+  const entries = sourceFs.readdirSync(SOURCE_DIRECTORY_PATH);
+
   while (entries.length !== 0) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const { entry, copyonly } = entries.shift()!;
+    const entry = entries.shift()!;
 
     const sourcePath = join(SOURCE_DIRECTORY_PATH, entry);
     const destPath = join(DISTRIBUTION_DIRECTORY_PATH, entry);
 
+    const noResolve = noResolvesInSource.some((path) => sourcePath.startsWith(path));
+
     const stat = sourceFs.lstatSync(sourcePath);
     if (stat.isFile()) {
-      if (copyonly || COPYABLE_FILENAMES.includes(basename(entry))) {
+      if (noResolve || COPYABLE_FILENAMES.includes(basename(entry))) {
         distributionFs.writeFileSync(destPath, sourceFs.readFileSync(sourcePath));
       }
     } else if (stat.isDirectory()) {
@@ -135,11 +140,7 @@ const copyDirectory = ({ copyonlyDirectories }: Hint) => {
       }
 
       for (const subentry of sourceFs.readdirSync(sourcePath)) {
-        const e = join(entry, subentry);
-        entries.push({
-          entry: e,
-          copyonly: copyonly || copyonlyDirectories.some((path) => e === path),
-        });
+        entries.push(join(entry, subentry));
       }
     }
   }
