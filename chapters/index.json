@@ -1,6 +1,9 @@
 {
-  "copyonlyDirectories": [
+  "noResolves": [
     "libs",
     "resources"
-  ]
+  ],
+  "imports": {
+    "gl-matrix": "https://unpkg.com/gl-matrix@3.4.3/esm/index.js"
+  }
 }
