@@ -71,7 +71,7 @@ gl.bufferData(
      0.75,  1.0, -4.0,
      1.25, -1.0, -4.0,
      0.25, -1.0, -4.0,
-     // triangle left 0 color, green
+     // triangle left 0 color, blue
      0.4, 0.4, 1.0,
      0.4, 0.4, 1.0,
      1.0, 0.4, 0.4,
@@ -79,11 +79,11 @@ gl.bufferData(
      1.0, 1.0, 0.4,
      1.0, 1.0, 0.4,
      1.0, 0.4, 0.4,
-     // triangle left 2 color, blue
+     // triangle left 2 color, green
      0.4, 1.0, 0.4,
      0.4, 1.0, 0.4,
      1.0, 0.4, 0.4,
-     // triangle right 0 color, green
+     // triangle right 0 color, blue
      0.4, 0.4, 1.0,
      0.4, 0.4, 1.0,
      1.0, 0.4, 0.4,
@@ -91,7 +91,7 @@ gl.bufferData(
      1.0, 1.0, 0.4,
      1.0, 1.0, 0.4,
      1.0, 0.4, 0.4,
-     // triangle right 2 color, blue
+     // triangle right 2 color, green
      0.4, 1.0, 0.4,
      0.4, 1.0, 0.4,
      1.0, 0.4, 0.4,
