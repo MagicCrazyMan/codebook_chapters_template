@@ -7,7 +7,7 @@ import {
   getWebGLContext,
 } from "../../libs/common";
 
-class WebGLProgrammer {
+class WebGLProgram {
   /**@type {string} */
   vertexShader;
   /**@type {string} */
@@ -199,17 +199,17 @@ class Geometry {
 }
 
 class PerspectiveCamera {
-  /**@private */
+  /**@readonly */
   position = vec3.create();
-  /**@private */
+  /**@readonly */
   lookAt = vec3.create();
-  /**@private */
+  /**@readonly */
   fovy = 0;
-  /**@private */
+  /**@readonly */
   aspect = 0;
-  /**@private */
+  /**@readonly */
   near = 0;
-  /**@private */
+  /**@readonly */
   far = 0;
 
   /**@private */
@@ -279,7 +279,7 @@ class PerspectiveCamera {
   }
 }
 
-class ShadowMapRender extends WebGLProgrammer {
+class ShadowMapRender extends WebGLProgram {
   vertexShader = `
     attribute vec4 a_Position;
     uniform mat4 u_MvpMatrix;
@@ -312,6 +312,7 @@ class ShadowMapRender extends WebGLProgrammer {
    */
   framebuffer;
   /**
+   * Shadow map is in square shape
    * @private
    * @type {WebGLTexture | undefined}
    */
@@ -323,49 +324,61 @@ class ShadowMapRender extends WebGLProgrammer {
   renderbuffer;
 
   /**
+   * @type {vec3}
+   * @readonly
+   */
+  lightPosition = vec3.create();
+  /**
+   * @type {number}
+   * @readonly
+   */
+  shadowMapLength = 0;
+  /**
    * @type {PerspectiveCamera | undefined}
    * @readonly
    */
-  lightCamera;
-  /**
-   * @type {number | undefined}
-   * @readonly
-   */
-  bufferWidth;
-  /**
-   * @type {number | undefined}
-   * @readonly
-   */
-  bufferHeight;
+  shadowCamera;
 
   /**
    *
-   * @param {PerspectiveCamera} lightCamera
-   * @param {number} [bufferWidth]
-   * @param {number} [bufferHeight]
+   * @param {vec3} lightPosition
    */
-  constructor(lightCamera, bufferWidth, bufferHeight) {
+  constructor(lightPosition) {
     super();
-    this.lightCamera = lightCamera;
-    this.bufferWidth = bufferWidth;
-    this.bufferHeight = bufferHeight;
+    this.lightPosition.set(lightPosition);
   }
 
   /**
-   *
    * @param {WebGLRenderingContext} gl
+   * @param {PerspectiveCamera} camera
    */
-  prepare(gl) {
-    if (!this.shadowMap) {
-      this.shadowMap = gl.createTexture();
+  init(gl, camera) {
+    this.shadowMapLength = Math.max(gl.canvas.width, gl.canvas.height) * 2;
 
+    // init light camera
+    {
+      this.shadowCamera = new PerspectiveCamera(
+        this.lightPosition,
+        camera.lookAt,
+        glMatrix.toRadian(70),
+        1,
+        1,
+        200
+      );
+    }
+
+    // init texture for storing depth information
+    {
+      if (this.shadowMap) gl.deleteTexture(this.shadowMap);
+
+      this.shadowMap = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, this.shadowMap);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
         gl.RGBA,
-        this.bufferWidth ?? gl.canvas.width,
-        this.bufferHeight ?? gl.canvas.height,
+        this.shadowMapLength,
+        this.shadowMapLength,
         0,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
@@ -373,19 +386,24 @@ class ShadowMapRender extends WebGLProgrammer {
       );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
-    if (!this.renderbuffer) {
-      this.renderbuffer = gl.createRenderbuffer();
 
+    // init render buffer
+    {
+      if (this.renderbuffer) gl.deleteRenderbuffer(this.renderbuffer);
+
+      this.renderbuffer = gl.createRenderbuffer();
       gl.bindRenderbuffer(gl.RENDERBUFFER, this.renderbuffer);
       gl.renderbufferStorage(
         gl.RENDERBUFFER,
         gl.DEPTH_COMPONENT16,
-        this.bufferWidth ?? gl.canvas.width,
-        this.bufferHeight ?? gl.canvas.height
+        this.shadowMapLength,
+        this.shadowMapLength
       );
     }
-    if (!this.framebuffer) {
-      this.framebuffer = gl.createFramebuffer();
+
+    // init frame buffer
+    {
+      if (!this.framebuffer) this.framebuffer = gl.createFramebuffer();
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
       gl.framebufferTexture2D(
@@ -402,29 +420,35 @@ class ShadowMapRender extends WebGLProgrammer {
         this.renderbuffer
       );
     }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
   }
 
   /**
    *
    * @param {WebGLRenderingContext} gl
-   * @param {PerspectiveCamera} camera
    * @param {Geometry[]} geometries
    */
   render(gl, geometries) {
-    this.prepare(gl);
+    gl.useProgram(this.getProgram(gl));
 
     // bind framebuffer
-    gl.useProgram(this.getProgram(gl));
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.framebuffer);
 
-    gl.viewport(0, 0, this.bufferWidth, this.bufferHeight);
+    gl.viewport(0, 0, this.shadowMapLength, this.shadowMapLength);
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const mvpMatrixTemp = mat4.create();
     geometries.forEach((geometry) => {
       mat4.identity(mvpMatrixTemp);
-      mat4.multiply(mvpMatrixTemp, this.lightCamera.getViewProjMatrix(), geometry.getModelMatrix());
+      mat4.multiply(
+        mvpMatrixTemp,
+        this.shadowCamera.getViewProjMatrix(),
+        geometry.getModelMatrix()
+      );
       gl.uniformMatrix4fv(this.uniformLocations["u_MvpMatrix"], false, mvpMatrixTemp);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getVerticesBuffer(gl));
@@ -436,18 +460,19 @@ class ShadowMapRender extends WebGLProgrammer {
 
     // unbind framebuffer after finishing rendering
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.useProgram(null);
   }
 
   getShadowMap() {
     return this.shadowMap;
   }
 
-  getLightCamera() {
-    return this.lightCamera;
+  getShadowCamera() {
+    return this.shadowCamera;
   }
 }
 
-class ShadowRender extends WebGLProgrammer {
+class SceneRender extends WebGLProgram {
   vertexShader = `
     attribute vec4 a_Position;
     attribute vec4 a_Color;
@@ -479,7 +504,7 @@ class ShadowRender extends WebGLProgrammer {
       float depth = dot(rgbaDepth, bitShift);
       return depth;
     }
-  
+
     void main() {
       vec3 shadowCoord = (v_PositionFromLight.xyz / v_PositionFromLight.w) / 2.0 + 0.5;
       vec4 rgbaDepth = texture2D(u_ShadowMap, shadowCoord.xy);
@@ -497,9 +522,9 @@ class ShadowRender extends WebGLProgrammer {
    * @param {PerspectiveCamera} camera
    * @param {Geometry[]} geometries
    * @param {WebGLTexture} shadowMap
-   * @param {PerspectiveCamera} lightCamera
+   * @param {PerspectiveCamera} shadowCamera
    */
-  render(gl, camera, geometries, shadowMap, lightCamera) {
+  render(gl, camera, geometries, shadowMap, shadowCamera) {
     gl.useProgram(this.getProgram(gl));
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -522,7 +547,7 @@ class ShadowRender extends WebGLProgrammer {
       mat4.multiply(
         mvpMatrixFromLightTemp,
         mvpMatrixFromLightTemp,
-        lightCamera.getViewProjMatrix()
+        shadowCamera.getViewProjMatrix()
       );
       mat4.multiply(mvpMatrixFromLightTemp, mvpMatrixFromLightTemp, geometry.getModelMatrix());
       gl.uniformMatrix4fv(
@@ -543,6 +568,7 @@ class ShadowRender extends WebGLProgrammer {
     });
 
     gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.useProgram(null);
   }
 }
 
@@ -662,24 +688,9 @@ class Triangle extends Geometry {
 const gl = getWebGLContext();
 gl.enable(gl.DEPTH_TEST);
 
-const OFFSCREEN_WIDTH = 2048;
-const OFFSCREEN_HEIGHT = 2048;
-const shadowMapRender = new ShadowMapRender(
-  new PerspectiveCamera(
-    vec3.fromValues(0.0, 40.0, 2.0),
-    vec3.fromValues(0.0, 0.0, 0.0),
-    glMatrix.toRadian(70),
-    OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT,
-    1,
-    100
-  ),
-  OFFSCREEN_WIDTH,
-  OFFSCREEN_HEIGHT
-);
-const shadowRender = new ShadowRender();
 const camera = new PerspectiveCamera(
   vec3.fromValues(0.0, 7.0, 9.0),
-  vec3.fromValues(0.0, 0.0, 0.0),
+  vec3.fromValues(0.5, 0.5, 0),
   glMatrix.toRadian(45),
   gl.canvas.width / gl.canvas.height,
   1,
@@ -693,6 +704,10 @@ const dps = 30; // rotation degrees per second
 let lastRenderTime = 0;
 const geometries = [plane, triangle];
 
+const shadowMapRender = new ShadowMapRender(vec3.fromValues(0.0, 40.0, 2.0));
+shadowMapRender.init(gl, camera);
+const sceneRender = new SceneRender();
+
 const render = (renderTime) => {
   // update triangle rotation
   const rotation = ((renderTime / 1000) * dps) % 360;
@@ -702,9 +717,9 @@ const render = (renderTime) => {
   // render shadow map first
   shadowMapRender.render(gl, geometries);
   const shadowMap = shadowMapRender.getShadowMap();
-  const lightCamera = shadowMapRender.getLightCamera();
-  // render shadow
-  shadowRender.render(gl, camera, geometries, shadowMap, lightCamera);
+  const shadowCamera = shadowMapRender.getShadowCamera();
+  // render
+  sceneRender.render(gl, camera, geometries, shadowMap, shadowCamera);
 
   lastRenderTime = renderTime;
 
@@ -715,5 +730,6 @@ render(0);
 getCanvasResizeObserver(() => {
   camera.setPerspective(glMatrix.toRadian(45), gl.canvas.width / gl.canvas.height, 1, 100);
   camera.updateViewProjectMatrix();
+  shadowMapRender.init(gl, camera);
   render(lastRenderTime);
 });
