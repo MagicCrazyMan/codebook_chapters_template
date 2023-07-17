@@ -3,9 +3,25 @@ import { vec3 } from "gl-matrix";
 
 class OBJFace {
   /**
+   * @type {Uint32Array[]}
+   */
+  flattenIndices;
+  /**
+   * @type {number}
+   */
+  indicesLength;
+  /**
+   * @type {boolean}
+   */
+  hasTexture;
+  /**
    * @type {string | null}
    */
-  objectName = null;
+  material;
+  /**
+   * @type {string | null}
+   */
+  objectName;
   /**
    * @type {string[]}
    */
@@ -13,60 +29,73 @@ class OBJFace {
   /**
    * @type {false | number}
    */
-  smoothing = false;
-  /**
-   * @type {string | null}
-   */
-  material = null;
-  /**
-   * @type {number[]}
-   */
-  vIndices = [];
-  /**
-   * @type {number[]}
-   */
-  vnIndices = [];
-  /**
-   * @type {number[] | null}
-   */
-  vtIndices = null;
+  smoothing;
+
+  constructor(
+    flattenIndices,
+    indicesLength,
+    hasTexture,
+    material = null,
+    objectName = null,
+    groupNames = [],
+    smoothing = false
+  ) {
+    this.flattenIndices = flattenIndices;
+    this.indicesLength = indicesLength;
+    this.hasTexture = hasTexture;
+    this.material = material;
+    this.objectName = objectName;
+    this.groupNames = groupNames;
+    this.smoothing = smoothing;
+  }
 }
 
 class OBJInstance {
   /**
-   * Flatten geometric vertices values,
-   * each vertex contains 4 components: x, y, z and w
+   * Flatten values including v, vn, vt and vp in ordered.
    * @type {number[]}
    */
-  geometricVertices = [];
+  flatten;
   /**
-   * Flatten texture vertices values,
-   * each vertex contains 3 components: u, v and w
-   * @type {number[]}
+   * Length of geometric vertices
+   * @type {number}
    */
-  textureVertices = [];
+  vLength;
   /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {number[]}
+   * Length of normal vertices
+   * @type {number}
    */
-  normalVertices = [];
+  vnLength;
   /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {number[]}
+   * Length of texture vertices
+   * @type {number}
    */
-  parameterVertices = [];
+  vtLength;
+  /**
+   * Length of parameter spaces vertices
+   * @type {number}
+   */
+  vpLength;
   /**
    * Map of all materials
    * @type {Map<string, MTLBasicMaterial>}
    */
-  materials = new Map();
+  materials;
   /**
    * List of geometries.
    * @type {OBJFace[]}
    */
-  geometries = [];
+  geometries;
+
+  constructor(flatten, vLength, vnLength, vtLength, vpLength, geometries, materials) {
+    this.flatten = flatten;
+    this.vLength = vLength;
+    this.vnLength = vnLength;
+    this.vtLength = vtLength;
+    this.vpLength = vpLength;
+    this.materials = materials;
+    this.geometries = geometries;
+  }
 }
 
 class CommonTokenizer {
@@ -308,13 +337,31 @@ class OBJTokenizer extends CommonTokenizer {
       });
     });
 
-    const result = new OBJInstance();
-    result.geometricVertices = this.geometricVertices;
-    result.textureVertices = this.textureVertices;
-    result.normalVertices = this.normalVertices;
-    result.parameterVertices = this.parameterVertices;
-    result.materials = parsedMaterials;
-    result.geometries = this.geometries;
+    // collect all numerical values into ArrayBuffer
+    const flatten = new Float32Array(
+      this.geometricVertices.length +
+        this.normalVertices.length +
+        this.textureVertices.length +
+        this.parameterVertices.length
+    );
+    flatten.set(this.geometricVertices, 0);
+    flatten.set(this.normalVertices, this.geometricVertices.length);
+    flatten.set(this.textureVertices, this.geometricVertices.length + this.normalVertices.length);
+    flatten.set(
+      this.parameterVertices,
+      this.geometricVertices.length + this.normalVertices.length + this.textureVertices.length
+    );
+
+    const result = new OBJInstance(
+      flatten,
+      this.geometricVertices.length / 4,
+      this.normalVertices.length / 3,
+      this.textureVertices.length / 3,
+      this.parameterVertices.length / 3,
+      this.geometries,
+      parsedMaterials
+    );
+
     this.result = result;
     return this.result;
   }
@@ -697,7 +744,7 @@ class OBJTokenizer extends CommonTokenizer {
           vec3.cross(tempVec2, tempVec0, tempVec1);
           vec3.normalize(tempVec2, tempVec2);
 
-          const index = this.normalVertices.length / 3;
+          const index = (this.normalVertices.length / 3) + 1;
           this.normalVertices.push(tempVec2[0], tempVec2[1], tempVec2[2]);
           this.normalIndexOffset++;
           nvnIndices.push(index, index, index);
@@ -705,18 +752,24 @@ class OBJTokenizer extends CommonTokenizer {
       }
 
       vIndices = nvIndices;
-      vtIndices = nvtIndices;
       vnIndices = nvnIndices;
+      vtIndices = nvtIndices;
     }
 
-    const face = new OBJFace();
-    face.objectName = this.activatingObjectName;
-    face.groupNames = this.activatingGroupNames;
-    face.smoothing = this.activatingSmoothing;
-    face.material = this.activatingMaterial;
-    face.vIndices = vIndices;
-    face.vnIndices = vnIndices;
-    face.vtIndices = vtIndices.length === 0 ? null : vtIndices;
+    // collect all indices into ArrayBuffer
+    const flattenIndices = new Uint32Array(vIndices.length + vnIndices.length + vtIndices.length);
+    flattenIndices.set(vIndices, 0);
+    flattenIndices.set(vnIndices, vIndices.length);
+    flattenIndices.set(vtIndices, vIndices.length + vnIndices.length);
+    const face = new OBJFace(
+      flattenIndices,
+      vIndices.length / 3,
+      vtIndices.length !== 0,
+      this.activatingMaterial,
+      this.activatingObjectName,
+      this.activatingGroupNames,
+      this.activatingSmoothing
+    );
     this.geometries.push(face);
   }
 }
