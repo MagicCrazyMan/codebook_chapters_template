@@ -324,6 +324,9 @@ class OBJTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   async parse() {
+    this.line = 0;
+    this.index = 0;
+
     this.geometricVertices = [];
     this.textureVertices = [];
     this.normalVertices = [];
@@ -802,15 +805,15 @@ class OBJTokenizer extends CommonTokenizer {
           let pz2 = this.geometricVertices[vIndex2 * 4 + 2];
           const pw2 = this.geometricVertices[vIndex2 * 4 + 3];
 
-          px0 = px0 / pw0
-          py0 = py0 / pw0
-          pz0 = pz0 / pw0
-          px1 = px1 / pw1
-          py1 = py1 / pw1
-          pz1 = pz1 / pw1
-          px2 = px2 / pw2
-          py2 = py2 / pw2
-          pz2 = pz2 / pw2
+          px0 = px0 / pw0;
+          py0 = py0 / pw0;
+          pz0 = pz0 / pw0;
+          px1 = px1 / pw1;
+          py1 = py1 / pw1;
+          pz1 = pz1 / pw1;
+          px2 = px2 / pw2;
+          py2 = py2 / pw2;
+          pz2 = pz2 / pw2;
 
           vec3.set(tempVec0, px1 - px0, py1 - py0, pz1 - pz0);
           vec3.set(tempVec1, px2 - px1, py2 - py1, pz2 - pz1);
@@ -932,9 +935,11 @@ class MTLTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   parse() {
-    if (this.materials) return this.materials;
-
+    this.line = 0;
+    this.index = 0;
     this.materials = new Map();
+    this.activatingMaterial = null;
+
     for (;;) {
       const [tokenType, eol, eof] = this.nextToken();
       if (eof) break;
