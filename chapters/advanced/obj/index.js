@@ -1,44 +1,19 @@
 import { getCanvasResizeObserver } from "../../libs/common";
-import { vec3, vec4 } from "gl-matrix";
+import { vec3 } from "gl-matrix";
 
-class OBJObject {
-  /**@type {Map<string, OBJGroup>} */
-  groups = new Map();
-}
-
-class OBJGroup {
+class OBJFace {
+  /**
+   * @type {string | null}
+   */
+  objectName = null;
+  /**
+   * @type {string[]}
+   */
+  groupNames;
   /**
    * @type {false | number}
    */
   smoothing = false;
-  /**
-   * @type {OBJFace[]}
-   */
-  geometries = [];
-}
-
-class OBJNormalIndex {
-  /**
-   * @type {0 | 1} index source
-   */
-  source;
-  /**
-   * @type {number} index
-   */
-  index;
-
-  /**
-   *
-   * @param {0 | 1} source index source
-   * @param {number} index index number
-   */
-  constructor(source, index) {
-    this.source = source;
-    this.index = index;
-  }
-}
-
-class OBJFace {
   /**
    * @type {string | null}
    */
@@ -55,20 +30,6 @@ class OBJFace {
    * @type {number[] | null}
    */
   vtIndices = null;
-
-  /**
-   *
-   * @param {number[]} vIndices
-   * @param {OBJNormalIndex[]} vnIndices
-   * @param {number[] | null} [vtIndices]
-   * @param {string | null} [material]
-   */
-  constructor(vIndices, vnIndices, vtIndices = null, material = null) {
-    this.vIndices = vIndices;
-    this.vnIndices = vnIndices;
-    this.vtIndices = vtIndices;
-    this.material = material;
-  }
 }
 
 class OBJInstance {
@@ -98,45 +59,14 @@ class OBJInstance {
   parameterVertices = [];
   /**
    * Map of all materials
-   * @type {Map<string, MTLMaterial>}
+   * @type {Map<string, MTLBasicMaterial>}
    */
-  mtls = new Map();
+  materials = new Map();
   /**
-   * Tree view of grouped objects.
-   *
-   * DO NOT render objects using this field.
-   * Geometries may duplicated if
-   * `.obj` file defines multiple group name in one `g` statement
-   * or reuse group name in different `g` statement.
-   * @type {Map<string, OBJObject>}
+   * List of geometries.
+   * @type {OBJFace[]}
    */
-  objects = new Map();
-  /**
-   * Standalone grouped objects of the whole file.
-   *
-   * Render objects using this field.
-   * All objects in this field never duplicated.
-   * @type {OBJGroup[]}
-   */
-  groups = [];
-
-  constructor(
-    geometricVertices,
-    textureVertices,
-    normalVertices,
-    parameterVertices,
-    mtls,
-    objects,
-    groups
-  ) {
-    this.geometricVertices = geometricVertices;
-    this.textureVertices = textureVertices;
-    this.normalVertices = normalVertices;
-    this.parameterVertices = parameterVertices;
-    this.mtls = mtls;
-    this.objects = objects;
-    this.groups = groups;
-  }
+  geometries = [];
 }
 
 class CommonTokenizer {
@@ -269,20 +199,12 @@ class OBJTokenizer extends CommonTokenizer {
    * @type {string[]}
    * @private
    */
-  mtls;
+  materials;
   /**
-   * Tree view of grouped objects.
-   * @type {Map<string, OBJObject>}
+   * List of geometries.
+   * @type {OBJFace[]}
    */
-  objects = new Map();
-  /**
-   * Standalone grouped objects of the whole file.
-   *
-   * Render objects using this field.
-   * All objects in this field never duplicated.
-   * @type {OBJGroup[]}
-   */
-  groups = [];
+  geometries = [];
 
   /**
    * @type {Options}
@@ -291,20 +213,25 @@ class OBJTokenizer extends CommonTokenizer {
   options;
 
   /**
-   * @type {OBJObject | null}
+   * @type {string | null}
    * @private
    */
-  activatingObject = null;
+  activatingObjectName = null;
   /**
-   * @type {Set<OBJGroup> | null}
+   * @type {string[]}
    * @private
    */
-  activatingGroups = null;
+  activatingGroupNames = ["default"];
   /**
    * @type {string | null}
    * @private
    */
   activatingMaterial = null;
+  /**
+   * @type {boolean}
+   * @private
+   */
+  activatingSmoothing = false;
 
   /**
    * @type {OBJInstance}
@@ -318,7 +245,7 @@ class OBJTokenizer extends CommonTokenizer {
    */
   constructor(obj, options = {}) {
     super(obj, " ");
-    this.mtls = options.mtls ?? [];
+    this.materials = options.mtls ?? [];
     this.options = options;
   }
 
@@ -374,51 +301,22 @@ class OBJTokenizer extends CommonTokenizer {
 
     // parse mtls
     const parsedMaterials = new Map();
-    this.mtls.forEach((mtl) => {
+    this.materials.forEach((mtl) => {
       const materials = new MTLTokenizer(mtl).parse();
       materials.forEach((v, k) => {
         parsedMaterials.set(k, v);
       });
     });
 
-    this.result = new OBJInstance(
-      this.geometricVertices,
-      this.textureVertices,
-      this.normalVertices,
-      this.parameterVertices,
-      parsedMaterials,
-      this.objects,
-      this.groups
-    );
+    const result = new OBJInstance();
+    result.geometricVertices = this.geometricVertices;
+    result.textureVertices = this.textureVertices;
+    result.normalVertices = this.normalVertices;
+    result.parameterVertices = this.parameterVertices;
+    result.materials = parsedMaterials;
+    result.geometries = this.geometries;
+    this.result = result;
     return this.result;
-  }
-
-  getActivatingObject() {
-    if (this.activatingObject) {
-      return this.activatingObject;
-    } else {
-      const defaultObject = new OBJObject();
-      this.activatingObject = defaultObject;
-      this.objects.set(undefined, this.activatingObject);
-      return defaultObject;
-    }
-  }
-
-  getActivatingGroups() {
-    if (this.activatingGroups) {
-      return this.activatingGroups;
-    } else {
-      const activatingObject = this.getActivatingObject();
-      let defaultGroup = activatingObject.groups.get("default");
-      if (!defaultGroup) {
-        defaultGroup = new OBJGroup();
-        this.groups.push(defaultGroup);
-        activatingObject.groups.set("default", defaultGroup);
-      }
-
-      this.activatingGroups = new Set([defaultGroup]);
-      return this.activatingGroups;
-    }
   }
 
   /**
@@ -546,7 +444,7 @@ class OBJTokenizer extends CommonTokenizer {
         const requests = mtls.map((mtl) =>
           fetch(`${this.options.mtlBaseUrl}/${mtl}`).then((res) => res.text())
         );
-        this.mtls.push(...(await Promise.all(requests)));
+        this.materials.push(...(await Promise.all(requests)));
       } catch (e) {
         console.warn(`fetch mtl file from remote failed, mtl file ignored`);
         console.error(e);
@@ -566,10 +464,8 @@ class OBJTokenizer extends CommonTokenizer {
     }
     const objectName = tokens.join(" ");
 
-    const activatingObject = new OBJObject();
-    this.activatingObject = activatingObject;
-    this.activatingGroups = null;
-    this.objects.set(objectName, activatingObject);
+    this.activatingObjectName = objectName;
+    this.activatingGroupNames = ["default"];
   }
 
   /**
@@ -584,18 +480,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    const activatingGroups = new Set();
-    const obj = this.getActivatingObject();
-    groupNames.forEach((name) => {
-      let group = obj.groups.get(name);
-      if (!group) {
-        group = new OBJGroup();
-        this.groups.push(group);
-        obj.groups.set(name, group);
-      }
-      activatingGroups.add(group);
-    });
-    this.activatingGroups = activatingGroups;
+    this.activatingGroupNames = groupNames;
   }
 
   /**
@@ -629,9 +514,8 @@ class OBJTokenizer extends CommonTokenizer {
       if (isNaN(num)) throw new Error(`unexpected smoothing group value in line ${this.line}`);
       smoothing = num === 0 ? false : num;
     }
-    this.getActivatingGroups().forEach((group) => {
-      group.smoothing = smoothing;
-    });
+
+    this.activatingSmoothing = smoothing;
   }
 
   /**
@@ -825,61 +709,29 @@ class OBJTokenizer extends CommonTokenizer {
       vnIndices = nvnIndices;
     }
 
-    const face = new OBJFace(
-      vIndices,
-      vnIndices,
-      vtIndices.length === 0 ? null : vtIndices,
-      this.activatingMaterial
-    );
-    this.getActivatingGroups().forEach((group) => {
-      group.geometries.push(face);
-    });
+    const face = new OBJFace();
+    face.objectName = this.activatingObjectName;
+    face.groupNames = this.activatingGroupNames;
+    face.smoothing = this.activatingSmoothing;
+    face.material = this.activatingMaterial;
+    face.vIndices = vIndices;
+    face.vnIndices = vnIndices;
+    face.vtIndices = vtIndices.length === 0 ? null : vtIndices;
+    this.geometries.push(face);
   }
 }
 
-class MTLColor {
+class MTLBasicMaterial {
   /**
-   * @type {number[]}
-   * @private
-   */
-  rgb;
-
-  /**
-   *
-   * @param {number[]} rgb
-   */
-  constructor(rgb) {
-    this.rgb = rgb;
-  }
-
-  r() {
-    return this.rgb[0];
-  }
-
-  g() {
-    return this.rgb[1];
-  }
-
-  b() {
-    return this.rgb[2];
-  }
-
-  color() {
-    return [...this.rgb];
-  }
-}
-
-class MTLMaterial {
-  /**
-   * @type {MTLColor}
+   * @type {[number, number, number]}
    */
   ambientColor;
   /**
-   * @type {MTLColor}
+   * @type {[number, number, number]}
    */
   diffuseColor;
   /**
-   * @type {MTLColor}
+   * @type {[number, number, number]}
    */
   specularColor;
   /**
@@ -902,13 +754,13 @@ class MTLMaterial {
 
 class MTLTokenizer extends CommonTokenizer {
   /**
-   * @type {Map<string, MTLMaterial>}
+   * @type {Map<string, MTLBasicMaterial>}
    * @private
    */
   materials = null;
 
   /**
-   * @type {MTLMaterial | null}
+   * @type {MTLBasicMaterial | null}
    * @private
    */
   activatingMaterial = null;
@@ -987,7 +839,7 @@ class MTLTokenizer extends CommonTokenizer {
     }
 
     const materialName = tokens.join(" ");
-    const material = new MTLMaterial();
+    const material = new MTLBasicMaterial();
     this.materials.set(materialName, material);
     this.activatingMaterial = material;
   }
@@ -1020,18 +872,17 @@ class MTLTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    const color = new MTLColor(numbers);
     switch (type) {
       case "Ka": {
-        this.activatingMaterial.ambientColor = color;
+        this.activatingMaterial.ambientColor = numbers;
         break;
       }
       case "Kd": {
-        this.activatingMaterial.diffuseColor = color;
+        this.activatingMaterial.diffuseColor = numbers;
         break;
       }
       case "Ks": {
-        this.activatingMaterial.specularColor = color;
+        this.activatingMaterial.specularColor = numbers;
         break;
       }
       default: {
