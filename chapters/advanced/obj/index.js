@@ -1,156 +1,5 @@
 import { getCanvasResizeObserver } from "../../libs/common";
-import { vec3 } from "gl-matrix";
-
-class OBJGeometricVertex {
-  /**@type {number[]} */
-  xyzw;
-  /**@type {number[] | null} */
-  rgb;
-
-  /**
-   *
-   * @param {number[]} xyzw
-   * @param {number[] | null} [rgb]
-   */
-  constructor(xyzw, rgb = null) {
-    this.vertex = xyzw;
-    this.rgb = rgb;
-  }
-
-  x() {
-    return this.xyzw[0];
-  }
-
-  y() {
-    return this.xyzw[1];
-  }
-
-  z() {
-    return this.xyzw[2];
-  }
-
-  w() {
-    return this.xyzw[3] ?? 1;
-  }
-
-  vertex() {
-    const vertex = [...this.xyzw];
-    vertex[3] ??= 1;
-    return vertex;
-  }
-
-  r() {
-    return this.rgb?.[0] ?? null;
-  }
-
-  g() {
-    return this.rgb?.[1] ?? null;
-  }
-
-  b() {
-    return this.rgb?.[2] ?? null;
-  }
-
-  color() {
-    if (this.rgb) {
-      return [...this.rgb];
-    } else {
-      return null;
-    }
-  }
-}
-
-class OBJTextureVertex {
-  /**@type {number[]} */
-  uvw;
-
-  /**
-   *
-   * @param {number[]} uvw
-   */
-  constructor(uvw) {
-    this.uvw = uvw;
-  }
-
-  u() {
-    return this.uvw[0];
-  }
-
-  v() {
-    return this.uvw[1] ?? 0;
-  }
-
-  w() {
-    return this.uvw[2] ?? 0;
-  }
-
-  vertex() {
-    const vertex = [...this.uvw];
-    vertex[1] ??= 0;
-    vertex[2] ??= 0;
-    return vertex;
-  }
-}
-
-class OBJNormalVertex {
-  /**@type {number[]} */
-  ijk;
-
-  /**
-   *
-   * @param {number[]} ijk
-   */
-  constructor(ijk) {
-    this.ijk = ijk;
-  }
-
-  i() {
-    return this.ijk[0];
-  }
-
-  j() {
-    return this.ijk[1];
-  }
-
-  k() {
-    return this.ijk[2];
-  }
-
-  vertex() {
-    return [...this.ijk];
-  }
-}
-
-class OBJParameterVertex {
-  /**@type {number[]} */
-  uvw;
-
-  /**
-   *
-   * @param {number[]} uvw
-   */
-  constructor(uvw) {
-    this.uvw = uvw;
-  }
-
-  u() {
-    return this.uvw[0];
-  }
-
-  v() {
-    return this.uvw[1];
-  }
-
-  w() {
-    return this.uvw[2] ?? 0;
-  }
-
-  vertex() {
-    const vertex = [...this.uvw];
-    vertex[2] ??= 1;
-    return vertex;
-  }
-}
+import { vec3, vec4 } from "gl-matrix";
 
 class OBJObject {
   /**@type {Map<string, OBJGroup>} */
@@ -199,7 +48,7 @@ class OBJFace {
    */
   vIndices = [];
   /**
-   * @type {OBJNormalIndex[]}
+   * @type {number[]}
    */
   vnIndices = [];
   /**
@@ -224,28 +73,27 @@ class OBJFace {
 
 class OBJInstance {
   /**
-   * List of all geometric vertices
-   * @type {OBJGeometricVertex[]}
+   * Flatten geometric vertices values,
+   * each vertex contains 4 components: x, y, z and w
+   * @type {number[]}
    */
   geometricVertices = [];
   /**
-   * List of all texture vertices
-   * @type {OBJTextureVertex[]}
+   * Flatten texture vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {number[]}
    */
   textureVertices = [];
   /**
-   * List of all normal vertices
-   * @type {OBJNormalVertex[]}
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {number[]}
    */
   normalVertices = [];
   /**
-   * List of all normal vertices that calculated from  vertices
-   * @type {OBJNormalVertex[]}
-   */
-  calculatedNormalVertices = [];
-  /**
-   * List of all parameter space vertices
-   * @type {OBJParameterVertex[]}
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {number[]}
    */
   parameterVertices = [];
   /**
@@ -271,6 +119,24 @@ class OBJInstance {
    * @type {OBJGroup[]}
    */
   groups = [];
+
+  constructor(
+    geometricVertices,
+    textureVertices,
+    normalVertices,
+    parameterVertices,
+    mtls,
+    objects,
+    groups
+  ) {
+    this.geometricVertices = geometricVertices;
+    this.textureVertices = textureVertices;
+    this.normalVertices = normalVertices;
+    this.parameterVertices = parameterVertices;
+    this.mtls = mtls;
+    this.objects = objects;
+    this.groups = groups;
+  }
 }
 
 class CommonTokenizer {
@@ -368,21 +234,62 @@ class OBJTokenizer extends CommonTokenizer {
    */
 
   /**
+   * Flatten geometric vertices values,
+   * each vertex contains 4 components: x, y, z and w
+   * @type {number[]}
+   */
+  geometricVertices = [];
+  /**
+   * Flatten texture vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {number[]}
+   */
+  textureVertices = [];
+  /**
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {number[]}
+   */
+  normalVertices = [];
+  /**
+   * When a face geometry has no `vn` property,
+   * parser will automatically calculate a normal
+   * from face and push it into `normalVertices`.
+   * This field tells parser how many normals had
+   * calculated and add offset to normal indices
+   */
+  normalIndexOffset = 0;
+  /**
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {number[]}
+   */
+  parameterVertices = [];
+  /**
    * @type {string[]}
    * @private
    */
   mtls;
+  /**
+   * Tree view of grouped objects.
+   * @type {Map<string, OBJObject>}
+   */
+  objects = new Map();
+  /**
+   * Standalone grouped objects of the whole file.
+   *
+   * Render objects using this field.
+   * All objects in this field never duplicated.
+   * @type {OBJGroup[]}
+   */
+  groups = [];
+
   /**
    * @type {Options}
    * @private
    */
   options;
 
-  /**
-   * @type {OBJInstance | null}
-   * @private
-   */
-  instance = null;
   /**
    * @type {OBJObject | null}
    * @private
@@ -417,9 +324,18 @@ class OBJTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   async parse() {
-    if (this.instance) return this.instance;
+    this.geometricVertices = [];
+    this.textureVertices = [];
+    this.normalVertices = [];
+    this.parameterVertices = [];
+    this.normalIndexOffset = 0;
+    this.objects = new Map();
+    this.groups = [];
 
-    this.instance = new OBJInstance();
+    this.activatingObject = null;
+    this.activatingGroups = null;
+    this.activatingMaterial = null;
+
     for (;;) {
       const [tokenType, eol, eof] = this.nextToken();
       if (eof) break;
@@ -427,7 +343,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (tokenType === "#") {
         this.parseComment();
       } else {
-        if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
+        if (eol) throw new Error(`unexpected end of line in line ${this.line}`);
 
         if (tokenType === "v") {
           this.parseGeometricVertex();
@@ -456,20 +372,29 @@ class OBJTokenizer extends CommonTokenizer {
         } else if (tokenType === "usemtl") {
           this.parseUseMaterial();
         } else {
-          throw new Error(`unsupported type '${tokenType}' in line ${this.line + 1}`);
+          throw new Error(`unsupported type '${tokenType}' in line ${this.line}`);
         }
       }
     }
 
     // parse mtls
+    const parsedMaterials = new Map();
     this.mtls.forEach((mtl) => {
       const materials = new MTLTokenizer(mtl).parse();
       materials.forEach((v, k) => {
-        this.instance.mtls.set(k, v);
+        parsedMaterials.set(k, v);
       });
     });
 
-    return this.instance;
+    return new OBJInstance(
+      this.geometricVertices,
+      this.textureVertices,
+      this.normalVertices,
+      this.parameterVertices,
+      parsedMaterials,
+      this.objects,
+      this.groups
+    );
   }
 
   getActivatingObject() {
@@ -478,7 +403,7 @@ class OBJTokenizer extends CommonTokenizer {
     } else {
       const defaultObject = new OBJObject();
       this.activatingObject = defaultObject;
-      this.instance.objects.set(undefined, this.activatingObject);
+      this.objects.set(undefined, this.activatingObject);
       return defaultObject;
     }
   }
@@ -491,7 +416,7 @@ class OBJTokenizer extends CommonTokenizer {
       let defaultGroup = activatingObject.groups.get("default");
       if (!defaultGroup) {
         defaultGroup = new OBJGroup();
-        this.instance.groups.push(defaultGroup);
+        this.groups.push(defaultGroup);
         activatingObject.groups.set("default", defaultGroup);
       }
 
@@ -525,19 +450,16 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    let geometricVertex;
-    if (numbers.length === 3 || numbers.length === 4) {
-      geometricVertex = new OBJGeometricVertex(numbers);
+    if (numbers.length === 3) {
+      this.geometricVertices.push(...numbers, 1);
+    } else if (numbers.length === 4) {
+      this.geometricVertices.push(...numbers);
     } else if (numbers.length === 6) {
-      geometricVertex = new OBJGeometricVertex(
-        [numbers[0], numbers[1], numbers[2]],
-        [numbers[3], numbers[4], numbers[5]]
-      );
+      this.geometricVertices.push(...numbers.slice(0, 3), 1);
+      console.warn(`color values of geometric vertex ignored in line ${this.line}`);
     } else {
       throw new Error(`unexpected number size of geometric vertex in line ${this.line}`);
     }
-
-    this.instance.geometricVertices.push(geometricVertex);
   }
 
   /**
@@ -555,8 +477,12 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    if (numbers.length >= 1 && numbers.length <= 3) {
-      this.instance.textureVertices.push(new OBJTextureVertex(numbers));
+    if (numbers.length === 1) {
+      this.textureVertices.push(numbers[0], 0, 0);
+    } else if (numbers.length === 2) {
+      this.textureVertices.push(...numbers, 0);
+    } else if (numbers.length === 3) {
+      this.textureVertices.push(...numbers);
     } else {
       throw new Error(`unexpected number size of texture vertex in line ${this.line}`);
     }
@@ -578,7 +504,7 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (numbers.length === 3) {
-      this.instance.normalVertices.push(new OBJNormalVertex(numbers));
+      this.normalVertices.push(...numbers);
     } else {
       throw new Error(`unexpected number size of normal vertex in line ${this.line}`);
     }
@@ -599,8 +525,10 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    if (numbers.length === 2 || numbers.length === 3) {
-      this.instance.parameterVertices.push(new OBJParameterVertex(numbers));
+    if (numbers.length === 2) {
+      this.parameterVertices.push(...numbers, 1);
+    } else if (numbers.length === 3) {
+      this.parameterVertices.push(...numbers);
     } else {
       throw new Error(`unexpected number size of parameter vertex in line ${this.line}`);
     }
@@ -618,10 +546,15 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (this.options.mtlsFromObj) {
-      const requests = mtls.map((mtl) =>
-        fetch(`${this.options.mtlBaseUrl}/${mtl}`).then((res) => res.text())
-      );
-      this.mtls.push(...(await Promise.all(requests)));
+      try {
+        const requests = mtls.map((mtl) =>
+          fetch(`${this.options.mtlBaseUrl}/${mtl}`).then((res) => res.text())
+        );
+        this.mtls.push(...(await Promise.all(requests)));
+      } catch (e) {
+        console.warn(`fetch mtl file from remote failed, mtl file ignored`);
+        console.error(e);
+      }
     }
   }
 
@@ -640,7 +573,7 @@ class OBJTokenizer extends CommonTokenizer {
     const activatingObject = new OBJObject();
     this.activatingObject = activatingObject;
     this.activatingGroups = null;
-    this.instance.objects.set(objectName, activatingObject);
+    this.objects.set(objectName, activatingObject);
   }
 
   /**
@@ -661,7 +594,7 @@ class OBJTokenizer extends CommonTokenizer {
       let group = obj.groups.get(name);
       if (!group) {
         group = new OBJGroup();
-        this.instance.groups.push(group);
+        this.groups.push(group);
         obj.groups.set(name, group);
       }
       activatingGroups.add(group);
@@ -796,8 +729,8 @@ class OBJTokenizer extends CommonTokenizer {
       const [v, vt, vn] = token.split("/");
 
       if (i === 0) {
-        hasTextureIndices = vt && vt.length !== 0;
-        hasNormalIndices = vn && vn.length !== 0;
+        hasTextureIndices = !!vt && vt.length !== 0;
+        hasNormalIndices = !!vn && vn.length !== 0;
       }
 
       if (hasTextureIndices === (vt === void 0) || hasNormalIndices === (vn === void 0)) {
@@ -823,50 +756,70 @@ class OBJTokenizer extends CommonTokenizer {
         const normalIndex = parseInt(vn, 10);
         if (isNaN(normalIndex))
           throw new Error(`token ${vn} in line ${this.line} is not a normal vertices index`);
-        vnIndices.push(new OBJNormalIndex(0, normalIndex));
+        vnIndices.push(normalIndex + this.normalIndexOffset);
       }
 
       if (eol) break;
     }
 
     if (vIndices.length < 3) {
-      throw new Error(`at least 3 vertices for a face geometry in line ${this.line}`);
+      throw new Error(`face geometry requires at least 3 geometric vertices in line ${this.line}`);
     } else if (vIndices.length > 3) {
       // split into triangles, using triangle fan structure.
       // maybe replace earcut in the future
       const nvIndices = [];
       const nvtIndices = [];
       const nvnIndices = [];
-      vIndices = [];
+      const tempVec0 = vec3.create();
+      const tempVec1 = vec3.create();
+      const tempVec2 = vec3.create();
       for (let i = 1; i <= vIndices.length - 2; i++) {
         const i0 = 0;
         const i1 = i;
         const i2 = i + 1;
 
-        nvIndices.push(i0, i1, i2);
+        nvIndices.push(vIndices[i0], vIndices[i1], vIndices[i2]);
 
-        if (hasTextureIndices) nvtIndices.push(i0, i1, i2);
+        if (hasTextureIndices) nvtIndices.push(vtIndices[i0], vtIndices[i1], vtIndices[i2]);
 
         if (hasNormalIndices) {
-          nvnIndices.push(i0, i1, i2);
+          nvnIndices.push(vnIndices[i0], vnIndices[i1], vnIndices[i2]);
         } else {
           // calculate normal from triangle
-          const p0 = this.instance.geometricVertices[vIndices[i0]];
-          const p1 = this.instance.geometricVertices[vIndices[i1]];
-          const p2 = this.instance.geometricVertices[vIndices[i2]];
-          const v0 = vec3.fromValues(
-            p1.xyzw[0] - p0.xyzw[0],
-            p1.xyzw[1] - p0.xyzw[1],
-            p1.xyzw[2] - p0.xyzw[2]
-          );
-          const v1 = vec3.fromValues(
-            p2.xyzw[0] - p1.xyzw[0],
-            p2.xyzw[1] - p1.xyzw[1],
-            p2.xyzw[2] - p1.xyzw[2]
-          );
-          const n = vec3.cross(v0, v0, v1);
-          vec3.normalize(n);
-          const index = this.instance.calculatedNormalVertices.push(n) - 1;
+          const vIndex0 = vIndices[i0] - 1;
+          const vIndex1 = vIndices[i1] - 1;
+          const vIndex2 = vIndices[i2] - 1;
+          let px0 = this.geometricVertices[vIndex0 * 4];
+          let py0 = this.geometricVertices[vIndex0 * 4 + 1];
+          let pz0 = this.geometricVertices[vIndex0 * 4 + 2];
+          const pw0 = this.geometricVertices[vIndex0 * 4 + 3];
+          let px1 = this.geometricVertices[vIndex1 * 4];
+          let py1 = this.geometricVertices[vIndex1 * 4 + 1];
+          let pz1 = this.geometricVertices[vIndex1 * 4 + 2];
+          const pw1 = this.geometricVertices[vIndex1 * 4 + 3];
+          let px2 = this.geometricVertices[vIndex2 * 4];
+          let py2 = this.geometricVertices[vIndex2 * 4 + 1];
+          let pz2 = this.geometricVertices[vIndex2 * 4 + 2];
+          const pw2 = this.geometricVertices[vIndex2 * 4 + 3];
+
+          px0 = px0 / pw0
+          py0 = py0 / pw0
+          pz0 = pz0 / pw0
+          px1 = px1 / pw1
+          py1 = py1 / pw1
+          pz1 = pz1 / pw1
+          px2 = px2 / pw2
+          py2 = py2 / pw2
+          pz2 = pz2 / pw2
+
+          vec3.set(tempVec0, px1 - px0, py1 - py0, pz1 - pz0);
+          vec3.set(tempVec1, px2 - px1, py2 - py1, pz2 - pz1);
+          vec3.cross(tempVec2, tempVec0, tempVec1);
+          vec3.normalize(tempVec2, tempVec2);
+
+          const index = this.normalVertices.length / 3;
+          this.normalVertices.push(tempVec2[0], tempVec2[1], tempVec2[2]);
+          this.normalIndexOffset++;
           nvnIndices.push(index, index, index);
         }
       }
@@ -879,7 +832,7 @@ class OBJTokenizer extends CommonTokenizer {
     const face = new OBJFace(
       vIndices,
       vnIndices,
-      vnIndices.length === 0 ? null : vnIndices,
+      vtIndices.length === 0 ? null : vtIndices,
       this.activatingMaterial
     );
     this.getActivatingGroups().forEach((group) => {
@@ -1183,7 +1136,9 @@ const instance = await fetch("/resources/cube.obj")
   );
 console.log(instance);
 
-const render = () => {};
+const render = () => {
+  //
+};
 
 render();
 getCanvasResizeObserver(render);
