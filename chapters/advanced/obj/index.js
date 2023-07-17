@@ -307,6 +307,11 @@ class OBJTokenizer extends CommonTokenizer {
   activatingMaterial = null;
 
   /**
+   * @type {OBJInstance}
+   */
+  result = null;
+
+  /**
    * Constructs a .obj string tokenizer.
    * @param {string} obj .obj file in raw string
    * @param {Options} options options
@@ -324,20 +329,7 @@ class OBJTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   async parse() {
-    this.line = 0;
-    this.index = 0;
-
-    this.geometricVertices = [];
-    this.textureVertices = [];
-    this.normalVertices = [];
-    this.parameterVertices = [];
-    this.normalIndexOffset = 0;
-    this.objects = new Map();
-    this.groups = [];
-
-    this.activatingObject = null;
-    this.activatingGroups = null;
-    this.activatingMaterial = null;
+    if (this.result) return this.result;
 
     for (;;) {
       const [tokenType, eol, eof] = this.nextToken();
@@ -389,7 +381,7 @@ class OBJTokenizer extends CommonTokenizer {
       });
     });
 
-    return new OBJInstance(
+    this.result = new OBJInstance(
       this.geometricVertices,
       this.textureVertices,
       this.normalVertices,
@@ -398,6 +390,7 @@ class OBJTokenizer extends CommonTokenizer {
       this.objects,
       this.groups
     );
+    return this.result;
   }
 
   getActivatingObject() {
@@ -935,11 +928,9 @@ class MTLTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   parse() {
-    this.line = 0;
-    this.index = 0;
-    this.materials = new Map();
-    this.activatingMaterial = null;
+    if (this.materials) return this.materials;
 
+    this.materials = new Map();
     for (;;) {
       const [tokenType, eol, eof] = this.nextToken();
       if (eof) break;
