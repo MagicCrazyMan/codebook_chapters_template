@@ -1,4 +1,5 @@
 import { getCanvasResizeObserver } from "../../libs/common";
+import { vec3 } from "gl-matrix";
 
 class OBJGeometricVertex {
   /**@type {number[]} */
@@ -157,38 +158,14 @@ class OBJObject {
 }
 
 class OBJGroup {
-  /**@type {false | number} */
-  smoothing = false;
-  /**@type {OBJGeometry[]} */
-  geometries = [];
-}
-
-/**@enum {number} */
-const OBJGeometryType = {
-  Point: 0,
-  Line: 1,
-  Face: 2,
-};
-class OBJGeometry {
-  /**@type {OBJGeometryType} */
-  type;
-  /**@type {string | null} */
-  material = null;
-
-  /**@type {number[][]} */
-  geometricIndices = [];
-  /**@type {number[][] | null} */
-  textureIndices = null;
-  /**@type {number[][] | null} */
-  normalIndices = null;
-
   /**
-   *
-   * @param {OBJGeometryType} type
+   * @type {false | number}
    */
-  constructor(type) {
-    this.type = type;
-  }
+  smoothing = false;
+  /**
+   * @type {OBJFace[]}
+   */
+  geometries = [];
 }
 
 class OBJNormalIndex {
@@ -214,17 +191,35 @@ class OBJNormalIndex {
 
 class OBJFace {
   /**
+   * @type {string | null}
+   */
+  material = null;
+  /**
    * @type {number[]}
    */
-  geometricIndices = [];
+  vIndices = [];
   /**
    * @type {OBJNormalIndex[]}
    */
-  normalIndices = [];
+  vnIndices = [];
   /**
    * @type {number[] | null}
    */
-  textureIndices = null;
+  vtIndices = null;
+
+  /**
+   *
+   * @param {number[]} vIndices
+   * @param {OBJNormalIndex[]} vnIndices
+   * @param {number[] | null} [vtIndices]
+   * @param {string | null} [material]
+   */
+  constructor(vIndices, vnIndices, vtIndices = null, material = null) {
+    this.vIndices = vIndices;
+    this.vnIndices = vnIndices;
+    this.vtIndices = vtIndices;
+    this.material = material;
+  }
 }
 
 class OBJInstance {
@@ -714,77 +709,77 @@ class OBJTokenizer extends CommonTokenizer {
    * Parse point and add into all activating groups.
    * If no groups activating, create and add into default group.
    */
-  parsePoint() {
-    const indices = [];
-    for (;;) {
-      const [token, eol] = this.nextToken();
+  // parsePoint() {
+  //   const indices = [];
+  //   for (;;) {
+  //     const [token, eol] = this.nextToken();
 
-      const index = parseInt(token, 10);
-      if (isNaN(index))
-        throw new Error(`token ${token} in line ${this.line} is not a geometric vertices index`);
-      indices.push(index);
+  //     const index = parseInt(token, 10);
+  //     if (isNaN(index))
+  //       throw new Error(`token ${token} in line ${this.line} is not a geometric vertices index`);
+  //     indices.push(index);
 
-      if (eol) break;
-    }
+  //     if (eol) break;
+  //   }
 
-    const geometry = new OBJGeometry(OBJGeometryType.Point);
-    geometry.geometricIndices = indices;
-    geometry.material = this.activatingMaterial;
-    this.getActivatingGroups().forEach((group) => {
-      group.geometries.push(geometry);
-    });
-  }
+  //   const geometry = new OBJGeometry(OBJGeometryType.Point);
+  //   geometry.geometricIndices = indices;
+  //   geometry.material = this.activatingMaterial;
+  //   this.getActivatingGroups().forEach((group) => {
+  //     group.geometries.push(geometry);
+  //   });
+  // }
 
   /**
    * Parse line and add into all activating groups.
    * If no groups activating, create and add into default group.
    */
-  parseLine() {
-    let hasTextureIndices = false;
-    const geometricIndices = [];
-    const textureIndices = [];
-    for (let i = 0; ; i++) {
-      const [token, eol] = this.nextToken();
-      const [v, vt] = token.split("/");
+  // parseLine() {
+  //   let hasTextureIndices = false;
+  //   const geometricIndices = [];
+  //   const textureIndices = [];
+  //   for (let i = 0; ; i++) {
+  //     const [token, eol] = this.nextToken();
+  //     const [v, vt] = token.split("/");
 
-      if (i === 0) {
-        hasTextureIndices = vt && vt.length !== 0;
-      }
+  //     if (i === 0) {
+  //       hasTextureIndices = vt && vt.length !== 0;
+  //     }
 
-      // verify texture index
-      if (hasTextureIndices === (vt === void 0)) {
-        throw new Error(`unexpected geometric and texture index pair in line ${this.line}`);
-      }
+  //     // verify texture index
+  //     if (hasTextureIndices === (vt === void 0)) {
+  //       throw new Error(`unexpected geometric and texture index pair in line ${this.line}`);
+  //     }
 
-      // verify geometric index
-      const geometricIndex = parseInt(v, 10);
-      if (isNaN(geometricIndex))
-        throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
-      geometricIndices.push(geometricIndex);
+  //     // verify geometric index
+  //     const geometricIndex = parseInt(v, 10);
+  //     if (isNaN(geometricIndex))
+  //       throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
+  //     geometricIndices.push(geometricIndex);
 
-      if (vt) {
-        const textureIndex = parseInt(vt, 10);
-        if (isNaN(textureIndex))
-          throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
+  //     if (vt) {
+  //       const textureIndex = parseInt(vt, 10);
+  //       if (isNaN(textureIndex))
+  //         throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
 
-        textureIndices.push(textureIndex);
-      }
+  //       textureIndices.push(textureIndex);
+  //     }
 
-      if (eol) break;
-    }
+  //     if (eol) break;
+  //   }
 
-    if (geometricIndices.length < 2) {
-      throw new Error(`at least 2 vertices for a line geometry in line ${this.line}`);
-    }
+  //   if (geometricIndices.length < 2) {
+  //     throw new Error(`at least 2 vertices for a line geometry in line ${this.line}`);
+  //   }
 
-    const geometry = new OBJGeometry(OBJGeometryType.Line);
-    geometry.geometricIndices = geometricIndices;
-    geometry.textureIndices = textureIndices.length === 0 ? null : textureIndices;
-    geometry.material = this.activatingMaterial;
-    this.getActivatingGroups().forEach((group) => {
-      group.geometries.push(geometry);
-    });
-  }
+  //   const geometry = new OBJGeometry(OBJGeometryType.Line);
+  //   geometry.geometricIndices = geometricIndices;
+  //   geometry.textureIndices = textureIndices.length === 0 ? null : textureIndices;
+  //   geometry.material = this.activatingMaterial;
+  //   this.getActivatingGroups().forEach((group) => {
+  //     group.geometries.push(geometry);
+  //   });
+  // }
 
   /**
    * Parse face and add into all activating groups.
@@ -793,9 +788,9 @@ class OBJTokenizer extends CommonTokenizer {
   parseFace() {
     let hasTextureIndices = false;
     let hasNormalIndices = false;
-    const geometricIndices = [];
-    const textureIndices = [];
-    const normalIndices = [];
+    let vIndices = [];
+    let vtIndices = [];
+    let vnIndices = [];
     for (let i = 0; ; i++) {
       const [token, eol] = this.nextToken();
       const [v, vt, vn] = token.split("/");
@@ -809,46 +804,86 @@ class OBJTokenizer extends CommonTokenizer {
         throw new Error(`unexpected geometric, texture and normal index pair in line ${this.line}`);
       }
 
-      // verify geometric index
+      // parse geometric index
       const geometricIndex = parseInt(v, 10);
       if (isNaN(geometricIndex))
         throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
-      geometricIndices.push(geometricIndex);
+      vIndices.push(geometricIndex);
 
-      // verify texture index
+      // parse texture index
       if (vt) {
         const textureIndex = parseInt(vt, 10);
         if (isNaN(textureIndex))
           throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
-
-        textureIndices.push(textureIndex);
+        vtIndices.push(textureIndex);
       }
 
-      // verify normal index
+      // parse normal index
       if (vn) {
         const normalIndex = parseInt(vn, 10);
         if (isNaN(normalIndex))
           throw new Error(`token ${vn} in line ${this.line} is not a normal vertices index`);
-
-        normalIndices.push(normalIndex);
+        vnIndices.push(new OBJNormalIndex(0, normalIndex));
       }
 
       if (eol) break;
     }
 
-    if (geometricIndices.length < 3) {
+    if (vIndices.length < 3) {
       throw new Error(`at least 3 vertices for a face geometry in line ${this.line}`);
-    } else if (geometricIndices.length > 3) {
-      throw new Error(`only triangular face geometry supported in line ${this.line}`);
+    } else if (vIndices.length > 3) {
+      // split into triangles, using triangle fan structure.
+      // maybe replace earcut in the future
+      const nvIndices = [];
+      const nvtIndices = [];
+      const nvnIndices = [];
+      vIndices = [];
+      for (let i = 1; i <= vIndices.length - 2; i++) {
+        const i0 = 0;
+        const i1 = i;
+        const i2 = i + 1;
+
+        nvIndices.push(i0, i1, i2);
+
+        if (hasTextureIndices) nvtIndices.push(i0, i1, i2);
+
+        if (hasNormalIndices) {
+          nvnIndices.push(i0, i1, i2);
+        } else {
+          // calculate normal from triangle
+          const p0 = this.instance.geometricVertices[vIndices[i0]];
+          const p1 = this.instance.geometricVertices[vIndices[i1]];
+          const p2 = this.instance.geometricVertices[vIndices[i2]];
+          const v0 = vec3.fromValues(
+            p1.xyzw[0] - p0.xyzw[0],
+            p1.xyzw[1] - p0.xyzw[1],
+            p1.xyzw[2] - p0.xyzw[2]
+          );
+          const v1 = vec3.fromValues(
+            p2.xyzw[0] - p1.xyzw[0],
+            p2.xyzw[1] - p1.xyzw[1],
+            p2.xyzw[2] - p1.xyzw[2]
+          );
+          const n = vec3.cross(v0, v0, v1);
+          vec3.normalize(n);
+          const index = this.instance.calculatedNormalVertices.push(n) - 1;
+          nvnIndices.push(index, index, index);
+        }
+      }
+
+      vIndices = nvIndices;
+      vtIndices = nvtIndices;
+      vnIndices = nvnIndices;
     }
 
-    const geometry = new OBJGeometry(OBJGeometryType.Face);
-    geometry.geometricIndices = geometricIndices;
-    geometry.textureIndices = textureIndices.length === 0 ? null : textureIndices;
-    geometry.normalIndices = normalIndices.length === 0 ? null : normalIndices;
-    geometry.material = this.activatingMaterial;
+    const face = new OBJFace(
+      vIndices,
+      vnIndices,
+      vnIndices.length === 0 ? null : vnIndices,
+      this.activatingMaterial
+    );
     this.getActivatingGroups().forEach((group) => {
-      group.geometries.push(geometry);
+      group.geometries.push(face);
     });
   }
 }
