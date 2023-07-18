@@ -203,10 +203,10 @@ class MTLBasicMaterial {
 
     // bind data buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, this.getVerticesBuffer(gl));
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.geometricVertices, gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(
       MTLBasicMaterial.attributeLocations["a_Position"],
-      4,
+      3,
       gl.FLOAT,
       false,
       0,
@@ -214,12 +214,8 @@ class MTLBasicMaterial {
     );
     gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
 
-    // bind indices buffer
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.getIndicesBuffer(gl));
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.DYNAMIC_DRAW);
-
     // draw
-    gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_INT, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
   }
 }
 
@@ -228,28 +224,23 @@ class MTLBasicMaterial {
  */
 class OBJFace {
   /**
-   * Flatten indices values.
-   * @type {Uint32Array}
-   */
-  indices;
-  /**
    * Flatten geometric vertices values,
-   * each vertex contains 4 components: x, y, z and w
+   * each vertex contains 3 components: x, y and z
    * @type {Float32Array}
    */
-  geometricVertices;
+  vertices;
   /**
    * Flatten texture vertices values,
    * each vertex contains 3 components: u, v and w
    * @type {Float32Array}
    */
-  textureVertices;
+  uvs;
   /**
    * Flatten normal vertices values,
    * each vertex contains 3 components: i, j and k
    * @type {Float32Array}
    */
-  normalVertices;
+  normals;
   /**
    * @type {string | null}
    * @readonly
@@ -271,20 +262,10 @@ class OBJFace {
    */
   smoothing;
 
-  constructor(
-    indices,
-    geometricVertices,
-    normalVertices,
-    textureVertices,
-    material = null,
-    objectName = null,
-    groupNames = [],
-    smoothing = false
-  ) {
-    this.indices = indices;
-    this.geometricVertices = geometricVertices;
-    this.normalVertices = normalVertices;
-    this.textureVertices = textureVertices;
+  constructor(vertices, uvs, normals, material, objectName, groupNames, smoothing) {
+    this.vertices = vertices;
+    this.uvs = uvs;
+    this.normals = normals;
     this.material = material;
     this.objectName = objectName;
     this.groupNames = groupNames;
@@ -435,6 +416,16 @@ class CommonTokenizer {
     this.index += consumed;
     return [token, eol, eof];
   }
+
+  /**
+   * Skip current line
+   */
+  skipLine() {
+    for (;;) {
+      const [_, eol] = this.nextToken();
+      if (eol) return;
+    }
+  }
 }
 
 class OBJTokenizer extends CommonTokenizer {
@@ -446,71 +437,99 @@ class OBJTokenizer extends CommonTokenizer {
    */
 
   /**
-   * Flatten geometric vertices values,
-   * each vertex contains 4 components: x, y, z and w
-   * @type {number[]}
-   */
-  geometricVertices = [];
-  /**
-   * Flatten texture vertices values,
-   * each vertex contains 3 components: u, v and w
-   * @type {number[]}
-   */
-  textureVertices = [];
-  /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {number[]}
-   */
-  normalVertices = [];
-  /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {number[]}
-   */
-  parameterVertices = [];
-  /**
-   * @type {string[]}
-   * @private
-   */
-  materials;
-  /**
-   * List of geometries.
-   * @type {OBJFace[]}
-   */
-  geometries = [];
-
-  /**
    * @type {Options}
    * @private
    */
   options;
 
   /**
+   * @enum {number}
+   * @private
+   */
+  static GeometryType = {
+    NotStart: -1,
+    Point: 0,
+    Line: 1,
+    Face: 2,
+  };
+
+  /**
+   * @type {number[]}
+   * @private
+   */
+  aVertices = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  aUVs = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  aNormals = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  aParams = [];
+
+  /**
+   * @type {number}
+   * @private
+   */
+  type = OBJTokenizer.GeometryType.NotStart;
+  /**
+   * @type {number[]}
+   * @private
+   */
+  vertices = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  uvs = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  normals = [];
+  /**
+   * @type {number[]}
+   * @private
+   */
+  params = [];
+  /**
    * @type {string | null}
    * @private
    */
-  activatingObjectName = null;
+  material = null;
+  /**
+   * @type {string | null}
+   * @private
+   */
+  objectName = null;
+  /**
+   * @type {string[] | null}
+   * @private
+   */
+  groupNames = null;
+  /**
+   * @type {false | number | null}
+   * @private
+   */
+  smoothing = null;
+
   /**
    * @type {string[]}
    * @private
    */
-  activatingGroupNames = ["default"];
+  materials = [];
   /**
-   * @type {string | null}
+   * @type {OBJFace[]}
    * @private
    */
-  activatingMaterial = null;
-  /**
-   * @type {boolean}
-   * @private
-   */
-  activatingSmoothing = false;
-
-  /**
-   * @type {OBJInstance}
-   */
-  result = null;
+  geometries = [];
 
   /**
    * Constructs a .obj string tokenizer.
@@ -530,47 +549,73 @@ class OBJTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   async parse() {
-    if (this.result) return this.result;
-
     for (;;) {
-      const [tokenType, eol, eof] = this.nextToken();
+      const [type, eol, eof] = this.nextToken();
       if (eof) break;
 
-      if (tokenType === "#") {
+      if (type === "#") {
         this.parseComment();
       } else {
         if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
 
-        if (tokenType === "v") {
+        if (type === "v") {
           this.parseGeometricVertex();
-        } else if (tokenType === "vt") {
+        } else if (type === "vt") {
           this.parseTextureVertex();
-        } else if (tokenType === "vn") {
+        } else if (type === "vn") {
           this.parseNormalVertex();
-        } else if (tokenType === "vp") {
+        } else if (type === "vp") {
           this.parseParameterVertex();
-        } else if (tokenType === "p") {
+        } else if (type === "p") {
           // this.parsePoint();
           throw new Error(`unimplemented point element`);
-        } else if (tokenType === "l") {
+        } else if (type === "l") {
           // this.parseLine();
           throw new Error(`unimplemented line element`);
-        } else if (tokenType === "f") {
+        } else if (type === "f") {
+          if (
+            this.type !== OBJTokenizer.GeometryType.NotStart &&
+            this.type !== OBJTokenizer.GeometryType.Face
+          ) {
+            this.saveGroup();
+          }
+
           this.parseFace();
-        } else if (tokenType === "o") {
+        } else if (type === "o") {
+          if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+            this.saveGroup();
+          }
+
           this.parseObjectName();
-        } else if (tokenType === "g") {
+        } else if (type === "g") {
+          if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+            this.saveGroup();
+          }
+
           this.parseGroupNames();
-        } else if (tokenType === "s") {
+        } else if (type === "s") {
+          if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+            this.saveGroup();
+          }
+
           this.parseSmoothingGroup();
-        } else if (tokenType === "mtllib") {
+        } else if (type === "mtllib") {
           await this.parseMaterialLibraries();
-        } else if (tokenType === "usemtl") {
+        } else if (type === "usemtl") {
+          if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+            this.saveGroup();
+          }
+
           this.parseUseMaterial();
         } else {
-          throw new Error(`unsupported type '${tokenType}' in line ${this.line + 1}`);
+          console.warn(`unsupported type '${type}' in line ${this.line + 1}`);
+          this.skipLine();
         }
       }
+    }
+
+    if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+      this.saveGroup();
     }
 
     // parse mtls
@@ -582,16 +627,10 @@ class OBJTokenizer extends CommonTokenizer {
       });
     });
 
-    // transfer array to ArrayBuffer
-    this.result = new OBJInstance(this.geometries, parsedMaterials);
+    const instance = new OBJInstance(this.geometries, parsedMaterials);
+    this.reset(true);
 
-    // drop data immediately
-    this.geometricVertices.length = 0;
-    this.normalVertices.length = 0;
-    this.textureVertices.length = 0;
-    this.parameterVertices.length = 0;
-
-    return this.result;
+    return instance;
   }
 
   /**
@@ -621,11 +660,15 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (numbers.length === 3) {
-      this.geometricVertices.push(...numbers, 1);
+      this.aVertices.push(...numbers);
     } else if (numbers.length === 4) {
-      this.geometricVertices.push(...numbers);
+      this.aVertices.push(
+        numbers[0] / numbers[3],
+        numbers[1] / numbers[3],
+        numbers[2] / numbers[3]
+      );
     } else if (numbers.length === 6) {
-      this.geometricVertices.push(...numbers.slice(0, 3), 1);
+      this.aVertices.push(...numbers.slice(0, 3));
 
       if (this._colorVertexWarnCount === 0) {
         console.warn(`color values of geometric vertex ignored in line ${this.line + 1}`);
@@ -652,11 +695,11 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (numbers.length === 1) {
-      this.textureVertices.push(numbers[0], 0, 0);
+      this.aUVs.push(numbers[0], 0, 0);
     } else if (numbers.length === 2) {
-      this.textureVertices.push(...numbers, 0);
+      this.aUVs.push(...numbers, 0);
     } else if (numbers.length === 3) {
-      this.textureVertices.push(...numbers);
+      this.aUVs.push(...numbers);
     } else {
       throw new Error(`unexpected number size of texture vertex in line ${this.line + 1}`);
     }
@@ -678,7 +721,7 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (numbers.length === 3) {
-      this.normalVertices.push(...numbers);
+      this.aNormals.push(...numbers);
     } else {
       throw new Error(`unexpected number size of normal vertex in line ${this.line + 1}`);
     }
@@ -700,9 +743,9 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (numbers.length === 2) {
-      this.parameterVertices.push(...numbers, 1);
+      this.aParams.push(...numbers, 1);
     } else if (numbers.length === 3) {
-      this.parameterVertices.push(...numbers);
+      this.aParams.push(...numbers);
     } else {
       throw new Error(`unexpected number size of parameter vertex in line ${this.line + 1}`);
     }
@@ -748,10 +791,8 @@ class OBJTokenizer extends CommonTokenizer {
       tokens.push(token);
       if (eol) break;
     }
-    const objectName = tokens.join(" ");
 
-    this.activatingObjectName = objectName;
-    this.activatingGroupNames = ["default"];
+    this.objectName = tokens.join(" ");
   }
 
   /**
@@ -766,7 +807,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    this.activatingGroupNames = groupNames;
+    this.groupNames = groupNames;
   }
 
   /**
@@ -780,7 +821,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (eol) break;
     }
 
-    this.activatingMaterial = tokens.join(" ");
+    this.material = tokens.join(" ");
   }
 
   /**
@@ -801,7 +842,7 @@ class OBJTokenizer extends CommonTokenizer {
       smoothing = num === 0 ? false : num;
     }
 
-    this.activatingSmoothing = smoothing;
+    this.smoothing = smoothing;
   }
 
   /**
@@ -886,11 +927,13 @@ class OBJTokenizer extends CommonTokenizer {
    * If no groups activating, create and add into default group.
    */
   parseFace() {
+    this.type = OBJTokenizer.GeometryType.Face;
+
     let hasTextureIndices = false;
     let hasNormalIndices = false;
-    let vIndices = [];
-    let vtIndices = [];
-    let vnIndices = [];
+    const vIndices = [];
+    const vtIndices = [];
+    const vnIndices = [];
     for (let i = 0; ; i++) {
       const [token, eol] = this.nextToken();
       const [v, vt, vn] = token.split("/");
@@ -939,21 +982,18 @@ class OBJTokenizer extends CommonTokenizer {
 
     if (!hasNormalIndices || vnIndices.every((i) => vnIndices[0] == i)) {
       // if vertices of a face has no normal indices or they share the same normal, use OBJFace
-      const geometricVertices = new Float32Array(vIndices.length * 4);
-      const normalVertices = new Float32Array(vIndices.length * 3);
-      const textureVertices = new Float32Array(vtIndices.length * 3);
       let normal;
       if (hasNormalIndices) {
-        normal = this.normalVertices.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
+        normal = this.aNormals.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
       } else {
         // calculate from triangle if not existed
-        const v0 = this.geometricVertices.slice(vIndices[0] * 4, (vIndices[0] + 1) * 4);
-        const v1 = this.geometricVertices.slice(vIndices[1] * 4, (vIndices[1] + 1) * 4);
-        const v2 = this.geometricVertices.slice(vIndices[2] * 4, (vIndices[2] + 1) * 4);
+        const v0 = this.aVertices.slice(vIndices[0] * 3, (vIndices[0] + 1) * 3);
+        const v1 = this.aVertices.slice(vIndices[1] * 3, (vIndices[1] + 1) * 3);
+        const v2 = this.aVertices.slice(vIndices[2] * 3, (vIndices[2] + 1) * 3);
 
-        const p0 = vec3.fromValues(v0[0] / v0[3], v0[1] / v0[3], v0[2] / v0[3]);
-        const p1 = vec3.fromValues(v1[0] / v1[3], v1[1] / v1[3], v1[2] / v1[3]);
-        const p2 = vec3.fromValues(v2[0] / v2[3], v2[1] / v2[3], v2[2] / v2[3]);
+        const p0 = vec3.fromValues(v0[0], v0[1], v0[2]);
+        const p1 = vec3.fromValues(v1[0], v1[1], v1[2]);
+        const p2 = vec3.fromValues(v2[0], v2[1], v2[2]);
 
         const d0 = vec3.subtract(p2, p2, p0);
         const d1 = vec3.subtract(p1, p1, p0);
@@ -963,41 +1003,78 @@ class OBJTokenizer extends CommonTokenizer {
         normal = n;
       }
 
-      for (let i = 0; i < vIndices.length; i++) {
-        const v = this.geometricVertices.slice(vIndices[i] * 4, (vIndices[i] + 1) * 4);
-        geometricVertices.set(v, i * 4);
+      for (let i = 0; i < vIndices.length - 2; i++) {
+        const i0 = 0;
+        const i1 = i + 1;
+        const i2 = i + 2;
 
-        normalVertices.set(normal, i * 3);
+        const v0 = this.aVertices.slice(vIndices[i0] * 3, (vIndices[i0] + 1) * 3);
+        const v1 = this.aVertices.slice(vIndices[i1] * 3, (vIndices[i1] + 1) * 3);
+        const v2 = this.aVertices.slice(vIndices[i2] * 3, (vIndices[i2] + 1) * 3);
+        this.vertices.push(...v0, ...v1, ...v2);
+
+        this.normals.push(...normal, ...normal, ...normal);
 
         if (hasTextureIndices) {
-          const vt = this.geometricVertices.slice(vtIndices[i] * 4, (vtIndices[i] + 1) * 3);
-          textureVertices.set(vt, i * 3);
+          const vt0 = this.aVertices.slice(vtIndices[i0] * 3, (vtIndices[i0] + 1) * 3);
+          const vt1 = this.aVertices.slice(vtIndices[i1] * 3, (vtIndices[i1] + 1) * 3);
+          const vt2 = this.aVertices.slice(vtIndices[i2] * 3, (vtIndices[i2] + 1) * 3);
+          this.uvs.push(...vt0, ...vt1, ...vt2);
         }
       }
-
-      const trianglesCount = vIndices.length - 2;
-      const indices = new Uint32Array(trianglesCount * 3);
-      for (let i = 0; i < trianglesCount; i++) {
-        indices.set([0, i + 1, i + 2], i * 3);
-      }
-
-      const face = new OBJFace(
-        indices,
-        geometricVertices,
-        normalVertices,
-        textureVertices,
-        this.activatingMaterial,
-        this.activatingObjectName,
-        this.activatingGroupNames,
-        this.activatingSmoothing
-      );
-      this.geometries.push(face);
     } else {
       if (this._surfaceWarnCount === 0) {
         console.warn(`unimplemented curve surface, ignored. This message only show once`);
         this._surfaceWarnCount++;
       }
     }
+  }
+
+  reset(global = false) {
+    this.vertices = [];
+    this.uvs = [];
+    this.normals = [];
+    this.params = [];
+    this.type = OBJTokenizer.GeometryType.NotStart;
+
+    if (global) {
+      this.aVertices = [];
+      this.aNormals = [];
+      this.aUVs = [];
+      this.aParams = [];
+      this.geometries = [];
+      this.materials = [];
+      this.material = null;
+      this.objectName = null;
+      this.groupNames = null;
+      this.smoothing = null;
+    }
+  }
+
+  /**
+   * Save current OBJ group
+   */
+  saveGroup() {
+    let geom;
+    switch (this.type) {
+      case OBJTokenizer.GeometryType.Face: {
+        geom = new OBJFace(
+          new Float32Array(this.vertices),
+          new Float32Array(this.uvs),
+          new Float32Array(this.normals),
+          this.material,
+          this.objectName,
+          this.groupNames,
+          this.smoothing
+        );
+        break;
+      }
+      default:
+        throw new Error(`unsupported geometry type ${this.type} in line ${this.line + 1}`);
+    }
+
+    this.geometries.push(geom);
+    this.reset();
   }
 }
 class MTLTokenizer extends CommonTokenizer {
@@ -1028,35 +1105,38 @@ class MTLTokenizer extends CommonTokenizer {
    * Constructs a new tokenizer if you want to parse again.
    */
   parse() {
-    if (this.materials) return this.materials;
-
     this.materials = new Map();
+    this.activatingMaterial = null;
+
     for (;;) {
-      const [tokenType, eol, eof] = this.nextToken();
+      const [type, eol, eof] = this.nextToken();
       if (eof) break;
 
-      if (tokenType === "#") {
+      if (type === "#") {
         this.parseComment();
       } else {
         if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
 
-        if (tokenType === "newmtl") {
+        if (type === "newmtl") {
           this.parseNewMaterial();
         } else {
           this.verifyActivatingMaterial();
 
-          if (tokenType === "Ka" || tokenType === "Ks" || tokenType === "Kd") {
-            this.parseColor(tokenType);
-          } else if (tokenType === "Ns") {
+          if (type === "Ka" || type === "Ks" || type === "Kd") {
+            this.parseColor(type);
+          } else if (type === "Ns") {
             this.parseSpecularExponent();
-          } else if (tokenType === "Ni") {
+          } else if (type === "Ni") {
             this.parseOpticalDensity();
-          } else if (tokenType === "d") {
+          } else if (type === "d") {
             this.parseOpaque(false);
-          } else if (tokenType === "Tr") {
+          } else if (type === "Tr") {
             this.parseOpaque(true);
-          } else if (tokenType === "illum") {
+          } else if (type === "illum") {
             this.parseIlluminationMode();
+          } else {
+            console.warn(`unsupported type '${type}' in line ${this.line + 1}`);
+            this.skipLine();
           }
         }
       }
@@ -1249,11 +1329,11 @@ const camera = new PerspectiveCamera(
 let lastRenderTime = 0;
 const render = (renderTime) => {
   // update rotation
-  // const r = ((lastRenderTime / 1000) * 60) % 360;
-  // rotation[0] = r;
-  // rotation[2] = r;
-  // instance.setRotation(rotation);
-  // instance.updateModelMatrix();
+  const r = ((lastRenderTime / 1000) * 60) % 360;
+  rotation[0] = r;
+  rotation[2] = r;
+  instance.setRotation(rotation);
+  instance.updateModelMatrix();
 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 0);
