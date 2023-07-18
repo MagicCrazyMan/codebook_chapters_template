@@ -10,25 +10,34 @@ import { RenderGeometry } from "../../libs/geom/rendergeometry";
 
 class OBJFace {
   /**
-   * @type {number}
-   * @readonly
+   * Flatten indices values.
+   * @type {Uint32Array}
    */
-  vIndices;
+  indices;
   /**
-   * @type {number}
-   * @readonly
+   * Flatten geometric vertices values,
+   * each vertex contains 4 components: x, y, z and w
+   * @type {Float32Array}
    */
-  vnStart;
+  geometricVertices;
   /**
-   * @type {number | false}
-   * @readonly
+   * Flatten texture vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {Float32Array}
    */
-  vtStart;
+  textureVertices;
   /**
-   * @type {number}
-   * @readonly
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {Float32Array}
    */
-  length;
+  normalVertices;
+  /**
+   * Flatten parameter space vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {Float32Array}
+   */
+  parameterVertices;
   /**
    * @type {string | null}
    * @readonly
@@ -51,19 +60,19 @@ class OBJFace {
   smoothing;
 
   constructor(
-    vStart,
-    vnStart,
-    vtStart,
-    length,
+    indices,
+    geometricVertices,
+    normalVertices,
+    textureVertices,
     material = null,
     objectName = null,
     groupNames = [],
     smoothing = false
   ) {
-    this.vStart = vStart;
-    this.vnStart = vnStart;
-    this.vtStart = vtStart;
-    this.length = length;
+    this.indices = indices;
+    this.geometricVertices = geometricVertices;
+    this.normalVertices = normalVertices;
+    this.textureVertices = textureVertices;
     this.material = material;
     this.objectName = objectName;
     this.groupNames = groupNames;
@@ -72,51 +81,6 @@ class OBJFace {
 }
 
 class OBJInstance extends RenderGeometry {
-  /**
-  /**
-   * Flatten geometric vertices values,
-   * each vertex contains 4 components: x, y, z and w
-   * @type {Float32Array}
-   */
-  geometricVertices = [];
-  /**
-   * Flatten texture vertices values,
-   * each vertex contains 3 components: u, v and w
-   * @type {Float32Array}
-   */
-  textureVertices = [];
-  /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {Float32Array}
-   */
-  normalVertices = [];
-  /**
-   * Flatten parameter space vertices values,
-   * each vertex contains 3 components: u, v and w
-   * @type {Float32Array}
-   */
-  parameterVertices = [];
-  /**
-   * Length of geometric vertices
-   * @type {number}
-   */
-  vLength;
-  /**
-   * Length of normal vertices
-   * @type {number}
-   */
-  vnLength;
-  /**
-   * Length of texture vertices
-   * @type {number}
-   */
-  vtLength;
-  /**
-   * Length of parameter spaces vertices
-   * @type {number}
-   */
-  vpLength;
   /**
    * Map of all materials
    * @type {Map<string, MTLBasicMaterial>}
@@ -128,52 +92,10 @@ class OBJInstance extends RenderGeometry {
    */
   geometries;
 
-  constructor(
-    geometricVertices,
-    textureVertices,
-    normalVertices,
-    parameterVertices,
-    vLength,
-    vnLength,
-    vtLength,
-    vpLength,
-    geometries,
-    materials
-  ) {
+  constructor(geometries, materials) {
     super();
-    this.geometricVertices = geometricVertices;
-    this.textureVertices = textureVertices;
-    this.normalVertices = normalVertices;
-    this.parameterVertices = parameterVertices;
-    this.vLength = vLength;
-    this.vnLength = vnLength;
-    this.vtLength = vtLength;
-    this.vpLength = vpLength;
     this.materials = materials;
     this.geometries = geometries;
-  }
-
-  /**
-   * @type {WebGLBuffer}
-   * @private
-   */
-  _dataBuffer;
-
-  /**
-   * Gets data WebGL buffer
-   * @public
-   * @param {WebGL2RenderingContext} gl
-   * @returns {WebGLBuffer}
-   */
-  getDataBuffer(gl) {
-    if (!this._dataBuffer) {
-      this._dataBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, this._dataBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    }
-
-    return this._dataBuffer;
   }
 
   /**
@@ -320,14 +242,6 @@ class OBJTokenizer extends CommonTokenizer {
    */
   normalVertices = [];
   /**
-   * When a face geometry has no `vn` property,
-   * parser will automatically calculate a normal
-   * from face and push it into `normalVertices`.
-   * This field tells parser how many normals had
-   * calculated and add offset to normal indices
-   */
-  normalIndexOffset = 0;
-  /**
    * Flatten normal vertices values,
    * each vertex contains 3 components: i, j and k
    * @type {number[]}
@@ -447,18 +361,7 @@ class OBJTokenizer extends CommonTokenizer {
     });
 
     // transfer array to ArrayBuffer
-    this.result = new OBJInstance(
-      new Float32Array(this.geometricVertices),
-      new Float32Array(this.normalVertices),
-      new Float32Array(this.textureVertices),
-      new Float32Array(this.parameterVertices),
-      this.geometricVertices.length / 4,
-      this.normalVertices.length / 3,
-      this.textureVertices.length / 3,
-      this.parameterVertices.length / 3,
-      this.geometries,
-      parsedMaterials
-    );
+    this.result = new OBJInstance(this.geometries, parsedMaterials);
 
     // drop data immediately
     this.geometricVertices.length = 0;
@@ -768,14 +671,14 @@ class OBJTokenizer extends CommonTokenizer {
       }
 
       // parse geometric index
-      const geometricIndex = parseInt(v, 10);
+      const geometricIndex = parseInt(v, 10) - 1;
       if (isNaN(geometricIndex))
         throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
       vIndices.push(geometricIndex);
 
       // parse texture index
       if (vt) {
-        const textureIndex = parseInt(vt, 10);
+        const textureIndex = parseInt(vt, 10) - 1;
         if (isNaN(textureIndex))
           throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
         vtIndices.push(textureIndex);
@@ -783,10 +686,10 @@ class OBJTokenizer extends CommonTokenizer {
 
       // parse normal index
       if (vn) {
-        const normalIndex = parseInt(vn, 10);
+        const normalIndex = parseInt(vn, 10) - 1;
         if (isNaN(normalIndex))
           throw new Error(`token ${vn} in line ${this.line} is not a normal vertices index`);
-        vnIndices.push(normalIndex + this.normalIndexOffset);
+        vnIndices.push(normalIndex);
       }
 
       if (eol) break;
@@ -794,80 +697,80 @@ class OBJTokenizer extends CommonTokenizer {
 
     if (vIndices.length < 3) {
       throw new Error(`face geometry requires at least 3 geometric vertices in line ${this.line}`);
-    } else if (vIndices.length > 3) {
-      // split into triangles, using triangle fan structure.
-      // maybe replace earcut in the future
-      const nvIndices = [];
-      const nvtIndices = [];
-      const nvnIndices = [];
-      const tempVec0 = vec3.create();
-      const tempVec1 = vec3.create();
-      const tempVec2 = vec3.create();
-      for (let i = 1; i <= vIndices.length - 2; i++) {
-        const i0 = 0;
-        const i1 = i;
-        const i2 = i + 1;
-
-        nvIndices.push(vIndices[i0], vIndices[i1], vIndices[i2]);
-
-        if (hasTextureIndices) nvtIndices.push(vtIndices[i0], vtIndices[i1], vtIndices[i2]);
-
-        if (hasNormalIndices) {
-          nvnIndices.push(vnIndices[i0], vnIndices[i1], vnIndices[i2]);
-        } else {
-          // calculate normal from triangle
-          const vIndex0 = vIndices[i0] - 1;
-          const vIndex1 = vIndices[i1] - 1;
-          const vIndex2 = vIndices[i2] - 1;
-          let px0 = this.geometricVertices[vIndex0 * 4];
-          let py0 = this.geometricVertices[vIndex0 * 4 + 1];
-          let pz0 = this.geometricVertices[vIndex0 * 4 + 2];
-          const pw0 = this.geometricVertices[vIndex0 * 4 + 3];
-          let px1 = this.geometricVertices[vIndex1 * 4];
-          let py1 = this.geometricVertices[vIndex1 * 4 + 1];
-          let pz1 = this.geometricVertices[vIndex1 * 4 + 2];
-          const pw1 = this.geometricVertices[vIndex1 * 4 + 3];
-          let px2 = this.geometricVertices[vIndex2 * 4];
-          let py2 = this.geometricVertices[vIndex2 * 4 + 1];
-          let pz2 = this.geometricVertices[vIndex2 * 4 + 2];
-          const pw2 = this.geometricVertices[vIndex2 * 4 + 3];
-
-          px0 = px0 / pw0;
-          py0 = py0 / pw0;
-          pz0 = pz0 / pw0;
-          px1 = px1 / pw1;
-          py1 = py1 / pw1;
-          pz1 = pz1 / pw1;
-          px2 = px2 / pw2;
-          py2 = py2 / pw2;
-          pz2 = pz2 / pw2;
-
-          vec3.set(tempVec0, px1 - px0, py1 - py0, pz1 - pz0);
-          vec3.set(tempVec1, px2 - px1, py2 - py1, pz2 - pz1);
-          vec3.cross(tempVec2, tempVec0, tempVec1);
-          vec3.normalize(tempVec2, tempVec2);
-
-          const index = this.normalVertices.length / 3 + 1;
-          this.normalVertices.push(tempVec2[0], tempVec2[1], tempVec2[2]);
-          this.normalIndexOffset++;
-          nvnIndices.push(index, index, index);
-        }
-      }
-
-      vIndices = nvIndices;
-      vnIndices = nvnIndices;
-      vtIndices = nvtIndices;
     }
 
-    const start = this.indices.length;
-    this.indices.push(...vIndices);
-    this.indices.push(...vnIndices);
-    this.indices.push(...vtIndices);
+    const trianglesCount = vIndices.length - 2;
+    const indices = new Uint32Array(trianglesCount * 3 * 1);
+    const geometricVertices = new Float32Array(trianglesCount * 3 * 4);
+    const normalVertices = new Float32Array(trianglesCount * 3 * 3);
+    const textureVertices = new Float32Array(vtIndices.length === 0 ? 0 : trianglesCount * 3 * 3);
+    for (let i = 1, j = 0; i <= trianglesCount; i++, j += 3) {
+      // process indices
+      indices.set([j, j + 1, j + 2], j);
+
+      // process geometric vertices
+      const i0 = vIndices[0];
+      const i1 = vIndices[i];
+      const i2 = vIndices[i + 1];
+
+      const v0 = this.geometricVertices.slice(i0 * 4, (i0 + 1) * 4);
+      const v1 = this.geometricVertices.slice(i1 * 4, (i1 + 1) * 4);
+      const v2 = this.geometricVertices.slice(i2 * 4, (i2 + 1) * 4);
+
+      geometricVertices.set(v0, j * 4);
+      geometricVertices.set(v1, (j + 1) * 4);
+      geometricVertices.set(v2, (j + 2) * 4);
+
+      // process geometric vertices
+      if (hasNormalIndices) {
+        const in0 = vnIndices[0];
+        const in1 = vnIndices[i];
+        const in2 = vnIndices[i + 1];
+
+        const vn0 = this.normalVertices.slice(in0 * 3, (in0 + 1) * 3);
+        const vn1 = this.normalVertices.slice(in1 * 3, (in1 + 1) * 3);
+        const vn2 = this.normalVertices.slice(in2 * 3, (in2 + 1) * 3);
+
+        normalVertices.set(vn0, j * 4);
+        normalVertices.set(vn1, (j + 1) * 4);
+        normalVertices.set(vn2, (j + 2) * 4);
+      } else {
+        // calculate from triangle if not existed
+        const p0 = vec3.fromValues(v0[0] / v0[3], v0[1] / v0[3], v0[2] / v0[3]);
+        const p1 = vec3.fromValues(v1[0] / v1[3], v1[1] / v1[3], v1[2] / v1[3]);
+        const p2 = vec3.fromValues(v2[0] / v2[3], v2[1] / v2[3], v2[2] / v2[3]);
+
+        const d0 = vec3.subtract(p2, p2, p0);
+        const d1 = vec3.subtract(p1, p1, p0);
+
+        const normal = vec3.cross(d0, d0, d1);
+        vec3.normalize(normal, normal);
+
+        normalVertices.set(normal, j * 3);
+        normalVertices.set(normal, (j + 1) * 3);
+        normalVertices.set(normal, (j + 2) * 3);
+      }
+
+      if (hasTextureIndices) {
+        const it0 = vtIndices[0];
+        const it1 = vtIndices[i];
+        const it2 = vtIndices[i + 1];
+
+        const vt0 = this.textureVertices.slice(it0 * 3, (it0 + 1) * 3);
+        const vt1 = this.textureVertices.slice(it1 * 3, (it1 + 1) * 3);
+        const vt2 = this.textureVertices.slice(it2 * 3, (it2 + 1) * 3);
+
+        textureVertices.set(vt0, j * 3);
+        textureVertices.set(vt1, (j + 1) * 3);
+        textureVertices.set(vt2, (j + 2) * 3);
+      }
+    }
+
     const face = new OBJFace(
-      start,
-      vIndices.length,
-      vnIndices.length,
-      vtIndices.length,
+      indices,
+      geometricVertices,
+      normalVertices,
+      textureVertices,
       this.activatingMaterial,
       this.activatingObjectName,
       this.activatingGroupNames,
@@ -987,6 +890,44 @@ class MTLBasicMaterial {
   illumination;
 
   /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _verticesBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getVerticesBuffer(gl) {
+    if (!this._verticesBuffer) {
+      this._verticesBuffer = gl.createBuffer();
+    }
+
+    return this._verticesBuffer;
+  }
+
+  /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _indicesBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getIndicesBuffer(gl) {
+    if (!this._indicesBuffer) {
+      this._indicesBuffer = gl.createBuffer();
+    }
+
+    return this._indicesBuffer;
+  }
+
+  /**
    * @typedef {Object} RenderState
    * @property {PerspectiveCamera} camera
    * @property {OBJInstance} instance
@@ -1000,7 +941,6 @@ class MTLBasicMaterial {
    * @param {RenderState} state
    */
   render(gl, geometry, state) {
-    debugger;
     gl.useProgram(MTLBasicMaterial.getProgram(gl));
 
     // bind mvp matrix
@@ -1017,7 +957,8 @@ class MTLBasicMaterial {
     gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
 
     // bind data buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, state.instance.getDataBuffer(gl));
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.getVerticesBuffer(gl));
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.geometricVertices, gl.DYNAMIC_DRAW);
     gl.vertexAttribPointer(
       MTLBasicMaterial.attributeLocations["a_Position"],
       4,
@@ -1029,10 +970,11 @@ class MTLBasicMaterial {
     gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
 
     // bind indices buffer
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.instance.getIndicesBuffer(gl));
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.getIndicesBuffer(gl));
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.DYNAMIC_DRAW);
 
     // draw
-    gl.drawElements(gl.TRIANGLES, geometry.length, gl.UNSIGNED_INT, geometry.vStart);
+    gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_INT, 0);
   }
 }
 
@@ -1265,7 +1207,10 @@ const instance = await fetch("/resources/cube.obj")
       mtlBaseUrl: "/resources",
     }).parse()
   );
-console.log(instance);
+instance.setScale(vec3.fromValues(60, 60, 60));
+const rotation = vec3.fromValues(0, 0, 60);
+instance.setRotation(rotation);
+instance.updateModelMatrix();
 
 const gl = getWebGLContext();
 gl.enable(gl.DEPTH_TEST);
@@ -1277,17 +1222,29 @@ const camera = new PerspectiveCamera(
   1,
   5000
 );
-const render = () => {
+
+let lastRenderTime = 0;
+const render = (renderTime) => {
+  // update rotation
+  const r = ((lastRenderTime / 1000) * 60) % 360;
+  rotation[0] = r;
+  rotation[2] = r;
+  instance.setRotation(rotation);
+  instance.updateModelMatrix();
+
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   instance.render(gl, camera);
+
+  lastRenderTime = renderTime;
+  requestAnimationFrame(render);
 };
-render();
+render(lastRenderTime);
 
 getCanvasResizeObserver(() => {
   camera.setAspect(gl.canvas.width / gl.canvas.height);
-  camera.updateViewMatrix();
-  render();
+  camera.updateViewProjectMatrix();
+  render(lastRenderTime);
 });

@@ -45,26 +45,26 @@ export class Geometry {
 
   /**
    * Sets geometry position.
-   * @param {vec3} position
+   * @param {import("gl-matrix").ReadonlyVec3} position
    */
   setPosition(position) {
-    this.position = position;
+    this.position.set(position);
   }
 
   /**
    * Sets geometry rotation.
-   * @param {vec3} rotation
+   * @param {import("gl-matrix").ReadonlyVec3} rotation
    */
   setRotation(rotation) {
-    this.rotation = rotation;
+    this.rotation.set(rotation);
   }
 
   /**
    * Sets geometry scale.
-   * @param {vec3} scale
+   * @param {import("gl-matrix").ReadonlyVec3} scale
    */
   setScale(scale) {
-    this.scale = scale;
+    this.scale.set(scale);
   }
 
   /**
