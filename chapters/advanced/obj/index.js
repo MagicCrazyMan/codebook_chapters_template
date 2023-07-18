@@ -1,48 +1,69 @@
-import { getCanvasResizeObserver } from "../../libs/common";
-import { vec3 } from "gl-matrix";
+import {
+  compileShader,
+  createProgram,
+  getCanvasResizeObserver,
+  getWebGLContext,
+} from "../../libs/common";
+import { PerspectiveCamera } from "../../libs/camera/perspective";
+import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { RenderGeometry } from "../../libs/geom/rendergeometry";
 
 class OBJFace {
   /**
-   * @type {Uint32Array[]}
+   * @type {number}
+   * @readonly
    */
-  flattenIndices;
+  start;
   /**
    * @type {number}
+   * @readonly
    */
-  indicesLength;
+  vLength;
   /**
-   * @type {boolean}
+   * @type {number}
+   * @readonly
    */
-  hasTexture;
+  vnLength;
+  /**
+   * @type {number}
+   * @readonly
+   */
+  vtLength;
   /**
    * @type {string | null}
+   * @readonly
    */
   material;
   /**
    * @type {string | null}
+   * @readonly
    */
   objectName;
   /**
    * @type {string[]}
+   * @readonly
    */
   groupNames;
   /**
    * @type {false | number}
+   * @readonly
    */
   smoothing;
 
   constructor(
-    flattenIndices,
-    indicesLength,
-    hasTexture,
+    start,
+    vLength,
+    vnLength,
+    vtLength,
     material = null,
     objectName = null,
     groupNames = [],
     smoothing = false
   ) {
-    this.flattenIndices = flattenIndices;
-    this.indicesLength = indicesLength;
-    this.hasTexture = hasTexture;
+    this.start = start;
+    this.vLength = vLength;
+    this.vtLength = vtLength;
+    this.vnLength = vnLength;
     this.material = material;
     this.objectName = objectName;
     this.groupNames = groupNames;
@@ -50,12 +71,17 @@ class OBJFace {
   }
 }
 
-class OBJInstance {
+class OBJInstance extends RenderGeometry {
   /**
    * Flatten values including v, vn, vt and vp in ordered.
-   * @type {number[]}
+   * @type {Float32Array}
    */
-  flatten;
+  data;
+  /**
+   * Flatten indices values of all geometries.
+   * @type {Uint32Array}
+   */
+  indices;
   /**
    * Length of geometric vertices
    * @type {number}
@@ -87,14 +113,92 @@ class OBJInstance {
    */
   geometries;
 
-  constructor(flatten, vLength, vnLength, vtLength, vpLength, geometries, materials) {
-    this.flatten = flatten;
+  constructor(data, indices, vLength, vnLength, vtLength, vpLength, geometries, materials) {
+    super();
+    this.data = data;
+    this.indices = indices;
     this.vLength = vLength;
     this.vnLength = vnLength;
     this.vtLength = vtLength;
     this.vpLength = vpLength;
     this.materials = materials;
     this.geometries = geometries;
+  }
+
+  /**
+   * @type {WebGLBuffer}
+   * @private
+   */
+  _dataBuffer;
+
+  /**
+   * Gets data WebGL buffer
+   * @public
+   * @param {WebGL2RenderingContext} gl
+   * @returns {WebGLBuffer}
+   */
+  getDataBuffer(gl) {
+    if (!this._dataBuffer) {
+      this._dataBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._dataBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, this.data, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+
+    return this._dataBuffer;
+  }
+
+  /**
+   * @type {WebGLBuffer}
+   * @private
+   */
+  _indicesBuffer;
+
+  /**
+   * Gets data WebGL buffer
+   * @public
+   * @param {WebGL2RenderingContext} gl
+   * @returns {WebGLBuffer}
+   */
+  getIndicesBuffer(gl) {
+    if (!this._indicesBuffer) {
+      this._indicesBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indicesBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+
+    return this._indicesBuffer;
+  }
+
+  /**
+   * @private
+   */
+  _tempMvpMatrix = mat4.create();
+  /**
+   *
+   * @param {WebGL2RenderingContext} gl
+   * @param {PerspectiveCamera} camera
+   */
+  render(gl, camera) {
+    mat4.identity(this._tempMvpMatrix);
+    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, camera.getViewProjMatrix());
+    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, this.getModelMatrix());
+
+    const state = {
+      camera,
+      mvpMatrix: this._tempMvpMatrix,
+      instance: this,
+    };
+    this.geometries.forEach((geometry) => {
+      const mtl = this.materials.get(geometry.material);
+      if (!mtl) {
+        console.warn(`missing material, some faces ignored`);
+        return;
+      }
+
+      mtl.render(gl, geometry, state);
+    });
   }
 }
 
@@ -225,6 +329,12 @@ class OBJTokenizer extends CommonTokenizer {
    */
   parameterVertices = [];
   /**
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {number[]}
+   */
+  indices = [];
+  /**
    * @type {string[]}
    * @private
    */
@@ -338,22 +448,24 @@ class OBJTokenizer extends CommonTokenizer {
     });
 
     // collect all numerical values into ArrayBuffer
-    const flatten = new Float32Array(
+    const data = new Float32Array(
       this.geometricVertices.length +
         this.normalVertices.length +
         this.textureVertices.length +
         this.parameterVertices.length
     );
-    flatten.set(this.geometricVertices, 0);
-    flatten.set(this.normalVertices, this.geometricVertices.length);
-    flatten.set(this.textureVertices, this.geometricVertices.length + this.normalVertices.length);
-    flatten.set(
+    data.set(this.geometricVertices, 0);
+    data.set(this.normalVertices, this.geometricVertices.length);
+    data.set(this.textureVertices, this.geometricVertices.length + this.normalVertices.length);
+    data.set(
       this.parameterVertices,
       this.geometricVertices.length + this.normalVertices.length + this.textureVertices.length
     );
+    const indices = new Uint32Array(this.indices);
 
     const result = new OBJInstance(
-      flatten,
+      data,
+      indices,
       this.geometricVertices.length / 4,
       this.normalVertices.length / 3,
       this.textureVertices.length / 3,
@@ -744,7 +856,7 @@ class OBJTokenizer extends CommonTokenizer {
           vec3.cross(tempVec2, tempVec0, tempVec1);
           vec3.normalize(tempVec2, tempVec2);
 
-          const index = (this.normalVertices.length / 3) + 1;
+          const index = this.normalVertices.length / 3 + 1;
           this.normalVertices.push(tempVec2[0], tempVec2[1], tempVec2[2]);
           this.normalIndexOffset++;
           nvnIndices.push(index, index, index);
@@ -756,15 +868,15 @@ class OBJTokenizer extends CommonTokenizer {
       vtIndices = nvtIndices;
     }
 
-    // collect all indices into ArrayBuffer
-    const flattenIndices = new Uint32Array(vIndices.length + vnIndices.length + vtIndices.length);
-    flattenIndices.set(vIndices, 0);
-    flattenIndices.set(vnIndices, vIndices.length);
-    flattenIndices.set(vtIndices, vIndices.length + vnIndices.length);
+    const start = this.indices.length;
+    this.indices.push(...vIndices);
+    this.indices.push(...vnIndices);
+    this.indices.push(...vtIndices);
     const face = new OBJFace(
-      flattenIndices,
-      vIndices.length / 3,
-      vtIndices.length !== 0,
+      start,
+      vIndices.length,
+      vnIndices.length,
+      vtIndices.length,
       this.activatingMaterial,
       this.activatingObjectName,
       this.activatingGroupNames,
@@ -775,6 +887,85 @@ class OBJTokenizer extends CommonTokenizer {
 }
 
 class MTLBasicMaterial {
+  /**
+   * @private
+   */
+  static VERTEX_SHADER_SOURCE = `
+    attribute vec4 a_Position;
+    
+    uniform vec4 u_Color;
+    uniform mat4 u_MvpMatrix;
+
+    varying vec4 v_Color;
+
+    void main() {
+      gl_Position = u_MvpMatrix * a_Position;
+      v_Color = u_Color;
+    }
+  `;
+  /**
+   * @private
+   */
+  static FRAGMENT_SHADER_SOURCE = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+    #else
+      precision mediump float;
+    #endif
+
+    uniform vec3 u_AmbientLightColor;
+
+    varying vec4 v_Color;
+
+    void main() {
+      gl_FragColor = vec4(v_Color.rgb, v_Color.a);
+    }
+  `;
+  /**
+   * @private
+   * @type {WebGLProgram | null}
+   */
+  static program = null;
+  /**
+   * @private
+   * @type {Record<string, number> | null}
+   */
+  static attributeLocations = null;
+  /**
+   * @private
+   * @type {Record<string, WebGLUniformLocation> | null}
+   */
+  static uniformLocations = null;
+
+  /**
+   *
+   * @param {WebGL2RenderingContext} gl
+   * @returns
+   */
+  static getProgram(gl) {
+    if (MTLBasicMaterial.program) return MTLBasicMaterial.program;
+
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, MTLBasicMaterial.VERTEX_SHADER_SOURCE);
+    const fragmentShader = compileShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      MTLBasicMaterial.FRAGMENT_SHADER_SOURCE
+    );
+    const program = createProgram(gl, [vertexShader, fragmentShader]);
+
+    MTLBasicMaterial.program = program;
+    MTLBasicMaterial.attributeLocations = {
+      a_Position: gl.getAttribLocation(program, "a_Position"),
+    };
+    MTLBasicMaterial.uniformLocations = {
+      u_Color: gl.getUniformLocation(program, "u_Color"),
+      u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
+      u_MvpMatrix: gl.getUniformLocation(program, "u_MvpMatrix"),
+    };
+
+    return MTLBasicMaterial.program;
+  }
+
   /**
    * @type {[number, number, number]}
    */
@@ -803,6 +994,55 @@ class MTLBasicMaterial {
    * @type {number}
    */
   illumination;
+
+  /**
+   * @typedef {Object} RenderState
+   * @property {PerspectiveCamera} camera
+   * @property {OBJInstance} instance
+   * @property {mat4} mvpMatrix
+   */
+
+  /**
+   *
+   * @param {WebGL2RenderingContext} gl
+   * @param {OBJFace} geometry
+   * @param {RenderState} state
+   */
+  render(gl, geometry, state) {
+    debugger
+    gl.useProgram(MTLBasicMaterial.getProgram(gl));
+
+    // bind mvp matrix
+    gl.uniformMatrix4fv(MTLBasicMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
+    // bind color
+    gl.uniform4f(
+      MTLBasicMaterial.uniformLocations["u_Color"],
+      this.diffuseColor[0],
+      this.diffuseColor[1],
+      this.diffuseColor[2],
+      this.opaque
+    );
+    // bind ambient color
+    gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
+
+    // bind data buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.instance.getDataBuffer(gl));
+    gl.vertexAttribPointer(
+      MTLBasicMaterial.attributeLocations["a_Position"],
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
+
+    // bind indices buffer
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.instance.getIndicesBuffer(gl));
+
+    // draw
+    gl.drawElements(gl.TRIANGLES, geometry.vLength, gl.UNSIGNED_INT, geometry.start);
+  }
 }
 
 class MTLTokenizer extends CommonTokenizer {
@@ -1036,9 +1276,27 @@ const instance = await fetch("/resources/cube.obj")
   );
 console.log(instance);
 
+const gl = getWebGLContext();
+gl.enable(gl.DEPTH_TEST);
+const camera = new PerspectiveCamera(
+  vec3.fromValues(0.0, 500.0, 200.0),
+  vec3.fromValues(0.0, 0.0, 0.0),
+  glMatrix.toRadian(30),
+  gl.canvas.width / gl.canvas.height,
+  1,
+  5000
+);
 const render = () => {
-  //
-};
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+  instance.render(gl, camera);
+};
 render();
-getCanvasResizeObserver(render);
+
+getCanvasResizeObserver(() => {
+  camera.setAspect(gl.canvas.width / gl.canvas.height);
+  camera.updateViewMatrix();
+  render();
+});
