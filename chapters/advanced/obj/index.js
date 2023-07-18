@@ -134,43 +134,6 @@ class MTLBasicMaterial {
     this.opticalDensity = opticalDensity;
     this.illumination = illumination;
   }
-  /**
-   * @type {WebGLBuffer | null}
-   * @private
-   */
-  _verticesBuffer = null;
-
-  /**
-   *
-   * @param {WebGLRenderingContext} gl
-   * @returns
-   */
-  getVerticesBuffer(gl) {
-    if (!this._verticesBuffer) {
-      this._verticesBuffer = gl.createBuffer();
-    }
-
-    return this._verticesBuffer;
-  }
-
-  /**
-   * @type {WebGLBuffer | null}
-   * @private
-   */
-  _indicesBuffer = null;
-
-  /**
-   *
-   * @param {WebGLRenderingContext} gl
-   * @returns
-   */
-  getIndicesBuffer(gl) {
-    if (!this._indicesBuffer) {
-      this._indicesBuffer = gl.createBuffer();
-    }
-
-    return this._indicesBuffer;
-  }
 
   /**
    * @typedef {Object} RenderState
@@ -202,8 +165,7 @@ class MTLBasicMaterial {
     gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
 
     // bind data buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.getVerticesBuffer(gl));
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getVerticesBuffer(gl));
     gl.vertexAttribPointer(
       MTLBasicMaterial.attributeLocations["a_Position"],
       3,
@@ -261,6 +223,28 @@ class OBJFace {
    * @readonly
    */
   smoothing;
+
+  /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _verticesBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getVerticesBuffer(gl) {
+    if (!this._verticesBuffer) {
+      this._verticesBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._verticesBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, this.vertices, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+
+    return this._verticesBuffer;
+  }
 
   constructor(vertices, uvs, normals, material, objectName, groupNames, smoothing) {
     this.vertices = vertices;
