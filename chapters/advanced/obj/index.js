@@ -8,6 +8,221 @@ import { PerspectiveCamera } from "../../libs/camera/perspective";
 import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { RenderGeometry } from "../../libs/geom/rendergeometry";
 
+class MTLBasicMaterial {
+  /**
+   * @private
+   */
+  static VERTEX_SHADER_SOURCE = `
+    attribute vec4 a_Position;
+    
+    uniform vec4 u_Color;
+    uniform mat4 u_MvpMatrix;
+
+    varying vec4 v_Color;
+
+    void main() {
+      gl_Position = u_MvpMatrix * a_Position;
+      v_Color = u_Color;
+    }
+  `;
+  /**
+   * @private
+   */
+  static FRAGMENT_SHADER_SOURCE = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+    #else
+      precision mediump float;
+    #endif
+
+    uniform vec3 u_AmbientLightColor;
+
+    varying vec4 v_Color;
+
+    void main() {
+      gl_FragColor = vec4(v_Color.rgb, v_Color.a);
+    }
+  `;
+  /**
+   * @private
+   * @type {WebGLProgram | null}
+   */
+  static program = null;
+  /**
+   * @private
+   * @type {Record<string, number> | null}
+   */
+  static attributeLocations = null;
+  /**
+   * @private
+   * @type {Record<string, WebGLUniformLocation> | null}
+   */
+  static uniformLocations = null;
+
+  /**
+   *
+   * @param {WebGL2RenderingContext} gl
+   * @returns
+   */
+  static getProgram(gl) {
+    if (MTLBasicMaterial.program) return MTLBasicMaterial.program;
+
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, MTLBasicMaterial.VERTEX_SHADER_SOURCE);
+    const fragmentShader = compileShader(
+      gl,
+      gl.FRAGMENT_SHADER,
+      MTLBasicMaterial.FRAGMENT_SHADER_SOURCE
+    );
+    const program = createProgram(gl, [vertexShader, fragmentShader]);
+
+    MTLBasicMaterial.program = program;
+    MTLBasicMaterial.attributeLocations = {
+      a_Position: gl.getAttribLocation(program, "a_Position"),
+    };
+    MTLBasicMaterial.uniformLocations = {
+      u_Color: gl.getUniformLocation(program, "u_Color"),
+      u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
+      u_MvpMatrix: gl.getUniformLocation(program, "u_MvpMatrix"),
+    };
+
+    return MTLBasicMaterial.program;
+  }
+
+  /**
+   * @type {[number, number, number]}
+   */
+  ambientColor;
+  /**
+   * @type {[number, number, number]}
+   */
+  diffuseColor;
+  /**
+   * @type {[number, number, number]}
+   */
+  specularColor;
+  /**
+   * @type {number}
+   */
+  specularExponent;
+  /**
+   * @type {number}
+   */
+  opaque;
+  /**
+   * @type {number}
+   */
+  opticalDensity;
+  /**
+   * @type {number}
+   */
+  illumination;
+
+  constructor(
+    ambientColor,
+    diffuseColor,
+    specularColor,
+    specularExponent,
+    opaque,
+    opticalDensity,
+    illumination
+  ) {
+    this.ambientColor = ambientColor;
+    this.diffuseColor = diffuseColor;
+    this.specularColor = specularColor;
+    this.specularExponent = specularExponent;
+    this.opaque = opaque;
+    this.opticalDensity = opticalDensity;
+    this.illumination = illumination;
+  }
+  /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _verticesBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getVerticesBuffer(gl) {
+    if (!this._verticesBuffer) {
+      this._verticesBuffer = gl.createBuffer();
+    }
+
+    return this._verticesBuffer;
+  }
+
+  /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _indicesBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getIndicesBuffer(gl) {
+    if (!this._indicesBuffer) {
+      this._indicesBuffer = gl.createBuffer();
+    }
+
+    return this._indicesBuffer;
+  }
+
+  /**
+   * @typedef {Object} RenderState
+   * @property {PerspectiveCamera} camera
+   * @property {OBJInstance} instance
+   * @property {mat4} mvpMatrix
+   */
+
+  /**
+   *
+   * @param {WebGL2RenderingContext} gl
+   * @param {OBJFace} geometry
+   * @param {RenderState} state
+   */
+  render(gl, geometry, state) {
+    gl.useProgram(MTLBasicMaterial.getProgram(gl));
+
+    // bind mvp matrix
+    gl.uniformMatrix4fv(MTLBasicMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
+    // bind color
+    gl.uniform4f(
+      MTLBasicMaterial.uniformLocations["u_Color"],
+      this.diffuseColor[0],
+      this.diffuseColor[1],
+      this.diffuseColor[2],
+      this.opaque
+    );
+    // bind ambient color
+    gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
+
+    // bind data buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.getVerticesBuffer(gl));
+    gl.bufferData(gl.ARRAY_BUFFER, geometry.geometricVertices, gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(
+      MTLBasicMaterial.attributeLocations["a_Position"],
+      4,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
+
+    // bind indices buffer
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.getIndicesBuffer(gl));
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.DYNAMIC_DRAW);
+
+    // draw
+    gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_INT, 0);
+  }
+}
+
 /**
  * OBJ face geometry that every vertex share the same normal.
  */
@@ -79,6 +294,21 @@ class OBJFace {
 
 class OBJInstance extends RenderGeometry {
   /**
+   * Default material.
+   * @readonly
+   * @public
+   */
+  static DEFAULT_MATERIAL = new MTLBasicMaterial(
+    [1, 1, 1],
+    [1, 1, 1],
+    [0, 0, 0],
+    96.078431,
+    1,
+    1,
+    0
+  );
+
+  /**
    * Map of all materials
    * @type {Map<string, MTLBasicMaterial>}
    */
@@ -115,12 +345,7 @@ class OBJInstance extends RenderGeometry {
       mvpMatrix: this._tempMvpMatrix,
     };
     this.geometries.forEach((geometry) => {
-      const mtl = this.materials.get(geometry.material);
-      if (!mtl) {
-        console.warn(`missing material, some faces ignored`);
-        return;
-      }
-
+      const mtl = this.materials.get(geometry.material) ?? OBJInstance.DEFAULT_MATERIAL;
       mtl.render(gl, geometry, state);
     });
   }
@@ -314,7 +539,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (tokenType === "#") {
         this.parseComment();
       } else {
-        if (eol) throw new Error(`unexpected end of line in line ${this.line}`);
+        if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
 
         if (tokenType === "v") {
           this.parseGeometricVertex();
@@ -343,7 +568,7 @@ class OBJTokenizer extends CommonTokenizer {
         } else if (tokenType === "usemtl") {
           this.parseUseMaterial();
         } else {
-          throw new Error(`unsupported type '${tokenType}' in line ${this.line}`);
+          throw new Error(`unsupported type '${tokenType}' in line ${this.line + 1}`);
         }
       }
     }
@@ -379,6 +604,7 @@ class OBJTokenizer extends CommonTokenizer {
     }
   }
 
+  _colorVertexWarnCount = 0;
   /**
    * Parse geometric vertex
    */
@@ -388,7 +614,7 @@ class OBJTokenizer extends CommonTokenizer {
       const [token, eol] = this.nextToken();
 
       const number = parseFloat(token);
-      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line} is not a number`);
+      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line + 1} is not a number`);
       numbers.push(number);
 
       if (eol) break;
@@ -400,9 +626,13 @@ class OBJTokenizer extends CommonTokenizer {
       this.geometricVertices.push(...numbers);
     } else if (numbers.length === 6) {
       this.geometricVertices.push(...numbers.slice(0, 3), 1);
-      console.warn(`color values of geometric vertex ignored in line ${this.line}`);
+
+      if (this._colorVertexWarnCount === 0) {
+        console.warn(`color values of geometric vertex ignored in line ${this.line + 1}`);
+        this._colorVertexWarnCount++;
+      }
     } else {
-      throw new Error(`unexpected number size of geometric vertex in line ${this.line}`);
+      throw new Error(`unexpected number size of geometric vertex in line ${this.line + 1}`);
     }
   }
 
@@ -415,7 +645,7 @@ class OBJTokenizer extends CommonTokenizer {
       const [token, eol] = this.nextToken();
 
       const number = parseFloat(token);
-      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line} is not a number`);
+      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line + 1} is not a number`);
       numbers.push(number);
 
       if (eol) break;
@@ -428,7 +658,7 @@ class OBJTokenizer extends CommonTokenizer {
     } else if (numbers.length === 3) {
       this.textureVertices.push(...numbers);
     } else {
-      throw new Error(`unexpected number size of texture vertex in line ${this.line}`);
+      throw new Error(`unexpected number size of texture vertex in line ${this.line + 1}`);
     }
   }
 
@@ -441,7 +671,7 @@ class OBJTokenizer extends CommonTokenizer {
       const [token, eol] = this.nextToken();
 
       const number = parseFloat(token);
-      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line} is not a number`);
+      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line + 1} is not a number`);
       numbers.push(number);
 
       if (eol) break;
@@ -450,7 +680,7 @@ class OBJTokenizer extends CommonTokenizer {
     if (numbers.length === 3) {
       this.normalVertices.push(...numbers);
     } else {
-      throw new Error(`unexpected number size of normal vertex in line ${this.line}`);
+      throw new Error(`unexpected number size of normal vertex in line ${this.line + 1}`);
     }
   }
 
@@ -463,7 +693,7 @@ class OBJTokenizer extends CommonTokenizer {
       const [token, eol] = this.nextToken();
 
       const number = parseFloat(token);
-      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line} is not a number`);
+      if (isNaN(number)) throw new Error(`token ${token} in line ${this.line + 1} is not a number`);
       numbers.push(number);
 
       if (eol) break;
@@ -474,7 +704,7 @@ class OBJTokenizer extends CommonTokenizer {
     } else if (numbers.length === 3) {
       this.parameterVertices.push(...numbers);
     } else {
-      throw new Error(`unexpected number size of parameter vertex in line ${this.line}`);
+      throw new Error(`unexpected number size of parameter vertex in line ${this.line + 1}`);
     }
   }
 
@@ -492,7 +722,13 @@ class OBJTokenizer extends CommonTokenizer {
     if (this.options.mtlsFromObj) {
       try {
         const requests = mtls.map((mtl) =>
-          fetch(`${this.options.mtlBaseUrl}/${mtl}`).then((res) => res.text())
+          fetch(`${this.options.mtlBaseUrl}/${mtl}`).then((res) => {
+            if (res.ok) {
+              return res.text();
+            } else {
+              throw new Error(`failed to fetch mtl file from remote: ${res.statusText}`);
+            }
+          })
         );
         this.materials.push(...(await Promise.all(requests)));
       } catch (e) {
@@ -554,14 +790,14 @@ class OBJTokenizer extends CommonTokenizer {
   parseSmoothingGroup() {
     const [token, eol] = this.nextToken();
     if ((token && !eol) || (!token && eol))
-      throw new Error(`unexpected smoothing group value in line ${this.line}`);
+      throw new Error(`unexpected smoothing group value in line ${this.line + 1}`);
 
     let smoothing;
     if (smoothing === "off") {
       smoothing = false;
     } else {
       const num = parseInt(token);
-      if (isNaN(num)) throw new Error(`unexpected smoothing group value in line ${this.line}`);
+      if (isNaN(num)) throw new Error(`unexpected smoothing group value in line ${this.line + 1}`);
       smoothing = num === 0 ? false : num;
     }
 
@@ -579,7 +815,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   //     const index = parseInt(token, 10);
   //     if (isNaN(index))
-  //       throw new Error(`token ${token} in line ${this.line} is not a geometric vertices index`);
+  //       throw new Error(`token ${token} in line ${this.line + 1} is not a geometric vertices index`);
   //     indices.push(index);
 
   //     if (eol) break;
@@ -611,19 +847,19 @@ class OBJTokenizer extends CommonTokenizer {
 
   //     // verify texture index
   //     if (hasTextureIndices === (vt === void 0)) {
-  //       throw new Error(`unexpected geometric and texture index pair in line ${this.line}`);
+  //       throw new Error(`unexpected geometric and texture index pair in line ${this.line + 1}`);
   //     }
 
   //     // verify geometric index
   //     const geometricIndex = parseInt(v, 10);
   //     if (isNaN(geometricIndex))
-  //       throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
+  //       throw new Error(`token ${v} in line ${this.line + 1} is not a geometric vertices index`);
   //     geometricIndices.push(geometricIndex);
 
   //     if (vt) {
   //       const textureIndex = parseInt(vt, 10);
   //       if (isNaN(textureIndex))
-  //         throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
+  //         throw new Error(`token ${vt} in line ${this.line + 1} is not a texture vertices index`);
 
   //       textureIndices.push(textureIndex);
   //     }
@@ -632,7 +868,7 @@ class OBJTokenizer extends CommonTokenizer {
   //   }
 
   //   if (geometricIndices.length < 2) {
-  //     throw new Error(`at least 2 vertices for a line geometry in line ${this.line}`);
+  //     throw new Error(`at least 2 vertices for a line geometry in line ${this.line + 1}`);
   //   }
 
   //   const geometry = new OBJGeometry(OBJGeometryType.Line);
@@ -644,6 +880,7 @@ class OBJTokenizer extends CommonTokenizer {
   //   });
   // }
 
+  _surfaceWarnCount = 0;
   /**
    * Parse face and add into all activating groups.
    * If no groups activating, create and add into default group.
@@ -659,25 +896,27 @@ class OBJTokenizer extends CommonTokenizer {
       const [v, vt, vn] = token.split("/");
 
       if (i === 0) {
-        hasTextureIndices = !!vt && vt.length !== 0;
-        hasNormalIndices = !!vn && vn.length !== 0;
+        hasTextureIndices = !!vt;
+        hasNormalIndices = !!vn;
       }
 
-      if (hasTextureIndices === (vt === void 0) || hasNormalIndices === (vn === void 0)) {
-        throw new Error(`unexpected geometric, texture and normal index pair in line ${this.line}`);
+      if (hasTextureIndices === !vt || hasNormalIndices === !vn) {
+        throw new Error(
+          `unexpected geometric, texture and normal index pair in line ${this.line + 1}`
+        );
       }
 
       // parse geometric index
       const geometricIndex = parseInt(v, 10) - 1;
       if (isNaN(geometricIndex))
-        throw new Error(`token ${v} in line ${this.line} is not a geometric vertices index`);
+        throw new Error(`token ${v} in line ${this.line + 1} is not a geometric vertices index`);
       vIndices.push(geometricIndex);
 
       // parse texture index
       if (vt) {
         const textureIndex = parseInt(vt, 10) - 1;
         if (isNaN(textureIndex))
-          throw new Error(`token ${vt} in line ${this.line} is not a texture vertices index`);
+          throw new Error(`token ${vt} in line ${this.line + 1} is not a texture vertices index`);
         vtIndices.push(textureIndex);
       }
 
@@ -685,7 +924,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (vn) {
         const normalIndex = parseInt(vn, 10) - 1;
         if (isNaN(normalIndex))
-          throw new Error(`token ${vn} in line ${this.line} is not a normal vertices index`);
+          throw new Error(`token ${vn} in line ${this.line + 1} is not a normal vertices index`);
         vnIndices.push(normalIndex);
       }
 
@@ -693,7 +932,9 @@ class OBJTokenizer extends CommonTokenizer {
     }
 
     if (vIndices.length < 3) {
-      throw new Error(`face geometry requires at least 3 geometric vertices in line ${this.line}`);
+      throw new Error(
+        `face geometry requires at least 3 geometric vertices in line ${this.line + 1}`
+      );
     }
 
     if (!hasNormalIndices || vnIndices.every((i) => vnIndices[0] == i)) {
@@ -752,209 +993,13 @@ class OBJTokenizer extends CommonTokenizer {
       );
       this.geometries.push(face);
     } else {
-      throw new Error(`unimplemented curve surface`);
+      if (this._surfaceWarnCount === 0) {
+        console.warn(`unimplemented curve surface, ignored. This message only show once`);
+        this._surfaceWarnCount++;
+      }
     }
   }
 }
-
-class MTLBasicMaterial {
-  /**
-   * @private
-   */
-  static VERTEX_SHADER_SOURCE = `
-    attribute vec4 a_Position;
-    
-    uniform vec4 u_Color;
-    uniform mat4 u_MvpMatrix;
-
-    varying vec4 v_Color;
-
-    void main() {
-      gl_Position = u_MvpMatrix * a_Position;
-      v_Color = u_Color;
-    }
-  `;
-  /**
-   * @private
-   */
-  static FRAGMENT_SHADER_SOURCE = `
-    #ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-    #else
-      precision mediump float;
-    #endif
-
-    uniform vec3 u_AmbientLightColor;
-
-    varying vec4 v_Color;
-
-    void main() {
-      gl_FragColor = vec4(v_Color.rgb, v_Color.a);
-    }
-  `;
-  /**
-   * @private
-   * @type {WebGLProgram | null}
-   */
-  static program = null;
-  /**
-   * @private
-   * @type {Record<string, number> | null}
-   */
-  static attributeLocations = null;
-  /**
-   * @private
-   * @type {Record<string, WebGLUniformLocation> | null}
-   */
-  static uniformLocations = null;
-
-  /**
-   *
-   * @param {WebGL2RenderingContext} gl
-   * @returns
-   */
-  static getProgram(gl) {
-    if (MTLBasicMaterial.program) return MTLBasicMaterial.program;
-
-    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, MTLBasicMaterial.VERTEX_SHADER_SOURCE);
-    const fragmentShader = compileShader(
-      gl,
-      gl.FRAGMENT_SHADER,
-      MTLBasicMaterial.FRAGMENT_SHADER_SOURCE
-    );
-    const program = createProgram(gl, [vertexShader, fragmentShader]);
-
-    MTLBasicMaterial.program = program;
-    MTLBasicMaterial.attributeLocations = {
-      a_Position: gl.getAttribLocation(program, "a_Position"),
-    };
-    MTLBasicMaterial.uniformLocations = {
-      u_Color: gl.getUniformLocation(program, "u_Color"),
-      u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
-      u_MvpMatrix: gl.getUniformLocation(program, "u_MvpMatrix"),
-    };
-
-    return MTLBasicMaterial.program;
-  }
-
-  /**
-   * @type {[number, number, number]}
-   */
-  ambientColor;
-  /**
-   * @type {[number, number, number]}
-   */
-  diffuseColor;
-  /**
-   * @type {[number, number, number]}
-   */
-  specularColor;
-  /**
-   * @type {number}
-   */
-  specularExponent;
-  /**
-   * @type {number}
-   */
-  opaque;
-  /**
-   * @type {number}
-   */
-  opticalDensity;
-  /**
-   * @type {number}
-   */
-  illumination;
-
-  /**
-   * @type {WebGLBuffer | null}
-   * @private
-   */
-  _verticesBuffer = null;
-
-  /**
-   *
-   * @param {WebGLRenderingContext} gl
-   * @returns
-   */
-  getVerticesBuffer(gl) {
-    if (!this._verticesBuffer) {
-      this._verticesBuffer = gl.createBuffer();
-    }
-
-    return this._verticesBuffer;
-  }
-
-  /**
-   * @type {WebGLBuffer | null}
-   * @private
-   */
-  _indicesBuffer = null;
-
-  /**
-   *
-   * @param {WebGLRenderingContext} gl
-   * @returns
-   */
-  getIndicesBuffer(gl) {
-    if (!this._indicesBuffer) {
-      this._indicesBuffer = gl.createBuffer();
-    }
-
-    return this._indicesBuffer;
-  }
-
-  /**
-   * @typedef {Object} RenderState
-   * @property {PerspectiveCamera} camera
-   * @property {OBJInstance} instance
-   * @property {mat4} mvpMatrix
-   */
-
-  /**
-   *
-   * @param {WebGL2RenderingContext} gl
-   * @param {OBJFace} geometry
-   * @param {RenderState} state
-   */
-  render(gl, geometry, state) {
-    gl.useProgram(MTLBasicMaterial.getProgram(gl));
-
-    // bind mvp matrix
-    gl.uniformMatrix4fv(MTLBasicMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
-    // bind color
-    gl.uniform4f(
-      MTLBasicMaterial.uniformLocations["u_Color"],
-      this.diffuseColor[0],
-      this.diffuseColor[1],
-      this.diffuseColor[2],
-      this.opaque
-    );
-    // bind ambient color
-    gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
-
-    // bind data buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.getVerticesBuffer(gl));
-    gl.bufferData(gl.ARRAY_BUFFER, geometry.geometricVertices, gl.DYNAMIC_DRAW);
-    gl.vertexAttribPointer(
-      MTLBasicMaterial.attributeLocations["a_Position"],
-      4,
-      gl.FLOAT,
-      false,
-      0,
-      0
-    );
-    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
-
-    // bind indices buffer
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.getIndicesBuffer(gl));
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.DYNAMIC_DRAW);
-
-    // draw
-    gl.drawElements(gl.TRIANGLES, geometry.indices.length, gl.UNSIGNED_INT, 0);
-  }
-}
-
 class MTLTokenizer extends CommonTokenizer {
   /**
    * @type {Map<string, MTLBasicMaterial>}
@@ -1054,7 +1099,7 @@ class MTLTokenizer extends CommonTokenizer {
   verifyActivatingMaterial() {
     if (!this.activatingMaterial)
       throw new Error(
-        `no material defined before assigning material properties in line ${this.line}`
+        `no material defined before assigning material properties in line ${this.line + 1}`
       );
   }
 
@@ -1069,7 +1114,7 @@ class MTLTokenizer extends CommonTokenizer {
 
       const number = parseFloat(token);
       if (isNaN(number) || number < 0 || number > 1.0)
-        throw new Error(`token ${token} in line ${this.line} is not a color component`);
+        throw new Error(`token ${token} in line ${this.line + 1} is not a color component`);
       numbers.push(number);
 
       if (eol) break;
@@ -1101,7 +1146,7 @@ class MTLTokenizer extends CommonTokenizer {
     const [token] = this.nextToken();
     const number = parseFloat(token);
     if (isNaN(number) || number < 0 || number > 1000)
-      throw new Error(`unexpected specular exponent in line ${this.line}`);
+      throw new Error(`unexpected specular exponent in line ${this.line + 1}`);
 
     this.activatingMaterial.specularExponent = number;
   }
@@ -1114,7 +1159,7 @@ class MTLTokenizer extends CommonTokenizer {
     const [token] = this.nextToken();
     const number = parseFloat(token);
     if (isNaN(number) || number < 0 || number > 1)
-      throw new Error(`unexpected opaque in line ${this.line}`);
+      throw new Error(`unexpected opaque in line ${this.line + 1}`);
 
     this.activatingMaterial.opaque = isTransparent ? 1 - number : number;
   }
@@ -1126,7 +1171,7 @@ class MTLTokenizer extends CommonTokenizer {
     const [token] = this.nextToken();
     const number = parseFloat(token);
     if (isNaN(number) || number < 0.001 || number > 10)
-      throw new Error(`unexpected optical density in line ${this.line}`);
+      throw new Error(`unexpected optical density in line ${this.line + 1}`);
 
     this.activatingMaterial.opticalDensity = number;
   }
@@ -1138,7 +1183,7 @@ class MTLTokenizer extends CommonTokenizer {
     const [token] = this.nextToken();
     const number = parseInt(token);
     if (isNaN(number) || number < 0 || number > 10)
-      throw new Error(`unexpected illumination mode in line ${this.line}`);
+      throw new Error(`unexpected illumination mode in line ${this.line + 1}`);
 
     this.activatingMaterial.illumination = number;
   }
@@ -1176,7 +1221,7 @@ class OBJReader {
   }
 }
 
-const instance = await fetch("/resources/cube.obj")
+const instance = await fetch("/resources/car.obj")
   .then((res) => res.text())
   .then((obj) =>
     new OBJReader(obj, {
@@ -1204,11 +1249,11 @@ const camera = new PerspectiveCamera(
 let lastRenderTime = 0;
 const render = (renderTime) => {
   // update rotation
-  const r = ((lastRenderTime / 1000) * 60) % 360;
-  rotation[0] = r;
-  rotation[2] = r;
-  instance.setRotation(rotation);
-  instance.updateModelMatrix();
+  // const r = ((lastRenderTime / 1000) * 60) % 360;
+  // rotation[0] = r;
+  // rotation[2] = r;
+  // instance.setRotation(rotation);
+  // instance.updateModelMatrix();
 
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 0);
