@@ -8,6 +8,9 @@ import { PerspectiveCamera } from "../../libs/camera/perspective";
 import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { RenderGeometry } from "../../libs/geom/rendergeometry";
 
+/**
+ * OBJ face geometry that every vertex share the same normal.
+ */
 class OBJFace {
   /**
    * Flatten indices values.
@@ -32,12 +35,6 @@ class OBJFace {
    * @type {Float32Array}
    */
   normalVertices;
-  /**
-   * Flatten parameter space vertices values,
-   * each vertex contains 3 components: u, v and w
-   * @type {Float32Array}
-   */
-  parameterVertices;
   /**
    * @type {string | null}
    * @readonly
@@ -699,43 +696,20 @@ class OBJTokenizer extends CommonTokenizer {
       throw new Error(`face geometry requires at least 3 geometric vertices in line ${this.line}`);
     }
 
-    const trianglesCount = vIndices.length - 2;
-    const indices = new Uint32Array(trianglesCount * 3 * 1);
-    const geometricVertices = new Float32Array(trianglesCount * 3 * 4);
-    const normalVertices = new Float32Array(trianglesCount * 3 * 3);
-    const textureVertices = new Float32Array(vtIndices.length === 0 ? 0 : trianglesCount * 3 * 3);
-    for (let i = 1, j = 0; i <= trianglesCount; i++, j += 3) {
-      // process indices
-      indices.set([j, j + 1, j + 2], j);
-
-      // process geometric vertices
-      const i0 = vIndices[0];
-      const i1 = vIndices[i];
-      const i2 = vIndices[i + 1];
-
-      const v0 = this.geometricVertices.slice(i0 * 4, (i0 + 1) * 4);
-      const v1 = this.geometricVertices.slice(i1 * 4, (i1 + 1) * 4);
-      const v2 = this.geometricVertices.slice(i2 * 4, (i2 + 1) * 4);
-
-      geometricVertices.set(v0, j * 4);
-      geometricVertices.set(v1, (j + 1) * 4);
-      geometricVertices.set(v2, (j + 2) * 4);
-
-      // process geometric vertices
+    if (!hasNormalIndices || vnIndices.every((i) => vnIndices[0] == i)) {
+      // if vertices of a face has no normal indices or they share the same normal, use OBJFace
+      const geometricVertices = new Float32Array(vIndices.length * 4);
+      const normalVertices = new Float32Array(vIndices.length * 3);
+      const textureVertices = new Float32Array(vtIndices.length * 3);
+      let normal;
       if (hasNormalIndices) {
-        const in0 = vnIndices[0];
-        const in1 = vnIndices[i];
-        const in2 = vnIndices[i + 1];
-
-        const vn0 = this.normalVertices.slice(in0 * 3, (in0 + 1) * 3);
-        const vn1 = this.normalVertices.slice(in1 * 3, (in1 + 1) * 3);
-        const vn2 = this.normalVertices.slice(in2 * 3, (in2 + 1) * 3);
-
-        normalVertices.set(vn0, j * 4);
-        normalVertices.set(vn1, (j + 1) * 4);
-        normalVertices.set(vn2, (j + 2) * 4);
+        normal = this.normalVertices.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
       } else {
         // calculate from triangle if not existed
+        const v0 = this.geometricVertices.slice(vIndices[0] * 4, (vIndices[0] + 1) * 4);
+        const v1 = this.geometricVertices.slice(vIndices[1] * 4, (vIndices[1] + 1) * 4);
+        const v2 = this.geometricVertices.slice(vIndices[2] * 4, (vIndices[2] + 1) * 4);
+
         const p0 = vec3.fromValues(v0[0] / v0[3], v0[1] / v0[3], v0[2] / v0[3]);
         const p1 = vec3.fromValues(v1[0] / v1[3], v1[1] / v1[3], v1[2] / v1[3]);
         const p2 = vec3.fromValues(v2[0] / v2[3], v2[1] / v2[3], v2[2] / v2[3]);
@@ -743,40 +717,43 @@ class OBJTokenizer extends CommonTokenizer {
         const d0 = vec3.subtract(p2, p2, p0);
         const d1 = vec3.subtract(p1, p1, p0);
 
-        const normal = vec3.cross(d0, d0, d1);
-        vec3.normalize(normal, normal);
-
-        normalVertices.set(normal, j * 3);
-        normalVertices.set(normal, (j + 1) * 3);
-        normalVertices.set(normal, (j + 2) * 3);
+        const n = vec3.cross(d0, d0, d1);
+        vec3.normalize(n, n);
+        normal = n;
       }
 
-      if (hasTextureIndices) {
-        const it0 = vtIndices[0];
-        const it1 = vtIndices[i];
-        const it2 = vtIndices[i + 1];
+      for (let i = 0; i < vIndices.length; i++) {
+        const v = this.geometricVertices.slice(vIndices[i] * 4, (vIndices[i] + 1) * 4);
+        geometricVertices.set(v, i * 4);
 
-        const vt0 = this.textureVertices.slice(it0 * 3, (it0 + 1) * 3);
-        const vt1 = this.textureVertices.slice(it1 * 3, (it1 + 1) * 3);
-        const vt2 = this.textureVertices.slice(it2 * 3, (it2 + 1) * 3);
+        normalVertices.set(normal, i * 3);
 
-        textureVertices.set(vt0, j * 3);
-        textureVertices.set(vt1, (j + 1) * 3);
-        textureVertices.set(vt2, (j + 2) * 3);
+        if (hasTextureIndices) {
+          const vt = this.geometricVertices.slice(vtIndices[i] * 4, (vtIndices[i] + 1) * 3);
+          textureVertices.set(vt, i * 3);
+        }
       }
+
+      const trianglesCount = vIndices.length - 2;
+      const indices = new Uint32Array(trianglesCount * 3);
+      for (let i = 0; i < trianglesCount; i++) {
+        indices.set([0, i + 1, i + 2], i * 3);
+      }
+
+      const face = new OBJFace(
+        indices,
+        geometricVertices,
+        normalVertices,
+        textureVertices,
+        this.activatingMaterial,
+        this.activatingObjectName,
+        this.activatingGroupNames,
+        this.activatingSmoothing
+      );
+      this.geometries.push(face);
+    } else {
+      throw new Error(`unimplemented curve surface`);
     }
-
-    const face = new OBJFace(
-      indices,
-      geometricVertices,
-      normalVertices,
-      textureVertices,
-      this.activatingMaterial,
-      this.activatingObjectName,
-      this.activatingGroupNames,
-      this.activatingSmoothing
-    );
-    this.geometries.push(face);
   }
 }
 
@@ -1211,6 +1188,7 @@ instance.setScale(vec3.fromValues(60, 60, 60));
 const rotation = vec3.fromValues(0, 0, 60);
 instance.setRotation(rotation);
 instance.updateModelMatrix();
+console.log(instance);
 
 const gl = getWebGLContext();
 gl.enable(gl.DEPTH_TEST);
