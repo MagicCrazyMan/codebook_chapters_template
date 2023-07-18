@@ -13,22 +13,22 @@ class OBJFace {
    * @type {number}
    * @readonly
    */
-  start;
+  vIndices;
   /**
    * @type {number}
    * @readonly
    */
-  vLength;
+  vnStart;
+  /**
+   * @type {number | false}
+   * @readonly
+   */
+  vtStart;
   /**
    * @type {number}
    * @readonly
    */
-  vnLength;
-  /**
-   * @type {number}
-   * @readonly
-   */
-  vtLength;
+  length;
   /**
    * @type {string | null}
    * @readonly
@@ -51,19 +51,19 @@ class OBJFace {
   smoothing;
 
   constructor(
-    start,
-    vLength,
-    vnLength,
-    vtLength,
+    vStart,
+    vnStart,
+    vtStart,
+    length,
     material = null,
     objectName = null,
     groupNames = [],
     smoothing = false
   ) {
-    this.start = start;
-    this.vLength = vLength;
-    this.vtLength = vtLength;
-    this.vnLength = vnLength;
+    this.vStart = vStart;
+    this.vnStart = vnStart;
+    this.vtStart = vtStart;
+    this.length = length;
     this.material = material;
     this.objectName = objectName;
     this.groupNames = groupNames;
@@ -73,15 +73,30 @@ class OBJFace {
 
 class OBJInstance extends RenderGeometry {
   /**
-   * Flatten values including v, vn, vt and vp in ordered.
+  /**
+   * Flatten geometric vertices values,
+   * each vertex contains 4 components: x, y, z and w
    * @type {Float32Array}
    */
-  data;
+  geometricVertices = [];
   /**
-   * Flatten indices values of all geometries.
-   * @type {Uint32Array}
+   * Flatten texture vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {Float32Array}
    */
-  indices;
+  textureVertices = [];
+  /**
+   * Flatten normal vertices values,
+   * each vertex contains 3 components: i, j and k
+   * @type {Float32Array}
+   */
+  normalVertices = [];
+  /**
+   * Flatten parameter space vertices values,
+   * each vertex contains 3 components: u, v and w
+   * @type {Float32Array}
+   */
+  parameterVertices = [];
   /**
    * Length of geometric vertices
    * @type {number}
@@ -113,10 +128,23 @@ class OBJInstance extends RenderGeometry {
    */
   geometries;
 
-  constructor(data, indices, vLength, vnLength, vtLength, vpLength, geometries, materials) {
+  constructor(
+    geometricVertices,
+    textureVertices,
+    normalVertices,
+    parameterVertices,
+    vLength,
+    vnLength,
+    vtLength,
+    vpLength,
+    geometries,
+    materials
+  ) {
     super();
-    this.data = data;
-    this.indices = indices;
+    this.geometricVertices = geometricVertices;
+    this.textureVertices = textureVertices;
+    this.normalVertices = normalVertices;
+    this.parameterVertices = parameterVertices;
     this.vLength = vLength;
     this.vnLength = vnLength;
     this.vtLength = vtLength;
@@ -149,29 +177,6 @@ class OBJInstance extends RenderGeometry {
   }
 
   /**
-   * @type {WebGLBuffer}
-   * @private
-   */
-  _indicesBuffer;
-
-  /**
-   * Gets data WebGL buffer
-   * @public
-   * @param {WebGL2RenderingContext} gl
-   * @returns {WebGLBuffer}
-   */
-  getIndicesBuffer(gl) {
-    if (!this._indicesBuffer) {
-      this._indicesBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indicesBuffer);
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.indices, gl.STATIC_DRAW);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-
-    return this._indicesBuffer;
-  }
-
-  /**
    * @private
    */
   _tempMvpMatrix = mat4.create();
@@ -187,8 +192,8 @@ class OBJInstance extends RenderGeometry {
 
     const state = {
       camera,
-      mvpMatrix: this._tempMvpMatrix,
       instance: this,
+      mvpMatrix: this._tempMvpMatrix,
     };
     this.geometries.forEach((geometry) => {
       const mtl = this.materials.get(geometry.material);
@@ -329,12 +334,6 @@ class OBJTokenizer extends CommonTokenizer {
    */
   parameterVertices = [];
   /**
-   * Flatten normal vertices values,
-   * each vertex contains 3 components: i, j and k
-   * @type {number[]}
-   */
-  indices = [];
-  /**
    * @type {string[]}
    * @private
    */
@@ -447,25 +446,12 @@ class OBJTokenizer extends CommonTokenizer {
       });
     });
 
-    // collect all numerical values into ArrayBuffer
-    const data = new Float32Array(
-      this.geometricVertices.length +
-        this.normalVertices.length +
-        this.textureVertices.length +
-        this.parameterVertices.length
-    );
-    data.set(this.geometricVertices, 0);
-    data.set(this.normalVertices, this.geometricVertices.length);
-    data.set(this.textureVertices, this.geometricVertices.length + this.normalVertices.length);
-    data.set(
-      this.parameterVertices,
-      this.geometricVertices.length + this.normalVertices.length + this.textureVertices.length
-    );
-    const indices = new Uint32Array(this.indices);
-
-    const result = new OBJInstance(
-      data,
-      indices,
+    // transfer array to ArrayBuffer
+    this.result = new OBJInstance(
+      new Float32Array(this.geometricVertices),
+      new Float32Array(this.normalVertices),
+      new Float32Array(this.textureVertices),
+      new Float32Array(this.parameterVertices),
       this.geometricVertices.length / 4,
       this.normalVertices.length / 3,
       this.textureVertices.length / 3,
@@ -474,7 +460,12 @@ class OBJTokenizer extends CommonTokenizer {
       parsedMaterials
     );
 
-    this.result = result;
+    // drop data immediately
+    this.geometricVertices.length = 0;
+    this.normalVertices.length = 0;
+    this.textureVertices.length = 0;
+    this.parameterVertices.length = 0;
+
     return this.result;
   }
 
@@ -1009,7 +1000,7 @@ class MTLBasicMaterial {
    * @param {RenderState} state
    */
   render(gl, geometry, state) {
-    debugger
+    debugger;
     gl.useProgram(MTLBasicMaterial.getProgram(gl));
 
     // bind mvp matrix
@@ -1041,7 +1032,7 @@ class MTLBasicMaterial {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.instance.getIndicesBuffer(gl));
 
     // draw
-    gl.drawElements(gl.TRIANGLES, geometry.vLength, gl.UNSIGNED_INT, geometry.start);
+    gl.drawElements(gl.TRIANGLES, geometry.length, gl.UNSIGNED_INT, geometry.vStart);
   }
 }
 
