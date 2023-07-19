@@ -1350,7 +1350,7 @@ class OBJReader {
   }
 }
 
-const instance = await fetch("/resources/cube.obj")
+const instance = await fetch("/resources/car.obj")
   .then((res) => res.text())
   .then((obj) =>
     new OBJReader(obj, {
@@ -1373,7 +1373,7 @@ const camera = new PerspectiveCamera(
   1,
   5000
 );
-const light = new PointLight(vec3.fromValues(1, 1, 1), 300, vec3.fromValues(0.0, 20.0, 4.0));
+const light = new PointLight(vec3.fromValues(1, 1, 1), 300, vec3.fromValues(0.0, 40.0, 4.0));
 
 let lastRenderTime = 0;
 const render = (renderTime) => {

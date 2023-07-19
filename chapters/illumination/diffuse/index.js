@@ -15,10 +15,10 @@ const vertexShader = `
     gl_Position = u_MvpMatrix * a_Position;
     // normalizes the normal vector
     vec3 normal = normalize(a_Normal);
-    // calculates dot product between light direction and normal vector to get the incidence
-    float incidence = max(dot(u_LightDirection, normal), 0.0);
+    // calculates dot product between light direction and normal vector to get the intensity
+    float intensity = max(dot(u_LightDirection, normal), 0.0);
     // calculates final diffuse color
-    vec3 diffuse = vec3(a_Color) * u_LightColor * incidence;
+    vec3 diffuse = vec3(a_Color) * u_LightColor * intensity;
     v_Color = vec4(diffuse, a_Color.a);
   }
 `;
