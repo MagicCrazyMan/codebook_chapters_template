@@ -88,12 +88,12 @@ getCanvasResizeObserver(() => {
  */
 // prettier-ignore
 const vertices = new Float32Array([
-  1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0,  // v0-v1-v2-v3 front
-  1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0,  // v0-v3-v4-v5 right
-  1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
- -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0,  // v1-v6-v7-v2 left
- -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0,  // v7-v4-v3-v2 down
-  1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0   // v4-v7-v6-v5 back
+  2.0, 2.0, 2.0,  -2.0, 2.0, 2.0,  -2.0,-2.0, 2.0,   2.0,-2.0, 2.0,  // v0-v1-v2-v3 front
+  2.0, 2.0, 2.0,   2.0,-2.0, 2.0,   2.0,-2.0,-2.0,   2.0, 2.0,-2.0,  // v0-v3-v4-v5 right
+  2.0, 2.0, 2.0,   2.0, 2.0,-2.0,  -2.0, 2.0,-2.0,  -2.0, 2.0, 2.0,  // v0-v5-v6-v1 up
+ -2.0, 2.0, 2.0,  -2.0, 2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0,-2.0, 2.0,  // v1-v6-v7-v2 left
+ -2.0,-2.0,-2.0,   2.0,-2.0,-2.0,   2.0,-2.0, 2.0,  -2.0,-2.0, 2.0,  // v7-v4-v3-v2 down
+  2.0,-2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0, 2.0,-2.0,   2.0, 2.0,-2.0   // v4-v7-v6-v5 back
 ]);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
@@ -215,9 +215,9 @@ const flatShading = () => {
 
     const lightDirection = vec3.subtract(lightDirectionTemp, lightPosition, centroid3Temp);
     vec3.normalize(lightDirection, lightDirection);
-    vec3.normalize(normalTemp, normalTemp);
+    vec3.normalize(normal3Temp, normal3Temp);
 
-    const intensity = Math.max(vec3.dot(lightDirection, normalTemp), 0.0);
+    const intensity = Math.max(vec3.dot(lightDirection, normal3Temp), 0.0);
     vec3.scale(diffuseColorTemp, lightColorTemp, intensity);
     vec3.multiply(diffuseColorTemp, diffuseColorTemp, color);
 
@@ -226,8 +226,6 @@ const flatShading = () => {
     colors.set(colorTemp, i * 12 + 3);
     colors.set(colorTemp, i * 12 + 6);
     colors.set(colorTemp, i * 12 + 9);
-
-    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
@@ -238,9 +236,10 @@ gl.enable(gl.DEPTH_TEST);
 const render = (time) => {
   setModelMatrix(time);
   setMvpMatrix();
+  flatShading();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  flatShading();
+  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
 
   requestAnimationFrame(render);
   lastAnimationTime = time;
