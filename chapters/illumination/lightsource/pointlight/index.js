@@ -1,5 +1,5 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../libs/common";
+import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 
 const vertexShader = `
   attribute vec4 a_Position;

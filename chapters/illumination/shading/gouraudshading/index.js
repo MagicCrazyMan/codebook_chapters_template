@@ -1,5 +1,5 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../libs/common";
+import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 
 const vertexShader = `
   attribute vec4 a_Position;
@@ -8,17 +8,23 @@ const vertexShader = `
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
+  uniform vec3 u_LightColor;
+  uniform vec3 u_LightPosition;
+  uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
-  varying vec3 v_Normal;
-  varying vec3 v_Position;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    // calculates vertex position in world coordinates system
-    v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
-    v_Color = a_Color;
+
+    vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    vec3 vertexPosition = vec3(u_ModelMatrix * a_Position);
+    vec3 lightDirection = normalize(u_LightPosition - vertexPosition);
+    
+    float intensity = max(dot(lightDirection, normal), 0.0);
+    vec3 diffuse = u_LightColor * a_Color.rgb * intensity;
+    vec3 ambient = u_AmbientLight * a_Color.rgb;
+    v_Color = vec4(diffuse + ambient, a_Color.a);
   }
 `;
 const fragmentShader = `
@@ -28,26 +34,10 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
-  uniform vec3 u_LightColor;
-  uniform vec3 u_LightPosition;
-  uniform vec3 u_AmbientLight;
-
   varying vec4 v_Color;
-  varying vec3 v_Normal;
-  varying vec3 v_Position;
 
   void main() {
-    // normalizes normal vector because it is interpolated and not 1.0 in length any more
-    vec3 normal = normalize(v_Normal);
-    // calculates light direction and normalizes it
-    vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    // calculates intensity
-    float intensity = max(dot(normal, lightDirection), 0.0);
-    // calculates diffuse light color
-    vec3 diffuse = u_LightColor * v_Color.rgb * intensity;
-    // calculates ambient light color
-    vec3 ambient = u_AmbientLight * v_Color.rgb;
-    gl_FragColor = vec4(diffuse + ambient, v_Color.a);
+    gl_FragColor = v_Color;
   }
 `;
 

@@ -5,19 +5,16 @@ const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
   attribute vec4 a_Normal;
+
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_NormalMatrix;
-  uniform vec3 u_LightColor;
-  uniform vec3 u_LightDirection;
   uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    vec4 normal = u_NormalMatrix * a_Normal;
-    float incidence = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
-    v_Color = vec4(a_Color.xyz * (u_LightColor * incidence + u_AmbientLight), a_Color.a);
+    v_Color = vec4(a_Color.xyz * u_AmbientLight, a_Color.a);
   }
 `;
 const fragmentShader = `
@@ -108,31 +105,6 @@ gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
 const uNormals = gl.getAttribLocation(program, "a_Normal");
 gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
-
-/**
- * Setups diffuse light color
- */
-const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const diffuseInputs = [
-  document.getElementById("diffuseColorR"),
-  document.getElementById("diffuseColorG"),
-  document.getElementById("diffuseColorB"),
-];
-diffuseInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setDiffuseLightColor();
-    render(lastAnimationTime);
-  });
-});
-const setDiffuseLightColor = () => {
-  gl.uniform3f(
-    uLightColor,
-    parseFloat(diffuseInputs[0].value),
-    parseFloat(diffuseInputs[1].value),
-    parseFloat(diffuseInputs[2].value)
-  );
-};
-setDiffuseLightColor();
 
 /**
  * Setups diffuse light direction

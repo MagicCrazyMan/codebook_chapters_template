@@ -1,5 +1,5 @@
 {
-  "title": "Diffuse Light",
-  "intro": "Light up a cuba using diffuse reflection",
+  "title": "漫反射",
+  "intro": "使用漫反射渲染光照效果",
   "zIndex": 0
 }
