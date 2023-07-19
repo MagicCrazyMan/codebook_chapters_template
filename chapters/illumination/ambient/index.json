@@ -1,5 +1,5 @@
 {
   "title": "环境光",
   "intro": "无论如何都存在的全局光",
-  "zIndex": 1
+  "zIndex": 0
 }

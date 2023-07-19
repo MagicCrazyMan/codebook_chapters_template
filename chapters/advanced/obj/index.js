@@ -59,8 +59,8 @@ class MTLPhongMaterial {
 
       vec3 normal = normalize(v_Normal);
       vec3 lightDirection = normalize(u_PointLightPosition - v_Position);
-      float incidence = max(dot(lightDirection, normal), 0.0);
-      vec3 diffuse = v_Color.rgb * incidence * u_PointLightColor * lightPower;
+      float diffuseIntensity = max(dot(lightDirection, normal), 0.0);
+      vec3 diffuse = v_Color.rgb * u_PointLightColor * lightPower * diffuseIntensity;
 
       vec3 ambient = v_Color.rgb * u_AmbientLightColor;
 
