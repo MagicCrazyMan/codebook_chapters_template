@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import { Geometry } from "./geom/geometry";
+import { Geometry } from "./geom/geometry.js";
 
 export class PointLight extends Geometry {
   /**

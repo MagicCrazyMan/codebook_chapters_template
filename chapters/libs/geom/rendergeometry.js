@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { PerspectiveCamera } from "../camera/perspective";
-import { Geometry } from "./geometry";
+import { PerspectiveCamera } from "../camera/perspective.js";
+import { Geometry } from "./geometry.js";
 
 /**
  * Geometry for render in WebGL.
