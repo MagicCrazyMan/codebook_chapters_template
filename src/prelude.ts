@@ -127,13 +127,6 @@ const collectLocalImports = async (entry: string) => {
       if (lib !== moduleSpecifier.value) {
         replacements.set(moduleSpecifier.value, lib);
       }
-
-      // add library script recursively
-      const libPath = join(dirname(fullPath), lib);
-      scripts.push({
-        code: distributionFs.readFileSync(libPath, "utf-8"),
-        fullPath: libPath,
-      });
     }
 
     if (replacements.size > 0) {
