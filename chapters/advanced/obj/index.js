@@ -605,11 +605,6 @@ class OBJTokenizer extends CommonTokenizer {
    * @private
    */
   groupNames = null;
-  /**
-   * @type {false | number}
-   * @private
-   */
-  smoothing = false;
 
   /**
    * @type {string[]}
@@ -685,7 +680,8 @@ class OBJTokenizer extends CommonTokenizer {
 
           this.parseGroupNames();
         } else if (type === "s") {
-          this.parseSmoothingGroup();
+          // enable smoothing group using Phong Shading in default for all face
+          this.skipLine();
         } else if (type === "mtllib") {
           await this.parseMaterialLibraries();
         } else if (type === "usemtl") {
@@ -910,28 +906,6 @@ class OBJTokenizer extends CommonTokenizer {
   }
 
   /**
-   * Parse smoothing group and set it to all activating groups.
-   * If no groups activating, create and add into default group.
-   * @private
-   */
-  parseSmoothingGroup() {
-    const [token, eol] = this.nextToken();
-    if ((token && !eol) || (!token && eol))
-      throw new Error(`unexpected smoothing group value in line ${this.line + 1}`);
-
-    let smoothing;
-    if (smoothing === "off") {
-      smoothing = false;
-    } else {
-      const num = parseInt(token);
-      if (isNaN(num)) throw new Error(`unexpected smoothing group value in line ${this.line + 1}`);
-      smoothing = num === 0 ? false : num;
-    }
-
-    this.smoothing = smoothing;
-  }
-
-  /**
    * Parse point and add into all activating groups.
    * If no groups activating, create and add into default group.
    */
@@ -1069,8 +1043,6 @@ class OBJTokenizer extends CommonTokenizer {
       );
     }
 
-    // if (!this.smoothing) return;
-
     let normal;
     if (vnIndices.length !== 0) {
       normal = this.aNormals.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
@@ -1135,7 +1107,6 @@ class OBJTokenizer extends CommonTokenizer {
       this.material = null;
       this.objectName = null;
       this.groupNames = null;
-      this.smoothing = false;
     }
   }
 
