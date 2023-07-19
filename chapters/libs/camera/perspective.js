@@ -44,7 +44,7 @@ export class PerspectiveCamera {
    * @param {import("gl-matrix").ReadonlyVec3} position Camera position
    */
   setPosition(position) {
-    this.position.set(position);
+    vec3.copy(this.position, position)
   }
 
   /**
@@ -52,7 +52,7 @@ export class PerspectiveCamera {
    * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at target
    */
   setLookAt(lookAt) {
-    this.lookAt.set(lookAt);
+    vec3.copy(this.lookAt, lookAt)
   }
 
   /**
@@ -93,8 +93,8 @@ export class PerspectiveCamera {
    * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at target
    */
   setView(position, lookAt) {
-    this.position.set(position);
-    this.lookAt.set(lookAt);
+    vec3.copy(this.position, position)
+    vec3.copy(this.lookAt, lookAt)
   }
 
   /**

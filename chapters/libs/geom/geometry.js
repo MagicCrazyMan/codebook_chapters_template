@@ -32,9 +32,9 @@ export class Geometry {
    * Constructs a new basic geometry.
    *
    * This is an abstract class, do no use directly.
-   * @param {vec3} [position]
-   * @param {vec3} [rotation]
-   * @param {vec3} [scale]
+   * @param {import("gl-matrix").ReadonlyVec3} [position]
+   * @param {import("gl-matrix").ReadonlyVec3} [rotation]
+   * @param {import("gl-matrix").ReadonlyVec3} [scale]
    */
   constructor(position, rotation, scale) {
     if (position) this.setPosition(position);
@@ -48,7 +48,7 @@ export class Geometry {
    * @param {import("gl-matrix").ReadonlyVec3} position
    */
   setPosition(position) {
-    this.position.set(position);
+    vec3.copy(this.position, position);
   }
 
   /**
@@ -56,7 +56,7 @@ export class Geometry {
    * @param {import("gl-matrix").ReadonlyVec3} rotation
    */
   setRotation(rotation) {
-    this.rotation.set(rotation);
+    vec3.copy(this.rotation, rotation);
   }
 
   /**
@@ -64,7 +64,7 @@ export class Geometry {
    * @param {import("gl-matrix").ReadonlyVec3} scale
    */
   setScale(scale) {
-    this.scale.set(scale);
+    vec3.copy(this.scale, scale);
   }
 
   /**

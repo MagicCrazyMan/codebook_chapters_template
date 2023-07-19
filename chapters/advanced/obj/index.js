@@ -7,6 +7,7 @@ import {
 import { PerspectiveCamera } from "../../libs/camera/perspective";
 import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { RenderGeometry } from "../../libs/geom/rendergeometry";
+import { PointLight } from "../../libs/pointlight";
 
 class MTLBasicMaterial {
   /**
@@ -14,14 +15,21 @@ class MTLBasicMaterial {
    */
   static VERTEX_SHADER_SOURCE = `
     attribute vec4 a_Position;
+    attribute vec4 a_Normal;
     
     uniform vec4 u_Color;
     uniform mat4 u_MvpMatrix;
+    uniform mat4 u_ModelMatrix;
+    uniform mat4 u_NormalMatrix;
 
+    varying vec3 v_Position;
+    varying vec3 v_Normal;
     varying vec4 v_Color;
 
     void main() {
       gl_Position = u_MvpMatrix * a_Position;
+      v_Position = vec3(u_ModelMatrix * a_Position);
+      v_Normal = vec3(u_NormalMatrix * a_Normal);
       v_Color = u_Color;
     }
   `;
@@ -35,12 +43,23 @@ class MTLBasicMaterial {
       precision mediump float;
     #endif
 
+    uniform vec3 u_PointLightColor;
+    uniform vec3 u_PointLightPosition;
     uniform vec3 u_AmbientLightColor;
 
+    varying vec3 v_Position;
+    varying vec3 v_Normal;
     varying vec4 v_Color;
 
     void main() {
-      gl_FragColor = vec4(v_Color.rgb, v_Color.a);
+      vec3 normal = normalize(v_Normal);
+      vec3 lightDirection = normalize(u_PointLightPosition - v_Position);
+      float incidence = max(dot(lightDirection, normal), 0.0);
+      vec3 diffuse = v_Color.rgb * incidence * u_PointLightColor;
+
+      vec3 ambient = v_Color.rgb * u_AmbientLightColor;
+
+      gl_FragColor = vec4(diffuse + ambient, v_Color.a);
     }
   `;
   /**
@@ -78,11 +97,16 @@ class MTLBasicMaterial {
     MTLBasicMaterial.program = program;
     MTLBasicMaterial.attributeLocations = {
       a_Position: gl.getAttribLocation(program, "a_Position"),
+      a_Normal: gl.getAttribLocation(program, "a_Normal"),
     };
     MTLBasicMaterial.uniformLocations = {
       u_Color: gl.getUniformLocation(program, "u_Color"),
-      u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
       u_MvpMatrix: gl.getUniformLocation(program, "u_MvpMatrix"),
+      u_ModelMatrix: gl.getUniformLocation(program, "u_ModelMatrix"),
+      u_NormalMatrix: gl.getUniformLocation(program, "u_NormalMatrix"),
+      u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
+      u_PointLightColor: gl.getUniformLocation(program, "u_PointLightColor"),
+      u_PointLightPosition: gl.getUniformLocation(program, "u_PointLightPosition"),
     };
 
     return MTLBasicMaterial.program;
@@ -138,10 +162,15 @@ class MTLBasicMaterial {
   /**
    * @typedef {Object} RenderState
    * @property {PerspectiveCamera} camera
+   * @property {PointLight} light
    * @property {OBJInstance} instance
    * @property {mat4} mvpMatrix
    */
 
+  /**
+   * @private
+   */
+  _normalMatrix = mat4.create();
   /**
    *
    * @param {WebGL2RenderingContext} gl
@@ -153,6 +182,21 @@ class MTLBasicMaterial {
 
     // bind mvp matrix
     gl.uniformMatrix4fv(MTLBasicMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
+    // bind model matrix
+    gl.uniformMatrix4fv(
+      MTLBasicMaterial.uniformLocations["u_ModelMatrix"],
+      false,
+      state.instance.getModelMatrix()
+    );
+    // bind normal matrix
+    mat4.identity(this._normalMatrix);
+    mat4.invert(this._normalMatrix, state.instance.getModelMatrix());
+    mat4.transpose(this._normalMatrix, this._normalMatrix);
+    gl.uniformMatrix4fv(
+      MTLBasicMaterial.uniformLocations["u_NormalMatrix"],
+      false,
+      this._normalMatrix
+    );
     // bind color
     gl.uniform4f(
       MTLBasicMaterial.uniformLocations["u_Color"],
@@ -163,8 +207,18 @@ class MTLBasicMaterial {
     );
     // bind ambient color
     gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
+    // bind point light color
+    gl.uniform3fv(
+      MTLBasicMaterial.uniformLocations["u_PointLightColor"],
+      state.light.getLightColor()
+    );
+    // bind point light position
+    gl.uniform3fv(
+      MTLBasicMaterial.uniformLocations["u_PointLightPosition"],
+      state.light.getPosition()
+    );
 
-    // bind data buffer
+    // bind vertices buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getVerticesBuffer(gl));
     gl.vertexAttribPointer(
       MTLBasicMaterial.attributeLocations["a_Position"],
@@ -175,6 +229,17 @@ class MTLBasicMaterial {
       0
     );
     gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
+    // bind normals buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getNormalsBuffer(gl));
+    gl.vertexAttribPointer(
+      MTLBasicMaterial.attributeLocations["a_Normal"],
+      3,
+      gl.FLOAT,
+      false,
+      0,
+      0
+    );
+    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Normal"]);
 
     // draw
     gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
@@ -246,6 +311,28 @@ class OBJFace {
     return this._verticesBuffer;
   }
 
+  /**
+   * @type {WebGLBuffer | null}
+   * @private
+   */
+  _normalsBuffer = null;
+
+  /**
+   *
+   * @param {WebGLRenderingContext} gl
+   * @returns
+   */
+  getNormalsBuffer(gl) {
+    if (!this._normalsBuffer) {
+      this._normalsBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._normalsBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, this.normals, gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+
+    return this._normalsBuffer;
+  }
+
   constructor(vertices, uvs, normals, material, objectName, groupNames, smoothing) {
     this.vertices = vertices;
     this.uvs = uvs;
@@ -298,13 +385,15 @@ class OBJInstance extends RenderGeometry {
    *
    * @param {WebGL2RenderingContext} gl
    * @param {PerspectiveCamera} camera
+   * @param {PointLight} light
    */
-  render(gl, camera) {
+  render(gl, camera, light) {
     mat4.identity(this._tempMvpMatrix);
     mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, camera.getViewProjMatrix());
     mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, this.getModelMatrix());
 
     const state = {
+      light,
       camera,
       instance: this,
       mvpMatrix: this._tempMvpMatrix,
@@ -982,8 +1071,8 @@ class OBJTokenizer extends CommonTokenizer {
         const p1 = vec3.fromValues(v1[0], v1[1], v1[2]);
         const p2 = vec3.fromValues(v2[0], v2[1], v2[2]);
 
-        const d0 = vec3.subtract(p2, p2, p0);
-        const d1 = vec3.subtract(p1, p1, p0);
+        const d0 = vec3.subtract(p0, p1, p0);
+        const d1 = vec3.subtract(p1, p2, p1);
 
         const n = vec3.cross(d0, d0, d1);
         vec3.normalize(n, n);
@@ -1278,7 +1367,7 @@ class OBJReader {
   }
 }
 
-const instance = await fetch("/resources/car.obj")
+const instance = await fetch("/resources/cube.obj")
   .then((res) => res.text())
   .then((obj) =>
     new OBJReader(obj, {
@@ -1286,8 +1375,7 @@ const instance = await fetch("/resources/car.obj")
       mtlBaseUrl: "/resources",
     }).parse()
   );
-instance.setScale(vec3.fromValues(60, 60, 60));
-const rotation = vec3.fromValues(0, 0, 60);
+const rotation = vec3.create();
 instance.setRotation(rotation);
 instance.updateModelMatrix();
 console.log(instance);
@@ -1295,13 +1383,14 @@ console.log(instance);
 const gl = getWebGLContext();
 gl.enable(gl.DEPTH_TEST);
 const camera = new PerspectiveCamera(
-  vec3.fromValues(0.0, 500.0, 200.0),
+  vec3.fromValues(0.0, 10.0, 4.0),
   vec3.fromValues(0.0, 0.0, 0.0),
   glMatrix.toRadian(30),
   gl.canvas.width / gl.canvas.height,
   1,
   5000
 );
+const ligth = new PointLight(vec3.fromValues(1, 1, 1), vec3.fromValues(0.0, 10.0, 4.0));
 
 let lastRenderTime = 0;
 const render = (renderTime) => {
@@ -1312,11 +1401,12 @@ const render = (renderTime) => {
   instance.setRotation(rotation);
   instance.updateModelMatrix();
 
+  // render
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  instance.render(gl, camera);
+  instance.render(gl, camera, ligth);
 
   lastRenderTime = renderTime;
   requestAnimationFrame(render);
