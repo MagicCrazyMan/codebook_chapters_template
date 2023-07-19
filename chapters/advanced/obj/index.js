@@ -9,7 +9,7 @@ import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { RenderGeometry } from "../../libs/geom/rendergeometry";
 import { PointLight } from "../../libs/pointlight";
 
-class MTLBasicMaterial {
+class MTLPhongMaterial {
   /**
    * @private
    */
@@ -45,6 +45,7 @@ class MTLBasicMaterial {
 
     uniform vec3 u_PointLightColor;
     uniform vec3 u_PointLightPosition;
+    uniform float u_PointLightIntensity;
     uniform vec3 u_AmbientLightColor;
 
     varying vec3 v_Position;
@@ -52,10 +53,14 @@ class MTLBasicMaterial {
     varying vec4 v_Color;
 
     void main() {
+      float lightDistance = distance(v_Position, u_PointLightPosition);
+      // quadratic power of distance
+      float lightPower = u_PointLightIntensity / pow(lightDistance, 2.0);
+
       vec3 normal = normalize(v_Normal);
       vec3 lightDirection = normalize(u_PointLightPosition - v_Position);
       float incidence = max(dot(lightDirection, normal), 0.0);
-      vec3 diffuse = v_Color.rgb * incidence * u_PointLightColor;
+      vec3 diffuse = v_Color.rgb * incidence * u_PointLightColor * lightPower;
 
       vec3 ambient = v_Color.rgb * u_AmbientLightColor;
 
@@ -84,22 +89,22 @@ class MTLBasicMaterial {
    * @returns
    */
   static getProgram(gl) {
-    if (MTLBasicMaterial.program) return MTLBasicMaterial.program;
+    if (MTLPhongMaterial.program) return MTLPhongMaterial.program;
 
-    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, MTLBasicMaterial.VERTEX_SHADER_SOURCE);
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, MTLPhongMaterial.VERTEX_SHADER_SOURCE);
     const fragmentShader = compileShader(
       gl,
       gl.FRAGMENT_SHADER,
-      MTLBasicMaterial.FRAGMENT_SHADER_SOURCE
+      MTLPhongMaterial.FRAGMENT_SHADER_SOURCE
     );
     const program = createProgram(gl, [vertexShader, fragmentShader]);
 
-    MTLBasicMaterial.program = program;
-    MTLBasicMaterial.attributeLocations = {
+    MTLPhongMaterial.program = program;
+    MTLPhongMaterial.attributeLocations = {
       a_Position: gl.getAttribLocation(program, "a_Position"),
       a_Normal: gl.getAttribLocation(program, "a_Normal"),
     };
-    MTLBasicMaterial.uniformLocations = {
+    MTLPhongMaterial.uniformLocations = {
       u_Color: gl.getUniformLocation(program, "u_Color"),
       u_MvpMatrix: gl.getUniformLocation(program, "u_MvpMatrix"),
       u_ModelMatrix: gl.getUniformLocation(program, "u_ModelMatrix"),
@@ -107,9 +112,10 @@ class MTLBasicMaterial {
       u_AmbientLightColor: gl.getUniformLocation(program, "u_AmbientLightColor"),
       u_PointLightColor: gl.getUniformLocation(program, "u_PointLightColor"),
       u_PointLightPosition: gl.getUniformLocation(program, "u_PointLightPosition"),
+      u_PointLightIntensity: gl.getUniformLocation(program, "u_PointLightIntensity"),
     };
 
-    return MTLBasicMaterial.program;
+    return MTLPhongMaterial.program;
   }
 
   /**
@@ -178,13 +184,13 @@ class MTLBasicMaterial {
    * @param {RenderState} state
    */
   render(gl, geometry, state) {
-    gl.useProgram(MTLBasicMaterial.getProgram(gl));
+    gl.useProgram(MTLPhongMaterial.getProgram(gl));
 
     // bind mvp matrix
-    gl.uniformMatrix4fv(MTLBasicMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
+    gl.uniformMatrix4fv(MTLPhongMaterial.uniformLocations["u_MvpMatrix"], false, state.mvpMatrix);
     // bind model matrix
     gl.uniformMatrix4fv(
-      MTLBasicMaterial.uniformLocations["u_ModelMatrix"],
+      MTLPhongMaterial.uniformLocations["u_ModelMatrix"],
       false,
       state.instance.getModelMatrix()
     );
@@ -193,53 +199,58 @@ class MTLBasicMaterial {
     mat4.invert(this._normalMatrix, state.instance.getModelMatrix());
     mat4.transpose(this._normalMatrix, this._normalMatrix);
     gl.uniformMatrix4fv(
-      MTLBasicMaterial.uniformLocations["u_NormalMatrix"],
+      MTLPhongMaterial.uniformLocations["u_NormalMatrix"],
       false,
       this._normalMatrix
     );
     // bind color
     gl.uniform4f(
-      MTLBasicMaterial.uniformLocations["u_Color"],
+      MTLPhongMaterial.uniformLocations["u_Color"],
       this.diffuseColor[0],
       this.diffuseColor[1],
       this.diffuseColor[2],
       this.opaque
     );
     // bind ambient color
-    gl.uniform3fv(MTLBasicMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
+    gl.uniform3fv(MTLPhongMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
     // bind point light color
     gl.uniform3fv(
-      MTLBasicMaterial.uniformLocations["u_PointLightColor"],
+      MTLPhongMaterial.uniformLocations["u_PointLightColor"],
       state.light.getLightColor()
     );
     // bind point light position
     gl.uniform3fv(
-      MTLBasicMaterial.uniformLocations["u_PointLightPosition"],
+      MTLPhongMaterial.uniformLocations["u_PointLightPosition"],
       state.light.getPosition()
+    );
+    // bind point light power
+    gl.uniform1f(
+      MTLPhongMaterial.uniformLocations["u_PointLightIntensity"],
+      state.light.getLightIntensity()
     );
 
     // bind vertices buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getVerticesBuffer(gl));
     gl.vertexAttribPointer(
-      MTLBasicMaterial.attributeLocations["a_Position"],
+      MTLPhongMaterial.attributeLocations["a_Position"],
       3,
       gl.FLOAT,
       false,
       0,
       0
     );
-    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Position"]);
+    gl.enableVertexAttribArray(MTLPhongMaterial.attributeLocations["a_Position"]);
     // bind normals buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, geometry.getNormalsBuffer(gl));
     gl.vertexAttribPointer(
-      MTLBasicMaterial.attributeLocations["a_Normal"],
+      MTLPhongMaterial.attributeLocations["a_Normal"],
       3,
       gl.FLOAT,
       false,
       0,
       0
     );
-    gl.enableVertexAttribArray(MTLBasicMaterial.attributeLocations["a_Normal"]);
+    gl.enableVertexAttribArray(MTLPhongMaterial.attributeLocations["a_Normal"]);
 
     // draw
     gl.drawArrays(gl.TRIANGLES, 0, geometry.vertices.length / 3);
@@ -283,11 +294,6 @@ class OBJFace {
    * @readonly
    */
   groupNames;
-  /**
-   * @type {false | number}
-   * @readonly
-   */
-  smoothing;
 
   /**
    * @type {WebGLBuffer | null}
@@ -333,14 +339,13 @@ class OBJFace {
     return this._normalsBuffer;
   }
 
-  constructor(vertices, uvs, normals, material, objectName, groupNames, smoothing) {
+  constructor(vertices, uvs, normals, material, objectName, groupNames) {
     this.vertices = vertices;
     this.uvs = uvs;
     this.normals = normals;
     this.material = material;
     this.objectName = objectName;
     this.groupNames = groupNames;
-    this.smoothing = smoothing;
   }
 }
 
@@ -350,7 +355,7 @@ class OBJInstance extends RenderGeometry {
    * @readonly
    * @public
    */
-  static DEFAULT_MATERIAL = new MTLBasicMaterial(
+  static DEFAULT_MATERIAL = new MTLPhongMaterial(
     [1, 1, 1],
     [1, 1, 1],
     [0, 0, 0],
@@ -362,7 +367,7 @@ class OBJInstance extends RenderGeometry {
 
   /**
    * Map of all materials
-   * @type {Map<string, MTLBasicMaterial>}
+   * @type {Map<string, MTLPhongMaterial>}
    */
   materials;
   /**
@@ -601,10 +606,10 @@ class OBJTokenizer extends CommonTokenizer {
    */
   groupNames = null;
   /**
-   * @type {false | number | null}
+   * @type {false | number}
    * @private
    */
-  smoothing = null;
+  smoothing = false;
 
   /**
    * @type {string[]}
@@ -679,11 +684,7 @@ class OBJTokenizer extends CommonTokenizer {
           }
 
           this.parseGroupNames();
-        // } else if (type === "s") {
-        //   if (this.type !== OBJTokenizer.GeometryType.NotStart) {
-        //     this.saveGroup();
-        //   }
-
+        } else if (type === "s") {
           this.parseSmoothingGroup();
         } else if (type === "mtllib") {
           await this.parseMaterialLibraries();
@@ -722,6 +723,7 @@ class OBJTokenizer extends CommonTokenizer {
   _colorVertexWarnCount = 0;
   /**
    * Parse geometric vertex
+   * @private
    */
   parseGeometricVertex() {
     const numbers = [];
@@ -757,6 +759,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse texture vertex
+   * @private
    */
   parseTextureVertex() {
     const numbers = [];
@@ -783,6 +786,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse normal vertex
+   * @private
    */
   parseNormalVertex() {
     const numbers = [];
@@ -805,6 +809,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse parameter vertex
+   * @private
    */
   parseParameterVertex() {
     const numbers = [];
@@ -829,6 +834,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse material libraries
+   * @private
    */
   async parseMaterialLibraries() {
     const mtls = [];
@@ -859,6 +865,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse object name and set as activating.
+   * @private
    */
   parseObjectName() {
     let tokens = [];
@@ -874,6 +881,7 @@ class OBJTokenizer extends CommonTokenizer {
   /**
    * Parse group names, add to activating object and set groups as activating.
    * If no object activating, create a new default object with name `undefined`.
+   * @private
    */
   parseGroupNames() {
     const groupNames = [];
@@ -888,6 +896,7 @@ class OBJTokenizer extends CommonTokenizer {
 
   /**
    * Parse use material and set as activating geometry.
+   * @private
    */
   parseUseMaterial() {
     let tokens = [];
@@ -903,6 +912,7 @@ class OBJTokenizer extends CommonTokenizer {
   /**
    * Parse smoothing group and set it to all activating groups.
    * If no groups activating, create and add into default group.
+   * @private
    */
   parseSmoothingGroup() {
     const [token, eol] = this.nextToken();
@@ -997,10 +1007,10 @@ class OBJTokenizer extends CommonTokenizer {
   //   });
   // }
 
-  _surfaceWarnCount = 0;
   /**
    * Parse face and add into all activating groups.
    * If no groups activating, create and add into default group.
+   * @private
    */
   parseFace() {
     this.type = OBJTokenizer.GeometryType.Face;
@@ -1026,24 +1036,27 @@ class OBJTokenizer extends CommonTokenizer {
       }
 
       // parse geometric index
-      const geometricIndex = parseInt(v, 10) - 1;
+      let geometricIndex = parseInt(v, 10) - 1;
       if (isNaN(geometricIndex))
         throw new Error(`token ${v} in line ${this.line + 1} is not a geometric vertices index`);
+      if (geometricIndex < 0) geometricIndex = this.aVertices.length + geometricIndex;
       vIndices.push(geometricIndex);
 
       // parse texture index
       if (vt) {
-        const textureIndex = parseInt(vt, 10) - 1;
+        let textureIndex = parseInt(vt, 10) - 1;
         if (isNaN(textureIndex))
           throw new Error(`token ${vt} in line ${this.line + 1} is not a texture vertices index`);
+        if (textureIndex < 0) textureIndex = this.aUVs.length + geometricIndex;
         vtIndices.push(textureIndex);
       }
 
       // parse normal index
       if (vn) {
-        const normalIndex = parseInt(vn, 10) - 1;
+        let normalIndex = parseInt(vn, 10) - 1;
         if (isNaN(normalIndex))
           throw new Error(`token ${vn} in line ${this.line + 1} is not a normal vertices index`);
+        if (normalIndex < 0) normalIndex = this.aVertices.length + normalIndex;
         vnIndices.push(normalIndex);
       }
 
@@ -1056,56 +1069,55 @@ class OBJTokenizer extends CommonTokenizer {
       );
     }
 
-    if (!hasNormalIndices || vnIndices.every((i) => vnIndices[0] == i)) {
-      // if vertices of a face has no normal indices or they share the same normal, use OBJFace
-      let normal;
-      if (hasNormalIndices) {
-        normal = this.aNormals.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
-      } else {
-        // calculate from triangle if not existed
-        const v0 = this.aVertices.slice(vIndices[0] * 3, (vIndices[0] + 1) * 3);
-        const v1 = this.aVertices.slice(vIndices[1] * 3, (vIndices[1] + 1) * 3);
-        const v2 = this.aVertices.slice(vIndices[2] * 3, (vIndices[2] + 1) * 3);
+    // if (!this.smoothing) return;
 
-        const p0 = vec3.fromValues(v0[0], v0[1], v0[2]);
-        const p1 = vec3.fromValues(v1[0], v1[1], v1[2]);
-        const p2 = vec3.fromValues(v2[0], v2[1], v2[2]);
-
-        const d0 = vec3.subtract(p0, p1, p0);
-        const d1 = vec3.subtract(p1, p2, p1);
-
-        const n = vec3.cross(d0, d0, d1);
-        vec3.normalize(n, n);
-        normal = n;
-      }
-
-      for (let i = 0; i < vIndices.length - 2; i++) {
-        const i0 = 0;
-        const i1 = i + 1;
-        const i2 = i + 2;
-
-        const v0 = this.aVertices.slice(vIndices[i0] * 3, (vIndices[i0] + 1) * 3);
-        const v1 = this.aVertices.slice(vIndices[i1] * 3, (vIndices[i1] + 1) * 3);
-        const v2 = this.aVertices.slice(vIndices[i2] * 3, (vIndices[i2] + 1) * 3);
-        this.vertices.push(...v0, ...v1, ...v2);
-
-        this.normals.push(...normal, ...normal, ...normal);
-
-        if (hasTextureIndices) {
-          const vt0 = this.aVertices.slice(vtIndices[i0] * 3, (vtIndices[i0] + 1) * 3);
-          const vt1 = this.aVertices.slice(vtIndices[i1] * 3, (vtIndices[i1] + 1) * 3);
-          const vt2 = this.aVertices.slice(vtIndices[i2] * 3, (vtIndices[i2] + 1) * 3);
-          this.uvs.push(...vt0, ...vt1, ...vt2);
-        }
-      }
+    let normal;
+    if (vnIndices.length !== 0) {
+      normal = this.aNormals.slice(vnIndices[0] * 3, (vnIndices[0] + 1) * 3);
     } else {
-      if (this._surfaceWarnCount === 0) {
-        console.warn(`unimplemented curve surface, ignored. This message only show once`);
-        this._surfaceWarnCount++;
+      // calculate from triangle if not existed
+      const v0 = this.aVertices.slice(vIndices[0] * 3, (vIndices[0] + 1) * 3);
+      const v1 = this.aVertices.slice(vIndices[1] * 3, (vIndices[1] + 1) * 3);
+      const v2 = this.aVertices.slice(vIndices[2] * 3, (vIndices[2] + 1) * 3);
+
+      const p0 = vec3.fromValues(v0[0], v0[1], v0[2]);
+      const p1 = vec3.fromValues(v1[0], v1[1], v1[2]);
+      const p2 = vec3.fromValues(v2[0], v2[1], v2[2]);
+
+      const d0 = vec3.subtract(p0, p1, p0);
+      const d1 = vec3.subtract(p1, p2, p1);
+
+      const n = vec3.cross(d0, d0, d1);
+      vec3.normalize(n, n);
+      normal = n;
+    }
+
+    for (let i = 0; i < vIndices.length - 2; i++) {
+      const i0 = 0;
+      const i1 = i + 1;
+      const i2 = i + 2;
+
+      const v0 = this.aVertices.slice(vIndices[i0] * 3, (vIndices[i0] + 1) * 3);
+      const v1 = this.aVertices.slice(vIndices[i1] * 3, (vIndices[i1] + 1) * 3);
+      const v2 = this.aVertices.slice(vIndices[i2] * 3, (vIndices[i2] + 1) * 3);
+      this.vertices.push(...v0, ...v1, ...v2);
+
+      this.normals.push(...normal, ...normal, ...normal);
+
+      if (vtIndices.length !== 0) {
+        const vt0 = this.aVertices.slice(vtIndices[i0] * 3, (vtIndices[i0] + 1) * 3);
+        const vt1 = this.aVertices.slice(vtIndices[i1] * 3, (vtIndices[i1] + 1) * 3);
+        const vt2 = this.aVertices.slice(vtIndices[i2] * 3, (vtIndices[i2] + 1) * 3);
+        this.uvs.push(...vt0, ...vt1, ...vt2);
       }
     }
   }
 
+  /**
+   * Reset status.
+   * @private
+   * @param {boolean} global is reset all data
+   */
   reset(global = false) {
     this.vertices = [];
     this.uvs = [];
@@ -1123,12 +1135,13 @@ class OBJTokenizer extends CommonTokenizer {
       this.material = null;
       this.objectName = null;
       this.groupNames = null;
-      this.smoothing = null;
+      this.smoothing = false;
     }
   }
 
   /**
    * Save current OBJ group
+   * @private
    */
   saveGroup() {
     let geom;
@@ -1140,8 +1153,7 @@ class OBJTokenizer extends CommonTokenizer {
           new Float32Array(this.normals),
           this.material,
           this.objectName,
-          this.groupNames,
-          this.smoothing
+          this.groupNames
         );
         break;
       }
@@ -1155,13 +1167,13 @@ class OBJTokenizer extends CommonTokenizer {
 }
 class MTLTokenizer extends CommonTokenizer {
   /**
-   * @type {Map<string, MTLBasicMaterial>}
+   * @type {Map<string, MTLPhongMaterial>}
    * @private
    */
   materials = null;
 
   /**
-   * @type {MTLBasicMaterial | null}
+   * @type {MTLPhongMaterial | null}
    * @private
    */
   activatingMaterial = null;
@@ -1233,7 +1245,7 @@ class MTLTokenizer extends CommonTokenizer {
     }
 
     const materialName = tokens.join(" ");
-    const material = new MTLBasicMaterial();
+    const material = new MTLPhongMaterial();
     this.materials.set(materialName, material);
     this.activatingMaterial = material;
   }
@@ -1390,7 +1402,7 @@ const camera = new PerspectiveCamera(
   1,
   5000
 );
-const light = new PointLight(vec3.fromValues(1, 1, 1), vec3.fromValues(0.0, 15.0, 4.0));
+const light = new PointLight(vec3.fromValues(1, 1, 1), 300, vec3.fromValues(0.0, 20.0, 4.0));
 
 let lastRenderTime = 0;
 const render = (renderTime) => {
