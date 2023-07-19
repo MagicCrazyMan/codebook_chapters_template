@@ -679,10 +679,10 @@ class OBJTokenizer extends CommonTokenizer {
           }
 
           this.parseGroupNames();
-        } else if (type === "s") {
-          if (this.type !== OBJTokenizer.GeometryType.NotStart) {
-            this.saveGroup();
-          }
+        // } else if (type === "s") {
+        //   if (this.type !== OBJTokenizer.GeometryType.NotStart) {
+        //     this.saveGroup();
+        //   }
 
           this.parseSmoothingGroup();
         } else if (type === "mtllib") {
@@ -1390,7 +1390,7 @@ const camera = new PerspectiveCamera(
   1,
   5000
 );
-const ligth = new PointLight(vec3.fromValues(1, 1, 1), vec3.fromValues(0.0, 10.0, 4.0));
+const light = new PointLight(vec3.fromValues(1, 1, 1), vec3.fromValues(0.0, 15.0, 4.0));
 
 let lastRenderTime = 0;
 const render = (renderTime) => {
@@ -1406,7 +1406,7 @@ const render = (renderTime) => {
   gl.clearColor(0, 0, 0, 0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  instance.render(gl, camera, ligth);
+  instance.render(gl, camera, light);
 
   lastRenderTime = renderTime;
   requestAnimationFrame(render);
