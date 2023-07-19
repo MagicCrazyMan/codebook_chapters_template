@@ -88,18 +88,12 @@ getCanvasResizeObserver(() => {
  */
 // prettier-ignore
 const vertices = new Float32Array([
-  2.0, 2.0, 2.0,  -2.0, 2.0, 2.0,  -2.0,-2.0, 2.0,  // v0-v1-v2- front
-  2.0, 2.0, 2.0,  -2.0,-2.0, 2.0,   2.0,-2.0, 2.0,  // v0-v2-v3 front
-  2.0, 2.0, 2.0,   2.0,-2.0, 2.0,   2.0,-2.0,-2.0,  // v0-v3-v4 right
-  2.0, 2.0, 2.0,   2.0,-2.0,-2.0,   2.0, 2.0,-2.0,  // v0-v4-v5 right
-  2.0, 2.0, 2.0,   2.0, 2.0,-2.0,  -2.0, 2.0,-2.0,  // v0-v5-v6 up
-  2.0, 2.0, 2.0,  -2.0, 2.0,-2.0,  -2.0, 2.0, 2.0,  // v0-v6-v1 up
- -2.0, 2.0, 2.0,  -2.0, 2.0,-2.0,  -2.0,-2.0,-2.0,  // v1-v6-v7 left
- -2.0, 2.0, 2.0,  -2.0,-2.0,-2.0,  -2.0,-2.0, 2.0,  // v1-v7-v2 left
- -2.0,-2.0,-2.0,   2.0,-2.0,-2.0,   2.0,-2.0, 2.0,  // v7-v4-v3 down
- -2.0,-2.0,-2.0,   2.0,-2.0, 2.0,  -2.0,-2.0, 2.0,  // v7-v3-v2 down
-  2.0,-2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0, 2.0,-2.0,   // v4-v7-v6 back
-  2.0,-2.0,-2.0,  -2.0, 2.0,-2.0,   2.0, 2.0,-2.0   // v4-v6-v5 back
+  1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0,  // v0-v1-v2-v3 front
+  1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0,  // v0-v3-v4-v5 right
+  1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
+ -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0,  // v1-v6-v7-v2 left
+ -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0,  // v7-v4-v3-v2 down
+  1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0   // v4-v7-v6-v5 back
 ]);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
@@ -107,17 +101,47 @@ gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 const aPosition = gl.getAttribLocation(program, "a_Position");
 gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
-const colors = new Float32Array(12 * 3 * 3);
+
+const colors = new Float32Array(6 * 4 * 3);
 const colorsBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
 const aColor = gl.getAttribLocation(program, "a_Color");
 gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(aColor);
 
-/**
- * Setups diffuse light color
- */
+gl.enableVertexAttribArray(aColor);
+// prettier-ignore
+const indices = new Uint8Array([
+  0,  1,  2,  0,  2,  3,    // front
+  4,  5,  6,  4,  6,  7,    // right
+  8,  9, 10,  8, 10, 11,    // up
+ 12, 13, 14, 12, 14, 15,    // left
+ 16, 17, 18, 16, 18, 19,    // down
+ 20, 21, 22, 20, 22, 23     // back
+]);
+const indicesBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+// prettier-ignore
+const normals = [
+  vec4.fromValues( 0.0, 0.0, 1.0, 1.0),  // v0-v1-v2-v3 front
+  vec4.fromValues( 1.0, 0.0, 0.0, 1.0),  // v0-v3-v4-v5 right
+  vec4.fromValues( 0.0, 1.0, 0.0, 1.0),  // v0-v5-v6-v1 up
+  vec4.fromValues(-1.0, 0.0, 0.0, 1.0),  // v1-v6-v7-v2 left
+  vec4.fromValues( 0.0,-1.0, 0.0, 1.0),  // v7-v4-v3-v2 down
+  vec4.fromValues( 0.0, 0.0,-1.0, 1.0),  // v4-v7-v6-v5 back
+];
+const faceColors = [
+  vec3.fromValues(0.4, 0.4, 1.0), // v0-v1-v2-v3 front
+  vec3.fromValues(0.4, 1.0, 0.4), // v0-v3-v4-v5 right
+  vec3.fromValues(1.0, 0.4, 0.4), // v0-v5-v6-v1 up
+  vec3.fromValues(1.0, 1.0, 0.4), // v1-v6-v7-v2 left
+  vec3.fromValues(1.0, 1.0, 1.0), // v7-v4-v3-v2 down
+  vec3.fromValues(0.4, 1.0, 1.0), // v4-v7-v6-v5 back
+];
+const lightPosition = vec3.fromValues(2.3, 4.0, 3.5);
+
 const diffuseInputs = [
   document.getElementById("diffuseColorR"),
   document.getElementById("diffuseColorG"),
@@ -129,9 +153,6 @@ diffuseInputs.forEach((input) => {
   });
 });
 
-/**
- * Setups ambient light
- */
 const ambientInputs = [
   document.getElementById("ambientColorR"),
   document.getElementById("ambientColorG"),
@@ -142,37 +163,6 @@ ambientInputs.forEach((input) => {
     render(lastAnimationTime);
   });
 });
-
-// prettier-ignore
-const normals = [
-  vec4.fromValues( 0.0, 0.0, 1.0, 1.0),  // v0-v1-v2 front
-  vec4.fromValues( 0.0, 0.0, 1.0, 1.0),  // v0-v2-v3 front
-  vec4.fromValues( 1.0, 0.0, 0.0, 1.0),  // v0-v3-v4 right
-  vec4.fromValues( 1.0, 0.0, 0.0, 1.0),  // v0-v4-v5 right
-  vec4.fromValues( 0.0, 1.0, 0.0, 1.0),  // v0-v5-v6 up
-  vec4.fromValues( 0.0, 1.0, 0.0, 1.0),  // v0-v6-v1 up
-  vec4.fromValues(-1.0, 0.0, 0.0, 1.0),  // v1-v6-v7 left
-  vec4.fromValues(-1.0, 0.0, 0.0, 1.0),  // v1-v7-v2 left
-  vec4.fromValues( 0.0,-1.0, 0.0, 1.0),  // v7-v4-v3 down
-  vec4.fromValues( 0.0,-1.0, 0.0, 1.0),  // v7-v3-v2 down
-  vec4.fromValues( 0.0, 0.0,-1.0, 1.0),  // v4-v7-v6 back
-  vec4.fromValues( 0.0, 0.0,-1.0, 1.0),  // v4-v6-v5 back
-];
-const faceColors = [
-  vec3.fromValues(0.4, 0.4, 1.0), // v0-v1-v2 front
-  vec3.fromValues(0.4, 0.4, 1.0), // v0-v2-v3 front
-  vec3.fromValues(0.4, 1.0, 0.4), // v0-v3-v4 right
-  vec3.fromValues(0.4, 1.0, 0.4), // v0-v4-v5 right
-  vec3.fromValues(1.0, 0.4, 0.4), // v0-v5-v6 up
-  vec3.fromValues(1.0, 0.4, 0.4), // v0-v6-v1 up
-  vec3.fromValues(1.0, 1.0, 0.4), // v1-v6-v7 left
-  vec3.fromValues(1.0, 1.0, 0.4), // v1-v7-v2 left
-  vec3.fromValues(1.0, 1.0, 1.0), // v7-v4-v3 down
-  vec3.fromValues(1.0, 1.0, 1.0), // v7-v3-v2 down
-  vec3.fromValues(0.4, 1.0, 1.0), // v4-v7-v6 back
-  vec3.fromValues(0.4, 1.0, 1.0), // v4-v6-v5 back
-];
-const lightPosition = vec3.fromValues(2.3, 4.0, 3.5);
 
 const normalMatrixTemp = mat4.create();
 const normalTemp = vec4.create();
@@ -201,12 +191,20 @@ const flatShading = () => {
     parseFloat(ambientInputs[2].value)
   );
 
-  for (let i = 0; i < vertices.length / (3 * 3); i++) {
-    const [x0, y0, z0] = vertices.slice(i * 9, i * 9 + 3);
-    const [x1, y1, z1] = vertices.slice(i * 9 + 3, i * 9 + 6);
-    const [x2, y2, z2] = vertices.slice(i * 9 + 6, i * 9 + 9);
+  // iterate 6 face
+  for (let i = 0; i < 6; i++) {
+    const [x0, y0, z0] = vertices.slice(i * 12, i * 12 + 3);
+    const [x1, y1, z1] = vertices.slice(i * 12 + 3, i * 12 + 6);
+    const [x2, y2, z2] = vertices.slice(i * 12 + 6, i * 12 + 9);
+    const [x3, y3, z3] = vertices.slice(i * 12 + 9, i * 12 + 12);
 
-    vec4.set(centroidTemp, (x0 + y0 + z0) / 3, (x1 + y1 + z1) / 3, (x2 + y2 + z2) / 3, 1);
+    vec4.set(
+      centroidTemp,
+      (x0 + x1 + x2 + x3) / 4,
+      (y0 + y1 + y2 + y3) / 4,
+      (z0 + z1 + z2 + z3) / 4,
+      1
+    );
     vec4.copy(normalTemp, normals[i]);
     const color = faceColors[i];
 
@@ -224,9 +222,12 @@ const flatShading = () => {
     vec3.multiply(diffuseColorTemp, diffuseColorTemp, color);
 
     vec3.add(colorTemp, diffuseColorTemp, ambientColorTemp);
-    colors.set(colorTemp, i * 9);
-    colors.set(colorTemp, i * 9 + 3);
-    colors.set(colorTemp, i * 9 + 6);
+    colors.set(colorTemp, i * 12);
+    colors.set(colorTemp, i * 12 + 3);
+    colors.set(colorTemp, i * 12 + 6);
+    colors.set(colorTemp, i * 12 + 9);
+
+    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
@@ -237,10 +238,9 @@ gl.enable(gl.DEPTH_TEST);
 const render = (time) => {
   setModelMatrix(time);
   setMvpMatrix();
-  flatShading();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+  flatShading();
 
   requestAnimationFrame(render);
   lastAnimationTime = time;
