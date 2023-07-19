@@ -405,10 +405,23 @@ class CommonTokenizer {
    * Skip current line
    */
   skipLine() {
+    let consumed = 0;
     for (;;) {
-      const [_, eol] = this.nextToken();
-      if (eol) return;
+      const char = this.str.charAt(this.index + consumed);
+      if (char === "\n") {
+        consumed++;
+        break;
+      } else if (char === "\r" && this.str.charAt(this.index + consumed + 1) === "\n") {
+        consumed += 2;
+        break;
+      } else if (char === "") {
+        break;
+      } else {
+        consumed++;
+      }
     }
+
+    this.index += consumed;
   }
 }
 
@@ -538,7 +551,7 @@ class OBJTokenizer extends CommonTokenizer {
       if (eof) break;
 
       if (type === "#") {
-        this.parseComment();
+        this.skipLine();
       } else {
         if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
 
@@ -615,16 +628,6 @@ class OBJTokenizer extends CommonTokenizer {
     this.reset(true);
 
     return instance;
-  }
-
-  /**
-   * Parse token, skip every things after comment
-   */
-  parseComment() {
-    for (;;) {
-      const [_, eol] = this.nextToken();
-      if (eol) break;
-    }
   }
 
   _colorVertexWarnCount = 0;
@@ -1097,7 +1100,7 @@ class MTLTokenizer extends CommonTokenizer {
       if (eof) break;
 
       if (type === "#") {
-        this.parseComment();
+        this.skipLine();
       } else {
         if (eol) throw new Error(`unexpected end of line in line ${this.line + 1}`);
 
@@ -1127,16 +1130,6 @@ class MTLTokenizer extends CommonTokenizer {
     }
 
     return this.materials;
-  }
-
-  /**
-   * Parse token, skip every things after comment
-   */
-  parseComment() {
-    for (;;) {
-      const [_, eol] = this.nextToken();
-      if (eol) break;
-    }
   }
 
   /**
