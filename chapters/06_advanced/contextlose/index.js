@@ -43,7 +43,7 @@ const start = () => {
     varying vec3 v_Position;
   
     void main() {
-      // normalizes normal vector because it is interpolated and not 1.0 in length any more
+      // normalizes normal vector
       vec3 normal = normalize(v_Normal);
       // calculates light direction and normalizes it
       vec3 lightDirection = normalize(u_LightPosition - v_Position);

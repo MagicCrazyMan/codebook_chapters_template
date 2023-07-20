@@ -1,5 +1,5 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
+import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../libs/common";
 
 const vertexShader = `
   attribute vec4 a_Position;
@@ -16,7 +16,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    v_Normal = (vec3(u_NormalMatrix * a_Normal));
     v_Color = a_Color;
   }
 `;
@@ -29,20 +29,22 @@ const fragmentShader = `
 
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
+  uniform float u_LightIntensity;
 
   varying vec4 v_Color;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
   void main() {
-    // normalizes normal vector because it is interpolated and not 1.0 in length any more
+    // distance falloff
+    float dist = distance(v_Position, u_LightPosition);
+    float falloffPower = u_LightIntensity * 1.0 / pow(dist, 2.0); // quadratic falloff
+
+    // diffuse
     vec3 normal = normalize(v_Normal);
-    // calculates light direction and normalizes it
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    // calculates intensity
-    float intensity = max(dot(normal, lightDirection), 0.0);
-    // calculates diffuse light color
-    vec3 diffuse = u_LightColor * v_Color.rgb * intensity;
+    float diffusePower = max(dot(normal, lightDirection), 0.0);
+    vec3 diffuse = u_LightColor * falloffPower * diffusePower * v_Color.rgb;
 
     gl_FragColor = vec4(diffuse, v_Color.a);
   }
@@ -125,35 +127,48 @@ gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
 
 /**
- * Setups diffuse light color
+ * Setups light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const diffuseInputs = [
-  document.getElementById("diffuseColorR"),
-  document.getElementById("diffuseColorG"),
-  document.getElementById("diffuseColorB"),
+const lightColorInputs = [
+  document.getElementById("colorR"),
+  document.getElementById("colorG"),
+  document.getElementById("colorB"),
 ];
-diffuseInputs.forEach((input) => {
+lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setDiffuseLightColor();
+    setLightColor();
     render(lastAnimationTime);
   });
 });
-const setDiffuseLightColor = () => {
+const setLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(diffuseInputs[0].value),
-    parseFloat(diffuseInputs[1].value),
-    parseFloat(diffuseInputs[2].value)
+    parseFloat(lightColorInputs[0].value),
+    parseFloat(lightColorInputs[1].value),
+    parseFloat(lightColorInputs[2].value)
   );
 };
-setDiffuseLightColor();
+setLightColor();
+
+/**
+ * Setups light intensity
+ */
+const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
+const lightIntensityInput = document.getElementById("intensity");
+lightIntensityInput.addEventListener("input", () => {
+  setLightIntensity();
+});
+const setLightIntensity = () => {
+  gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
+};
+setLightIntensity();
 
 /**
  * Setups diffuse light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 2.3, 4.0, 3.5);
+gl.uniform3f(uLightPosition, 5, 5, 5);
 
 /**
  * Setups cube

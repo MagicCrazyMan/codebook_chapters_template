@@ -16,7 +16,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = (vec3(u_NormalMatrix * a_Normal));
+    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
     v_Color = a_Color;
   }
 `;
@@ -29,24 +29,24 @@ const fragmentShader = `
 
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
-  uniform float u_LightIntensity;
+  uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
   void main() {
-    // distance falloff
-    float dist = distance(v_Position, u_LightPosition);
-    float lightPower = u_LightIntensity * 1.0 / pow(dist, 2.0); // quadratic falloff
-
-    // diffuse
+    // normalizes normal vector
     vec3 normal = normalize(v_Normal);
+    // calculates light direction and normalizes it
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    float diffuseIntensity = max(dot(normal, lightDirection), 0.0);
-    vec3 diffuse = u_LightColor * lightPower * diffuseIntensity * v_Color.rgb;
-
-    gl_FragColor = vec4(diffuse, v_Color.a);
+    // calculates power
+    float power = max(dot(normal, lightDirection), 0.0);
+    // calculates diffuse light color
+    vec3 diffuse = u_LightColor * v_Color.rgb * power;
+    // calculates ambient light color
+    vec3 ambient = u_AmbientLight * v_Color.rgb;
+    gl_FragColor = vec4(diffuse + ambient, v_Color.a);
   }
 `;
 
@@ -127,48 +127,60 @@ gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
 
 /**
- * Setups light color
+ * Setups diffuse light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const lightColorInputs = [
-  document.getElementById("colorR"),
-  document.getElementById("colorG"),
-  document.getElementById("colorB"),
+const diffuseInputs = [
+  document.getElementById("diffuseColorR"),
+  document.getElementById("diffuseColorG"),
+  document.getElementById("diffuseColorB"),
 ];
-lightColorInputs.forEach((input) => {
+diffuseInputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setLightColor();
+    setDiffuseLightColor();
     render(lastAnimationTime);
   });
 });
-const setLightColor = () => {
+const setDiffuseLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(lightColorInputs[0].value),
-    parseFloat(lightColorInputs[1].value),
-    parseFloat(lightColorInputs[2].value)
+    parseFloat(diffuseInputs[0].value),
+    parseFloat(diffuseInputs[1].value),
+    parseFloat(diffuseInputs[2].value)
   );
 };
-setLightColor();
-
-/**
- * Setups light intensity
- */
-const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
-const lightIntensityInput = document.getElementById("intensity");
-lightIntensityInput.addEventListener("input", () => {
-  setLightIntensity();
-});
-const setLightIntensity = () => {
-  gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
-};
-setLightIntensity();
+setDiffuseLightColor();
 
 /**
  * Setups diffuse light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 5, 5, 5);
+gl.uniform3f(uLightPosition, 2.3, 4.0, 3.5);
+
+/**
+ * Setups ambient light
+ */
+const uAmbientLight = gl.getUniformLocation(program, "u_AmbientLight");
+const ambientInputs = [
+  document.getElementById("ambientColorR"),
+  document.getElementById("ambientColorG"),
+  document.getElementById("ambientColorB"),
+];
+ambientInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setAmbientLightColor();
+    render(lastAnimationTime);
+  });
+});
+const setAmbientLightColor = () => {
+  gl.uniform3f(
+    uAmbientLight,
+    parseFloat(ambientInputs[0].value),
+    parseFloat(ambientInputs[1].value),
+    parseFloat(ambientInputs[2].value)
+  );
+};
+setAmbientLightColor();
 
 /**
  * Setups cube

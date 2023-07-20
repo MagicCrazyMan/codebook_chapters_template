@@ -217,8 +217,8 @@ const flatShading = () => {
     vec3.normalize(lightDirection, lightDirection);
     vec3.normalize(normal3Temp, normal3Temp);
 
-    const intensity = Math.max(vec3.dot(lightDirection, normal3Temp), 0.0);
-    vec3.scale(diffuseColorTemp, lightColorTemp, intensity);
+    const power = Math.max(vec3.dot(lightDirection, normal3Temp), 0.0);
+    vec3.scale(diffuseColorTemp, lightColorTemp, power);
     vec3.multiply(diffuseColorTemp, diffuseColorTemp, color);
 
     vec3.add(colorTemp, diffuseColorTemp, ambientColorTemp);
