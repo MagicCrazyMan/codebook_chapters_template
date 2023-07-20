@@ -91,13 +91,13 @@ let lastAnimationTime = 0;
 let currentRotation = 0;
 const modelMatrix = mat4.create();
 const cameraPosition = vec3.fromValues(6, 6, 14);
+gl.uniform3fv(uCameraPosition, cameraPosition); // set camera position
 const viewMatrix = mat4.lookAt(
   mat4.create(),
   cameraPosition,
   vec3.fromValues(0, 0, 0),
   vec3.fromValues(0, 1, 0)
 );
-gl.uniform3fv(uCameraPosition, cameraPosition); // set camera position
 const projectionMatrix = mat4.create();
 const mvpMatrix = mat4.create();
 const normalMatrix = mat4.create();
@@ -130,6 +130,7 @@ const setNormalMatrix = () => {
 };
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
+  setMvpMatrix();
   render(lastAnimationTime);
 });
 
@@ -156,12 +157,12 @@ gl.enableVertexAttribArray(uNormals);
  * Setups light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const colorInputs = [
+const lightColorInputs = [
   document.getElementById("colorR"),
   document.getElementById("colorG"),
   document.getElementById("colorB"),
 ];
-colorInputs.forEach((input) => {
+lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightColor();
     render(lastAnimationTime);
@@ -170,9 +171,9 @@ colorInputs.forEach((input) => {
 const setLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(colorInputs[0].value),
-    parseFloat(colorInputs[1].value),
-    parseFloat(colorInputs[2].value)
+    parseFloat(lightColorInputs[0].value),
+    parseFloat(lightColorInputs[1].value),
+    parseFloat(lightColorInputs[2].value)
   );
 };
 setLightColor();

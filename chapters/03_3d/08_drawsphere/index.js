@@ -124,7 +124,11 @@ console.log(vertices, indices);
 /**
  * Setups mvp matrix and normal matrix
  */
-const modelMatrix = mat4.fromRotation(mat4.create(), glMatrix.toRadian(50), vec3.fromValues(1, 0.5, 0));
+const modelMatrix = mat4.fromRotation(
+  mat4.create(),
+  glMatrix.toRadian(0),
+  vec3.fromValues(1, 0.5, 0)
+);
 gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 const viewMatrix = mat4.lookAt(
   mat4.create(),

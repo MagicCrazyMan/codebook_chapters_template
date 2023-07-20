@@ -16,7 +16,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     vec4 normal = u_NormalMatrix * a_Normal;
-    float power = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
+    float power = clamp(dot(u_LightDirection, normalize(normal.xyz)), 0.0, 1.0);
     v_Color = vec4(a_Color.rgb * u_LightColor * power, a_Color.a);
   }
 `;

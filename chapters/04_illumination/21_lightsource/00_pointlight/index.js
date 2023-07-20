@@ -5,6 +5,7 @@ const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
   attribute vec4 a_Normal;
+
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
@@ -16,7 +17,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    v_Normal = vec3(u_NormalMatrix * a_Normal);
     v_Color = a_Color;
   }
 `;
@@ -27,8 +28,12 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
+  uniform vec3 u_CameraPosition;
+  uniform vec3 u_AmbientLight;
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
+  uniform float u_LightSpecularExponent;
+  uniform float u_LightIntensity;
 
   varying vec4 v_Color;
   varying vec3 v_Normal;
@@ -36,11 +41,30 @@ const fragmentShader = `
 
   void main() {
     vec3 normal = normalize(v_Normal);
-    vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    float power = max(dot(normal, lightDirection), 0.0);
-    vec3 diffuse = u_LightColor * v_Color.rgb * power;
+    vec3 toLight = normalize(u_LightPosition - v_Position);
+    vec3 toCamera = normalize(u_CameraPosition - v_Position);
 
-    gl_FragColor = vec4(diffuse, v_Color.a);
+    // calculates attenuation
+    float dist = distance(v_Position, u_LightPosition);
+    float falloffPower = clamp(u_LightIntensity / pow(dist, 2.0), 0.0, 1.0);
+    vec3 falloffLightColor = u_LightColor * falloffPower;
+
+    // calculates specular
+    vec3 specularProj = 2.0 * normal * dot(normal, toLight) - 1.0 * toLight;
+    specularProj = normalize(specularProj);
+    float specularCosine = clamp(dot(toCamera, specularProj), 0.0, 1.0);
+    float specularPower = pow(specularCosine, u_LightSpecularExponent);
+    vec3 specularColor = falloffLightColor * specularPower;
+    vec3 objectColor = v_Color.rgb * (1.0 - specularPower);
+
+    // calculates diffuse
+    float diffusePower = clamp(dot(normal, toLight), 0.0, 1.0);
+    vec3 diffuseColor = objectColor * falloffLightColor * diffusePower;
+
+    // calculates ambient
+    vec3 ambientColor = v_Color.rgb * u_AmbientLight;
+
+    gl_FragColor = vec4(ambientColor + specularColor + diffuseColor , v_Color.a);
   }
 `;
 
@@ -56,13 +80,16 @@ const program = bindWebGLProgram(gl, [
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
 const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
+const uCameraPosition = gl.getUniformLocation(program, "u_CameraPosition");
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;
 let currentRotation = 0;
 const modelMatrix = mat4.create();
+const cameraPosition = vec3.fromValues(6, 6, 14);
+gl.uniform3fv(uCameraPosition, cameraPosition);
 const viewMatrix = mat4.lookAt(
   mat4.create(),
-  vec3.fromValues(6, 6, 14),
+  cameraPosition,
   vec3.fromValues(0, 0, 0),
   vec3.fromValues(0, 1, 0)
 );
@@ -98,6 +125,7 @@ const setNormalMatrix = () => {
 };
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
+  setMvpMatrix();
   render(lastAnimationTime);
 });
 
@@ -121,35 +149,85 @@ gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
 
 /**
- * Setups diffuse light color
+ * Setups light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const diffuseInputs = [
-  document.getElementById("diffuseColorR"),
-  document.getElementById("diffuseColorG"),
-  document.getElementById("diffuseColorB"),
+const lightColorInputs = [
+  document.getElementById("colorR"),
+  document.getElementById("colorG"),
+  document.getElementById("colorB"),
 ];
-diffuseInputs.forEach((input) => {
+lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
-    setDiffuseLightColor();
+    setLightColor();
     render(lastAnimationTime);
   });
 });
-const setDiffuseLightColor = () => {
+const setLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(diffuseInputs[0].value),
-    parseFloat(diffuseInputs[1].value),
-    parseFloat(diffuseInputs[2].value)
+    parseFloat(lightColorInputs[0].value),
+    parseFloat(lightColorInputs[1].value),
+    parseFloat(lightColorInputs[2].value)
   );
 };
-setDiffuseLightColor();
-
+setLightColor();
 /**
- * Setups diffuse light position
+ * Setups light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 2.3, 4.0, 3.5);
+gl.uniform3fv(uLightPosition, vec3.fromValues(5, -2, 5));
+/**
+ * Setups light position
+ */
+const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularExponent");
+const lightSpecularInput = document.getElementById("specularExponent");
+lightSpecularInput.addEventListener("input", () => {
+  setLightSpecularExponent();
+  render(lastAnimationTime);
+});
+const setLightSpecularExponent = () => {
+  gl.uniform1f(uLightSpecularExponent, parseFloat(lightSpecularInput.value));
+};
+setLightSpecularExponent();
+/**
+ * Setups light intensity
+ */
+const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
+const lightIntensityInput = document.getElementById("intensity");
+lightIntensityInput.addEventListener("input", () => {
+  setLightIntensityExponent();
+  render(lastAnimationTime);
+});
+const setLightIntensityExponent = () => {
+  gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
+};
+setLightIntensityExponent();
+
+/**
+ * Setups ambient light
+ */
+const uAmbientLight = gl.getUniformLocation(program, "u_AmbientLight");
+const ambientInputs = [
+  document.getElementById("ambientColorR"),
+  document.getElementById("ambientColorG"),
+  document.getElementById("ambientColorB"),
+];
+ambientInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setAmbientLightColor();
+    render(lastAnimationTime);
+  });
+});
+const setAmbientLightColor = () => {
+  gl.uniform3f(
+    uAmbientLight,
+    parseFloat(ambientInputs[0].value),
+    parseFloat(ambientInputs[1].value),
+    parseFloat(ambientInputs[2].value)
+  );
+};
+setAmbientLightColor();
 
 /**
  * Setups cube
