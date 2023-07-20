@@ -65,14 +65,14 @@ const fragmentShader = `
     // calculates ambient
     vec3 ambientColor = v_Color.rgb * u_AmbientLight;
 
-    // determines is position inside light limit
-    float step = spotlightStep(dot(-1.0 * toLight, lightDirection));
-    if (step != 0.0) {
+    // determines is surface position inside spotlight limit
+    float spotStep = spotlightStep(dot(-1.0 * toLight, lightDirection));
+    if (spotStep != 0.0) {
       // calculates cosine between light and normal
       float dotLightNormal = dot(normal, toLight);
 
       // calculates smooth light
-      vec3 smoothLight = u_LightColor * step;
+      vec3 smoothLight = u_LightColor * spotStep;
 
       // calculates falloff
       float dist = distance(v_Position, u_LightPosition);
