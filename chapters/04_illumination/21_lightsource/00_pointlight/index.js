@@ -44,7 +44,10 @@ const fragmentShader = `
     vec3 toLight = normalize(u_LightPosition - v_Position);
     vec3 toCamera = normalize(u_CameraPosition - v_Position);
 
-    // calculates attenuation
+    // calculates ambient
+    vec3 ambientColor = v_Color.rgb * u_AmbientLight;
+
+    // calculates falloff
     float dist = distance(v_Position, u_LightPosition);
     float falloffPower = clamp(u_LightIntensity / pow(dist, 2.0), 0.0, 1.0);
     vec3 falloffLightColor = u_LightColor * falloffPower;
@@ -60,9 +63,6 @@ const fragmentShader = `
     // calculates diffuse
     float diffusePower = clamp(dot(normal, toLight), 0.0, 1.0);
     vec3 diffuseColor = objectColor * falloffLightColor * diffusePower;
-
-    // calculates ambient
-    vec3 ambientColor = v_Color.rgb * u_AmbientLight;
 
     gl_FragColor = vec4(ambientColor + specularColor + diffuseColor , v_Color.a);
   }
