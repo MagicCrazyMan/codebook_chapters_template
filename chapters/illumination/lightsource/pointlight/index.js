@@ -8,28 +8,16 @@ const vertexShader = `
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
-  uniform vec3 u_LightColor;
-  uniform vec3 u_LightPosition;
-  uniform vec3 u_AmbientLight;
 
   varying vec4 v_Color;
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    // gets transformed normal, and normalize it
-    vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
-    // calculates vertex position in world coordinates system
-    vec4 vertexPosition = u_ModelMatrix * a_Position;
-    // calculates light direction by subtract light position and vertex position, and normalize it
-    vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));
-    // calculates incidence between light direction and normal
-    float incidence = max(dot(lightDirection, normal), 0.0);
-    // calculates diffuse light color
-    vec3 diffuse = u_LightColor * a_Color.rgb * incidence;
-    // calculates ambient light color
-    vec3 ambient = u_AmbientLight * a_Color.rgb;
-    // combine diffuse and ambient light color
-    v_Color = vec4(diffuse + ambient, a_Color.a);
+    v_Position = vec3(u_ModelMatrix * a_Position);
+    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    v_Color = a_Color;
   }
 `;
 const fragmentShader = `
@@ -39,10 +27,24 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
+  uniform vec3 u_LightColor;
+  uniform vec3 u_LightPosition;
+
   varying vec4 v_Color;
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   void main() {
-    gl_FragColor = v_Color;
+    // normalizes normal vector because it is interpolated and not 1.0 in length any more
+    vec3 normal = normalize(v_Normal);
+    // calculates light direction and normalizes it
+    vec3 lightDirection = normalize(u_LightPosition - v_Position);
+    // calculates intensity
+    float intensity = max(dot(normal, lightDirection), 0.0);
+    // calculates diffuse light color
+    vec3 diffuse = u_LightColor * v_Color.rgb * intensity;
+
+    gl_FragColor = vec4(diffuse, v_Color.a);
   }
 `;
 
@@ -152,31 +154,6 @@ setDiffuseLightColor();
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
 gl.uniform3f(uLightPosition, 2.3, 4.0, 3.5);
-
-/**
- * Setups ambient light
- */
-const uAmbientLight = gl.getUniformLocation(program, "u_AmbientLight");
-const ambientInputs = [
-  document.getElementById("ambientColorR"),
-  document.getElementById("ambientColorG"),
-  document.getElementById("ambientColorB"),
-];
-ambientInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setAmbientLightColor();
-    render(lastAnimationTime);
-  });
-});
-const setAmbientLightColor = () => {
-  gl.uniform3f(
-    uAmbientLight,
-    parseFloat(ambientInputs[0].value),
-    parseFloat(ambientInputs[1].value),
-    parseFloat(ambientInputs[2].value)
-  );
-};
-setAmbientLightColor();
 
 /**
  * Setups cube
