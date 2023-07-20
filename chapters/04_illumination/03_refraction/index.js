@@ -5,6 +5,7 @@ const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Color;
   attribute vec4 a_Normal;
+
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
@@ -16,7 +17,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = (vec3(u_NormalMatrix * a_Normal));
+    v_Normal = vec3(u_NormalMatrix * a_Normal);
     v_Color = a_Color;
   }
 `;
@@ -29,24 +30,46 @@ const fragmentShader = `
 
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
-  uniform float u_LightIntensity;
+  uniform float u_LightSpecularExponent;
+
+  uniform vec3 u_CameraPosition;
 
   varying vec4 v_Color;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
   void main() {
-    // distance falloff
-    float dist = distance(v_Position, u_LightPosition);
-    float falloffPower = u_LightIntensity * 1.0 / pow(dist, 2.0); // quadratic falloff
-
-    // diffuse
+    // normalizes normal vector
     vec3 normal = normalize(v_Normal);
-    vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    float diffusePower = max(dot(normal, lightDirection), 0.0);
-    vec3 diffuse = u_LightColor * falloffPower * diffusePower * v_Color.rgb;
+    // calculates L vector
+    vec3 L = v_Position - u_LightPosition;
 
-    gl_FragColor = vec4(diffuse, v_Color.a);
+    // // calculates negative of L vector
+    // vec3 negativeL = -1.0 * L;
+    // // calculates N vector
+    // vec3 N = normal * dot(normal, negativeL);
+    // // calculates P vector
+    // vec3 P = L + N;
+    // // calculates R vector and normalize
+    // vec3 R = normalize(N + P);
+
+    // does the same job as above
+    vec3 R = 2.0 * normal * dot(normal, -1.0 * L) + L;
+    R = normalize(R);
+
+    // calculates vector from object position to camera and normalize
+    vec3 V = normalize(u_CameraPosition - v_Position);
+    // calculates cosine angle between R and V
+    float cos_angle = clamp(dot(R, V), 0.0, 1.0);
+    // calculates specular power
+    float power = pow(cos_angle, u_LightSpecularExponent);
+
+    // calculates specular light color
+    vec3 specularColor = u_LightColor * power;
+    // calculates object color
+    vec3 objectColor = v_Color.rgb * (1.0 - power);
+
+    gl_FragColor = vec4(specularColor + objectColor, v_Color.a);
   }
 `;
 
@@ -57,21 +80,24 @@ const program = bindWebGLProgram(gl, [
 ]);
 
 /**
- * Setups mvp and normal matrix
+ * Setups mvp, normal matrix and camera position
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
 const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
+const uCameraPosition = gl.getUniformLocation(program, "u_CameraPosition");
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;
 let currentRotation = 0;
 const modelMatrix = mat4.create();
+const cameraPosition = vec3.fromValues(6, 6, 14);
 const viewMatrix = mat4.lookAt(
   mat4.create(),
-  vec3.fromValues(6, 6, 14),
+  cameraPosition,
   vec3.fromValues(0, 0, 0),
   vec3.fromValues(0, 1, 0)
 );
+gl.uniform3fv(uCameraPosition, cameraPosition); // set camera position
 const projectionMatrix = mat4.create();
 const mvpMatrix = mat4.create();
 const normalMatrix = mat4.create();
@@ -130,12 +156,12 @@ gl.enableVertexAttribArray(uNormals);
  * Setups light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const lightColorInputs = [
+const colorInputs = [
   document.getElementById("colorR"),
   document.getElementById("colorG"),
   document.getElementById("colorB"),
 ];
-lightColorInputs.forEach((input) => {
+colorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightColor();
     render(lastAnimationTime);
@@ -144,31 +170,32 @@ lightColorInputs.forEach((input) => {
 const setLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(lightColorInputs[0].value),
-    parseFloat(lightColorInputs[1].value),
-    parseFloat(lightColorInputs[2].value)
+    parseFloat(colorInputs[0].value),
+    parseFloat(colorInputs[1].value),
+    parseFloat(colorInputs[2].value)
   );
 };
 setLightColor();
 
 /**
- * Setups light intensity
- */
-const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
-const lightIntensityInput = document.getElementById("intensity");
-lightIntensityInput.addEventListener("input", () => {
-  setLightIntensity();
-});
-const setLightIntensity = () => {
-  gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
-};
-setLightIntensity();
-
-/**
- * Setups diffuse light position
+ * Setups light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 5, 5, 5);
+gl.uniform3fv(uLightPosition, vec3.fromValues(5, -2, 5));
+
+/**
+ * Setups light specular exponent
+ */
+const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularExponent");
+const specularInput = document.getElementById("specularExponent");
+specularInput.addEventListener("input", () => {
+  setLightSpecularExponent();
+  render(lastAnimationTime);
+});
+const setLightSpecularExponent = () => {
+  gl.uniform1f(uLightSpecularExponent, parseFloat(specularInput.value));
+};
+setLightSpecularExponent();
 
 /**
  * Setups cube
