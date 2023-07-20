@@ -1,5 +1,9 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
+import {
+  bindWebGLProgram,
+  getCanvasResizeObserver,
+  getWebGLContext,
+} from "../../../libs/common.js";
 
 const vertexShader = `
   attribute vec4 a_Position;
@@ -34,40 +38,63 @@ const fragmentShader = `
   uniform vec3 u_LightPosition;
   uniform float u_LightSpecularExponent;
   uniform float u_LightIntensity;
+  uniform vec3 u_LightDirection;
+  uniform float u_InnerLightLimit;
+  uniform float u_OuterLightLimit;
 
   varying vec4 v_Color;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
+  float spotlightStep(in float limit) {
+    if (limit >= u_InnerLightLimit) {
+      return 1.0;
+    } else if (limit < u_OuterLightLimit) {
+      return 0.0;
+    } else {
+      return smoothstep(u_OuterLightLimit, u_InnerLightLimit, limit);
+    }
+  }
+
   void main() {
     vec3 normal = normalize(v_Normal);
     vec3 toLight = normalize(u_LightPosition - v_Position);
     vec3 toCamera = normalize(u_CameraPosition - v_Position);
+    vec3 lightDirection = normalize(u_LightDirection);
 
     // calculates ambient
     vec3 ambientColor = v_Color.rgb * u_AmbientLight;
 
-    // calculates cosine between light and normal
-    float dotLightNormal = dot(normal, toLight);
+    // determines is position inside light limit
+    float step = spotlightStep(dot(-1.0 * toLight, lightDirection));
+    if (step != 0.0) {
+      // calculates cosine between light and normal
+      float dotLightNormal = dot(normal, toLight);
 
-    // calculates falloff
-    float dist = distance(v_Position, u_LightPosition);
-    float falloffPower = clamp(u_LightIntensity / pow(dist, 2.0), 0.0, 1.0);
-    vec3 falloffLightColor = u_LightColor * falloffPower;
+      // calculates smooth light
+      vec3 smoothLight = u_LightColor * step;
 
-    // calculates specular
-    vec3 specularProj = 2.0 * normal * dotLightNormal - 1.0 * toLight;
-    specularProj = normalize(specularProj);
-    float specularCosine = clamp(dot(toCamera, specularProj), 0.0, 1.0);
-    float specularPower = pow(specularCosine, u_LightSpecularExponent);
-    vec3 specularColor = falloffLightColor * specularPower;
-    vec3 objectColor = v_Color.rgb * (1.0 - specularPower);
-
-    // calculates diffuse
-    float diffusePower = clamp(dotLightNormal, 0.0, 1.0);
-    vec3 diffuseColor = objectColor * falloffLightColor * diffusePower;
-
-    gl_FragColor = vec4(ambientColor + specularColor + diffuseColor , v_Color.a);
+      // calculates falloff
+      float dist = distance(v_Position, u_LightPosition);
+      float falloffPower = clamp(u_LightIntensity / pow(dist, 2.0), 0.0, 1.0);
+      vec3 falloffLightColor = smoothLight * falloffPower;
+  
+      // calculates specular
+      vec3 specularProj = 2.0 * normal * dotLightNormal - 1.0 * toLight;
+      specularProj = normalize(specularProj);
+      float specularCosine = clamp(dot(toCamera, specularProj), 0.0, 1.0);
+      float specularPower = pow(specularCosine, u_LightSpecularExponent);
+      vec3 specularColor = falloffLightColor * specularPower;
+      vec3 objectColor = v_Color.rgb * (1.0 - specularPower);
+  
+      // calculates diffuse
+      float diffusePower = clamp(dotLightNormal, 0.0, 1.0);
+      vec3 diffuseColor = objectColor * falloffLightColor * diffusePower;
+  
+      gl_FragColor = vec4(ambientColor + specularColor + diffuseColor , v_Color.a);
+    } else {
+      gl_FragColor = vec4(ambientColor , v_Color.a);
+    }
   }
 `;
 
@@ -179,7 +206,8 @@ setLightColor();
  * Setups light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3fv(uLightPosition, vec3.fromValues(5, -2, 5));
+const lightPosition = vec3.fromValues(5, 5, 5);
+gl.uniform3fv(uLightPosition, lightPosition);
 /**
  * Setups light position
  */
@@ -206,6 +234,41 @@ const setLightIntensityExponent = () => {
   gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
 };
 setLightIntensityExponent();
+/**
+ * Setups light limitation
+ */
+const uInnerLightLimit = gl.getUniformLocation(program, "u_InnerLightLimit");
+const innerLightLimitInput = document.getElementById("innerLimit");
+innerLightLimitInput.addEventListener("input", () => {
+  setInnerLightLimit();
+  render(lastAnimationTime);
+});
+const setInnerLightLimit = () => {
+  gl.uniform1f(
+    uInnerLightLimit,
+    Math.cos(glMatrix.toRadian(parseFloat(innerLightLimitInput.value)))
+  );
+};
+setInnerLightLimit();
+const uOuterLightLimit = gl.getUniformLocation(program, "u_OuterLightLimit");
+const outerLightLimitInput = document.getElementById("outerLimit");
+outerLightLimitInput.addEventListener("input", () => {
+  setOuterLightLimit();
+  render(lastAnimationTime);
+});
+const setOuterLightLimit = () => {
+  gl.uniform1f(
+    uOuterLightLimit,
+    Math.cos(glMatrix.toRadian(parseFloat(outerLightLimitInput.value)))
+  );
+};
+setOuterLightLimit();
+/**
+ * Setups light direction
+ */
+const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
+const lightLookAt = vec3.fromValues(0, 0, 0);
+gl.uniform3fv(uLightDirection, vec3.subtract(vec3.create(), lightLookAt, lightPosition));
 
 /**
  * Setups ambient light
