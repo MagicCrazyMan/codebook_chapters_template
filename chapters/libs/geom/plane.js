@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import { Geometry } from "./geometry";
+import { Geometry } from "./geometry.js";
 
 export class Plane extends Geometry {
   /**
