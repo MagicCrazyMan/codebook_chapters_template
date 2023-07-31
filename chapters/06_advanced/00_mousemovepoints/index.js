@@ -85,7 +85,7 @@ selector.addEventListener("input", (e) => {
  */
 const clear = document.getElementById("clear");
 clear.addEventListener("click", () => {
-  vertexSize = 0;
+  verticesSize = 0;
   render();
 });
 
@@ -115,18 +115,21 @@ colorInputs.forEach((selector) => {
 /**
  * Setups max vertex multiplier
  */
-const maxVertexSizeInput = document.getElementById("maxVertexSize");
-let maxVertexSize = parseInt(maxVertexSizeInput.value);
-let vertexSize = 0;
-let arraybuffer = new Float32Array(5 * maxVertexSize);
-maxVertexSizeInput.addEventListener("change", () => {
-  const oldVertexSize = vertexSize;
+const maxVerticesSizeInput = document.getElementById("maxVerticesSize");
+let maxVerticesSize = parseInt(maxVerticesSizeInput.value);
+let verticesSize = 0;
+let arraybuffer = new Float32Array(5 * maxVerticesSize);
+maxVerticesSizeInput.addEventListener("change", () => {
+  const newMaxVerticesSize = parseInt(maxVerticesSizeInput.value);
+  const newVerticesSize = Math.min(verticesSize, newMaxVerticesSize);
+  const newArraybuffer = new Float32Array(5 * newMaxVerticesSize);
+  newArraybuffer.set(arraybuffer.slice((verticesSize - newVerticesSize) * 5));
+  gl.bufferData(gl.ARRAY_BUFFER, newArraybuffer, gl.DYNAMIC_DRAW);
 
-  maxVertexSize = parseInt(maxVertexSizeInput.value);
-  vertexSize = Math.min(maxVertexSize, oldVertexSize);
-  arraybuffer = new Float32Array(5 * maxVertexSize);
-  arraybuffer.set(arraybuffer.slice((oldVertexSize - vertexSize) * 5, oldVertexSize * 5));
-  gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
+  maxVerticesSize = newMaxVerticesSize;
+  verticesSize = newVerticesSize;
+  arraybuffer = newArraybuffer;
+
   render();
 });
 
@@ -134,17 +137,19 @@ maxVertexSizeInput.addEventListener("change", () => {
  * Setups coordinates updater
  */
 const updatePoint = (e) => {
+  if (arraybuffer.length === 0) return;
+
   const coordinate = getWebGLCoordinateFromEvent(e, canvas.width, canvas.height);
   const color = [Math.random(), Math.random(), Math.random()];
   // Flushes coordinate into array buffer
-  if (vertexSize >= maxVertexSize) {
+  if (verticesSize >= maxVerticesSize) {
     arraybuffer.set(arraybuffer.slice(5), 0);
     arraybuffer.set(coordinate, arraybuffer.length - 5);
     arraybuffer.set(color, arraybuffer.length - 5 + 2);
   } else {
-    arraybuffer.set(coordinate, vertexSize * 5);
-    arraybuffer.set(color, vertexSize * 5 + 2);
-    vertexSize++;
+    arraybuffer.set(coordinate, verticesSize * 5);
+    arraybuffer.set(color, verticesSize * 5 + 2);
+    verticesSize++;
   }
   // Flushes array buffer to webgl buffer
   gl.bufferData(gl.ARRAY_BUFFER, arraybuffer, gl.DYNAMIC_DRAW);
@@ -159,7 +164,7 @@ canvas.addEventListener("touchmove", (e) => {
 
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.drawArrays(activeMode, 0, vertexSize);
+  gl.drawArrays(activeMode, 0, verticesSize);
 };
 
 getCanvasResizeObserver(render);
