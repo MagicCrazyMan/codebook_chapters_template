@@ -3,18 +3,18 @@ import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../.
 
 const vertexShader = `
   attribute vec4 a_Position;
-  attribute vec4 a_Color;
-  attribute vec4 a_Normal;
+  // reflection of ambient light
+  attribute vec3 a_AmbientReflection;
 
   uniform mat4 u_MvpMatrix;
-  uniform mat4 u_NormalMatrix;
+  // ambient light color
   uniform vec3 u_AmbientLight;
 
-  varying vec4 v_Color;
+  varying vec3 v_Color;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    v_Color = vec4(a_Color.xyz * u_AmbientLight, a_Color.a);
+    v_Color = a_AmbientReflection * u_AmbientLight;
   }
 `;
 const fragmentShader = `
@@ -24,10 +24,10 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
-  varying vec4 v_Color;
+  varying vec3 v_Color;
 
   void main() {
-    gl_FragColor = v_Color;
+    gl_FragColor = vec4(v_Color, 1.0);
   }
 `;
 
@@ -41,7 +41,6 @@ const program = bindWebGLProgram(gl, [
  * Setups mvp and normal matrix
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
-const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;
 let currentRotation = 0;
@@ -54,7 +53,6 @@ const viewMatrix = mat4.lookAt(
 );
 const projectionMatrix = mat4.create();
 const mvpMatrix = mat4.create();
-const normalMatrix = mat4.create();
 const setProjectionMatrix = () => {
   mat4.perspective(
     projectionMatrix,
@@ -77,34 +75,10 @@ const setMvpMatrix = () => {
   mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
-const setNormalMatrix = () => {
-  mat4.invert(normalMatrix, modelMatrix);
-  mat4.transpose(normalMatrix, normalMatrix);
-  gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
-};
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
   render(lastAnimationTime);
 });
-
-/**
- * Setups cube normals
- */
-// prettier-ignore
-const normals = new Float32Array([
-  0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,   0.0, 0.0, 1.0,  // v0-v1-v2-v3 front
-  1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,   1.0, 0.0, 0.0,  // v0-v3-v4-v5 right
-  0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,   0.0, 1.0, 0.0,  // v0-v5-v6-v1 up
- -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  -1.0, 0.0, 0.0,  // v1-v6-v7-v2 left
-  0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,   0.0,-1.0, 0.0,  // v7-v4-v3-v2 down
-  0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0,   0.0, 0.0,-1.0   // v4-v7-v6-v5 back
-]);
-const normalsBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-const uNormals = gl.getAttribLocation(program, "a_Normal");
-gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(uNormals);
 
 /**
  * Setups diffuse light direction
@@ -166,7 +140,7 @@ gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
 
 // prettier-ignore
-const colors = new Float32Array([
+const ambientReflections = new Float32Array([
   0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  // v0-v1-v2-v3 front(blue)
   0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  // v0-v3-v4-v5 right(green)
   1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  // v0-v5-v6-v1 up(red)
@@ -174,12 +148,12 @@ const colors = new Float32Array([
   1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  // v7-v4-v3-v2 bottom(white)
   0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0   // v4-v7-v6-v5 back(cyan)
 ]);
-const colorsBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
-const aColor = gl.getAttribLocation(program, "a_Color");
-gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(aColor);
+const ambientReflectionBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, ambientReflectionBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, ambientReflections, gl.STATIC_DRAW);
+const aAmbientReflection = gl.getAttribLocation(program, "a_AmbientReflection");
+gl.vertexAttribPointer(aAmbientReflection, 3, gl.FLOAT, false, 0, 0);
+gl.enableVertexAttribArray(aAmbientReflection);
 
 // prettier-ignore
 const indices = new Uint8Array([
@@ -198,7 +172,6 @@ gl.enable(gl.DEPTH_TEST);
 const render = (time) => {
   setModelMatrix(time);
   setMvpMatrix();
-  setNormalMatrix();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);

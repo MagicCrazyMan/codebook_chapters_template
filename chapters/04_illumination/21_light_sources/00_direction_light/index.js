@@ -1,23 +1,24 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../libs/common";
+import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 
 const vertexShader = `
   attribute vec4 a_Position;
-  attribute vec3 a_DiffuseReflection;
+  attribute vec4 a_Color;
   attribute vec4 a_Normal;
 
   uniform mat4 u_MvpMatrix;
+  uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
-  uniform vec3 u_LightColor;
-  uniform vec3 u_LightDirection;
 
-  varying vec3 v_Color;
+  varying vec4 v_Color;
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    vec4 normal = u_NormalMatrix * a_Normal;
-    float power = max(dot(u_LightDirection, normalize(normal.xyz)), 0.0);
-    v_Color = a_DiffuseReflection * u_LightColor * power;
+    v_Position = vec3(u_ModelMatrix * a_Position);
+    v_Normal = vec3(u_NormalMatrix * a_Normal);
+    v_Color = a_Color;
   }
 `;
 const fragmentShader = `
@@ -27,10 +28,24 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
-  varying vec3 v_Color;
+  uniform vec3 u_LightColor;
+  uniform vec3 u_LightDirection;
+
+  varying vec4 v_Color;
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   void main() {
-    gl_FragColor = vec4(v_Color, 1.0);
+    vec3 normal = normalize(v_Normal);
+
+    // calculates cosine between light and normal
+    float dotLightNormal = dot(normal, -1.0 * u_LightDirection);
+
+    // calculates direction light
+    float directionPower = clamp(dotLightNormal, 0.0, 1.0);
+    vec3 directionColor = v_Color.rgb * u_LightColor * directionPower;
+
+    gl_FragColor = vec4(directionColor , v_Color.a);
   }
 `;
 
@@ -44,14 +59,16 @@ const program = bindWebGLProgram(gl, [
  * Setups mvp and normal matrix
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
+const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
+const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;
 let currentRotation = 0;
 const modelMatrix = mat4.create();
 const viewMatrix = mat4.lookAt(
   mat4.create(),
-  vec3.fromValues(3, 3, 7),
+  vec3.fromValues(6, 6, 14),
   vec3.fromValues(0, 0, 0),
   vec3.fromValues(0, 1, 0)
 );
@@ -71,7 +88,7 @@ const setModelMatrix = (time) => {
   currentRotation += ((time - lastAnimationTime) / 1000) * rps;
   currentRotation %= 2 * Math.PI;
   mat4.fromYRotation(modelMatrix, currentRotation);
-  lastAnimationTime = time;
+  gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 };
 const setMvpMatrix = () => {
   mat4.identity(mvpMatrix);
@@ -87,6 +104,7 @@ const setNormalMatrix = () => {
 };
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
+  setMvpMatrix();
   render(lastAnimationTime);
 });
 
@@ -110,15 +128,15 @@ gl.vertexAttribPointer(uNormals, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(uNormals);
 
 /**
- * Setups diffuse light color
+ * Setups light color
  */
 const uLightColor = gl.getUniformLocation(program, "u_LightColor");
-const inputs = [
+const lightColorInputs = [
   document.getElementById("colorR"),
   document.getElementById("colorG"),
   document.getElementById("colorB"),
 ];
-inputs.forEach((input) => {
+lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightColor();
     render(lastAnimationTime);
@@ -127,19 +145,17 @@ inputs.forEach((input) => {
 const setLightColor = () => {
   gl.uniform3f(
     uLightColor,
-    parseFloat(inputs[0].value),
-    parseFloat(inputs[1].value),
-    parseFloat(inputs[2].value)
+    parseFloat(lightColorInputs[0].value),
+    parseFloat(lightColorInputs[1].value),
+    parseFloat(lightColorInputs[2].value)
   );
 };
 setLightColor();
-
 /**
- * Setups diffuse light direction
+ * Setups light direction
  */
-const uLightDirection = gl.getUniformLocation(program, "u_LightDirection");
-const lightDirection = vec3.fromValues(0.5, 3.0, 4.0); // sets light direction
-vec3.normalize(lightDirection, lightDirection); // must normalize the light direction
+const lightDirection = vec3.fromValues(10, -10, 0);
+vec3.normalize(lightDirection, lightDirection);
 gl.uniform3fv(uLightDirection, lightDirection);
 
 /**
@@ -154,12 +170,12 @@ gl.uniform3fv(uLightDirection, lightDirection);
  */
 // prettier-ignore
 const vertices = new Float32Array([
-  1.0, 1.0, 1.0,  -1.0, 1.0, 1.0,  -1.0,-1.0, 1.0,   1.0,-1.0, 1.0,  // v0-v1-v2-v3 front
-  1.0, 1.0, 1.0,   1.0,-1.0, 1.0,   1.0,-1.0,-1.0,   1.0, 1.0,-1.0,  // v0-v3-v4-v5 right
-  1.0, 1.0, 1.0,   1.0, 1.0,-1.0,  -1.0, 1.0,-1.0,  -1.0, 1.0, 1.0,  // v0-v5-v6-v1 up
- -1.0, 1.0, 1.0,  -1.0, 1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0,-1.0, 1.0,  // v1-v6-v7-v2 left
- -1.0,-1.0,-1.0,   1.0,-1.0,-1.0,   1.0,-1.0, 1.0,  -1.0,-1.0, 1.0,  // v7-v4-v3-v2 down
-  1.0,-1.0,-1.0,  -1.0,-1.0,-1.0,  -1.0, 1.0,-1.0,   1.0, 1.0,-1.0   // v4-v7-v6-v5 back
+  2.0, 2.0, 2.0,  -2.0, 2.0, 2.0,  -2.0,-2.0, 2.0,   2.0,-2.0, 2.0,  // v0-v1-v2-v3 front
+  2.0, 2.0, 2.0,   2.0,-2.0, 2.0,   2.0,-2.0,-2.0,   2.0, 2.0,-2.0,  // v0-v3-v4-v5 right
+  2.0, 2.0, 2.0,   2.0, 2.0,-2.0,  -2.0, 2.0,-2.0,  -2.0, 2.0, 2.0,  // v0-v5-v6-v1 up
+ -2.0, 2.0, 2.0,  -2.0, 2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0,-2.0, 2.0,  // v1-v6-v7-v2 left
+ -2.0,-2.0,-2.0,   2.0,-2.0,-2.0,   2.0,-2.0, 2.0,  -2.0,-2.0, 2.0,  // v7-v4-v3-v2 down
+  2.0,-2.0,-2.0,  -2.0,-2.0,-2.0,  -2.0, 2.0,-2.0,   2.0, 2.0,-2.0   // v4-v7-v6-v5 back
 ]);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
@@ -169,7 +185,7 @@ gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
 
 // prettier-ignore
-const diffuseReflections = new Float32Array([
+const colors = new Float32Array([
   0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  // v0-v1-v2-v3 front(blue)
   0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  // v0-v3-v4-v5 right(green)
   1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  // v0-v5-v6-v1 up(red)
@@ -177,12 +193,12 @@ const diffuseReflections = new Float32Array([
   1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  // v7-v4-v3-v2 bottom(white)
   0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0   // v4-v7-v6-v5 back(cyan)
 ]);
-const diffuseReflectionBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, diffuseReflectionBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, diffuseReflections, gl.STATIC_DRAW);
-const aDiffuseReflection = gl.getAttribLocation(program, "a_DiffuseReflection");
-gl.vertexAttribPointer(aDiffuseReflection, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(aDiffuseReflection);
+const colorsBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+const aColor = gl.getAttribLocation(program, "a_Color");
+gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
+gl.enableVertexAttribArray(aColor);
 
 // prettier-ignore
 const indices = new Uint8Array([
@@ -200,12 +216,13 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 gl.enable(gl.DEPTH_TEST);
 const render = (time) => {
   setModelMatrix(time);
-  setMvpMatrix();
   setNormalMatrix();
+  setMvpMatrix();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
 
   requestAnimationFrame(render);
+  lastAnimationTime = time;
 };
 render(0);

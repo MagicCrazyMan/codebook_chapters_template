@@ -51,12 +51,6 @@ const fragmentShader = `
   uniform vec3 u_LightPosition;
   uniform float u_LightSpecularExponent;
 
-  uniform float u_LightDiffuseIntensity;
-  uniform float u_LightSpecularIntensity;
-  uniform float u_LightAttenuationA;
-  uniform float u_LightAttenuationB;
-  uniform float u_LightAttenuationC;
-
   uniform vec3 u_CameraPosition;
 
   varying vec3 v_AmbientColor;
@@ -69,18 +63,18 @@ const fragmentShader = `
   /**
    * Calculates diffuse reflection color
    */
-  vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
+  vec3 diffuse(vec3 normal, vec3 lightDirection) {
     float cosine = max(dot(normal, lightDirection), 0.0);
-    return attenuation * u_LightDiffuseIntensity * u_DiffuseLightColor * v_DiffuseReflection * cosine;
+    return u_DiffuseLightColor * v_DiffuseReflection * cosine;
   }
 
   /**
    * Calculates specular reflection color
    */
-  vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
+  vec3 specular(vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
     float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
     float power = pow(cosine, u_LightSpecularExponent);
-    return attenuation * u_LightSpecularIntensity * u_SpecularLightColor * v_SpecularReflection * power;
+    return u_SpecularLightColor * v_SpecularReflection * power;
   }
 
   void main() {
@@ -89,12 +83,9 @@ const fragmentShader = `
     vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
     vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) * normal - lightDirection;
     reflectionDirection = normalize(reflectionDirection);
-
-    float distanceToLight = distance(v_Position, u_LightPosition);
-    float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
     
-    vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-    vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
+    vec3 diffuseColor = diffuse(normal, lightDirection);
+    vec3 specularColor = specular(normal, reflectionDirection, cameraDirection);
 
     gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
   }
@@ -260,36 +251,6 @@ const setSpecularLightColor = () => {
   );
 };
 setSpecularLightColor();
-
-/**
- * Setups light intensity and factors
- */
-const uLightDiffuseIntensity = gl.getUniformLocation(program, "u_LightDiffuseIntensity");
-const uLightSpecularIntensity = gl.getUniformLocation(program, "u_LightSpecularIntensity");
-const uLightAttenuationA = gl.getUniformLocation(program, "u_LightAttenuationA");
-const uLightAttenuationB = gl.getUniformLocation(program, "u_LightAttenuationB");
-const uLightAttenuationC = gl.getUniformLocation(program, "u_LightAttenuationC");
-const lightAttenuationInputs = [
-  document.getElementById("diffuseIntensity"),
-  document.getElementById("specularIntensity"),
-  document.getElementById("attenuationA"),
-  document.getElementById("attenuationB"),
-  document.getElementById("attenuationC"),
-];
-lightAttenuationInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setLightAttenuation();
-    render(lastAnimationTime);
-  });
-});
-const setLightAttenuation = () => {
-  gl.uniform1f(uLightDiffuseIntensity, parseFloat(lightAttenuationInputs[0].value));
-  gl.uniform1f(uLightSpecularIntensity, parseFloat(lightAttenuationInputs[1].value));
-  gl.uniform1f(uLightAttenuationA, parseFloat(lightAttenuationInputs[2].value));
-  gl.uniform1f(uLightAttenuationB, parseFloat(lightAttenuationInputs[3].value));
-  gl.uniform1f(uLightAttenuationC, parseFloat(lightAttenuationInputs[4].value));
-};
-setLightAttenuation();
 
 /**
  * Setups light specular exponent

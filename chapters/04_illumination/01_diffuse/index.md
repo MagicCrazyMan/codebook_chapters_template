@@ -1,1 +1,11 @@
-[漫反射（Diffusion Reflection）](https://en.wikipedia.org/wiki/Diffuse_reflection)
+[漫反射（Diffusion Reflection）](https://en.wikipedia.org/wiki/Diffuse_reflection) 是一种模拟粗糙或无光涂料粉刷的表面的反射模型。照射到表面上的光照会均匀地、等强度地向所有方向反射。漫反射的强度受平面的法向量和光线的入射方向向量之间的夹角影响，入射方向向量和平面法向量的夹角越小则光照效果越强。
+
+$$
+E_d = k_d L_d \max((\vec{l} \cdot \vec{n}), 0) 
+$$
+
+其中，$E_d$ 为物体表面漫反射光照颜色；$k_d$ 为物体漫反射反射率，取值范围 $[0, 1]$；$\vec{l}$ 为入射光线方向向量（归一化）；$\vec{n}$ 为平面法向量（归一化）；$L_d$ 为漫反射光照颜色；$\max$ 为最大值取值函数，其会从 $(\vec{l} \cdot \vec{n})^{\alpha}$ 和 $0$ 中选择较大值，用于排除负值。
+
+但需要注意的是，如果光线在表面的后方，则 $\vec{l} \cdot \vec{n}$ 的值会变成负数，但实际上只要光线在表面后方则表面不会收到任何光线的影响，则光线强度为 0 即可，因此我们需要使用 `max` 函数将所有负数变成 0。
+
+> 本例使用[远距离光源](./21_light_sources/00_direction_light)作为光源

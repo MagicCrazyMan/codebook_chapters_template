@@ -3,14 +3,14 @@ import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../.
 
 const vertexShader = `
   attribute vec4 a_Position;
-  attribute vec4 a_Color;
+  attribute vec3 a_SpecularReflection;
   attribute vec4 a_Normal;
 
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
 
-  varying vec4 v_Color;
+  varying vec3 v_SpecularReflection;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
@@ -18,7 +18,7 @@ const vertexShader = `
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
     v_Normal = vec3(u_NormalMatrix * a_Normal);
-    v_Color = a_Color;
+    v_SpecularReflection = a_SpecularReflection;
   }
 `;
 const fragmentShader = `
@@ -34,42 +34,30 @@ const fragmentShader = `
 
   uniform vec3 u_CameraPosition;
 
-  varying vec4 v_Color;
+  varying vec3 v_SpecularReflection;
   varying vec3 v_Normal;
   varying vec3 v_Position;
 
   void main() {
     // normalizes normal vector
     vec3 normal = normalize(v_Normal);
-    // calculates L vector
-    vec3 L = v_Position - u_LightPosition;
-
-    // // calculates negative of L vector
-    // vec3 negativeL = -1.0 * L;
-    // // calculates N vector
-    // vec3 N = normal * dot(normal, negativeL);
-    // // calculates P vector
-    // vec3 P = L + N;
-    // // calculates R vector and normalize
-    // vec3 R = normalize(N + P);
-
-    // does the same job as above
-    vec3 R = 2.0 * normal * dot(normal, -1.0 * L) + L;
-    R = normalize(R);
+    // calculates light direction
+    vec3 lightDirection = normalize(u_LightPosition - v_Position);
+    // calculates reflection direction
+    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
+    reflectionDirection = normalize(reflectionDirection);
 
     // calculates vector from object position to camera and normalize
-    vec3 V = normalize(u_CameraPosition - v_Position);
-    // calculates cosine angle between R and V
-    float cos_angle = clamp(dot(R, V), 0.0, 1.0);
+    vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
+    // calculates cosine angle between r and v
+    float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
     // calculates specular power
-    float power = pow(cos_angle, u_LightSpecularExponent);
+    float power = pow(cosine, u_LightSpecularExponent);
 
     // calculates specular light color
-    vec3 specularColor = u_LightColor * power;
-    // calculates object color
-    vec3 objectColor = v_Color.rgb * (1.0 - power);
+    vec3 color = v_SpecularReflection * u_LightColor * power;
 
-    gl_FragColor = vec4(specularColor + objectColor, v_Color.a);
+    gl_FragColor = vec4(color, 1.0);
   }
 `;
 
@@ -225,7 +213,7 @@ gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
 
 // prettier-ignore
-const colors = new Float32Array([
+const specularReflections = new Float32Array([
   0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  // v0-v1-v2-v3 front(blue)
   0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  0.4, 1.0, 0.4,  // v0-v3-v4-v5 right(green)
   1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  1.0, 0.4, 0.4,  // v0-v5-v6-v1 up(red)
@@ -233,12 +221,12 @@ const colors = new Float32Array([
   1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  // v7-v4-v3-v2 bottom(white)
   0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0,  0.4, 1.0, 1.0   // v4-v7-v6-v5 back(cyan)
 ]);
-const colorsBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
-const aColor = gl.getAttribLocation(program, "a_Color");
-gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(aColor);
+const specularReflectionBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, specularReflectionBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, specularReflections, gl.STATIC_DRAW);
+const aSpecularReflection = gl.getAttribLocation(program, "a_SpecularReflection");
+gl.vertexAttribPointer(aSpecularReflection, 3, gl.FLOAT, false, 0, 0);
+gl.enableVertexAttribArray(aSpecularReflection);
 
 // prettier-ignore
 const indices = new Uint8Array([

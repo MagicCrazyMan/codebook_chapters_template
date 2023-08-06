@@ -125,12 +125,12 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 // prettier-ignore
 const normals = [
-  vec4.fromValues( 0.0, 0.0, 1.0, 1.0),  // v0-v1-v2-v3 front
-  vec4.fromValues( 1.0, 0.0, 0.0, 1.0),  // v0-v3-v4-v5 right
-  vec4.fromValues( 0.0, 1.0, 0.0, 1.0),  // v0-v5-v6-v1 up
-  vec4.fromValues(-1.0, 0.0, 0.0, 1.0),  // v1-v6-v7-v2 left
-  vec4.fromValues( 0.0,-1.0, 0.0, 1.0),  // v7-v4-v3-v2 down
-  vec4.fromValues( 0.0, 0.0,-1.0, 1.0),  // v4-v7-v6-v5 back
+  vec4.fromValues( 0.0, 0.0, 1.0, 0.0),  // v0-v1-v2-v3 front
+  vec4.fromValues( 1.0, 0.0, 0.0, 0.0),  // v0-v3-v4-v5 right
+  vec4.fromValues( 0.0, 1.0, 0.0, 0.0),  // v0-v5-v6-v1 up
+  vec4.fromValues(-1.0, 0.0, 0.0, 0.0),  // v1-v6-v7-v2 left
+  vec4.fromValues( 0.0,-1.0, 0.0, 0.0),  // v7-v4-v3-v2 down
+  vec4.fromValues( 0.0, 0.0,-1.0, 0.0),  // v4-v7-v6-v5 back
 ];
 const faceColors = [
   vec3.fromValues(0.4, 0.4, 1.0), // v0-v1-v2-v3 front
