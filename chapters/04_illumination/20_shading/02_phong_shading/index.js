@@ -148,7 +148,7 @@ const setMvpMatrix = () => {
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
 const lightPosition = vec4.create();
 const lightOriginPosition = vec4.fromValues(0, 0, 0, 1);
-const lightTranslation = vec3.fromValues(-5, 5, 5);
+const lightTranslation = vec3.fromValues(0, 5, 5);
 const lightModelMatrix = mat4.create();
 const rps = glMatrix.toRadian(20); // Radian Per Second
 let lastAnimationTime = 0;

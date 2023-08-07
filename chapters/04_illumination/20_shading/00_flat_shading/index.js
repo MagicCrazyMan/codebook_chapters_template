@@ -44,7 +44,7 @@ let lastAnimationTime = 0;
 let currentRotation = 0;
 const modelMatrix = mat4.fromRotation(
   mat4.create(),
-  glMatrix.toRadian(60),
+  glMatrix.toRadian(0),
   vec3.fromValues(1, 0.5, 0)
 );
 const cameraPosition = vec3.fromValues(0, 0, 6);
@@ -110,7 +110,7 @@ const faceReflection = vec3.fromValues(0.4, 0.4, 1.0);
 /**
  * Light position
  */
-const lightPosition = vec3.fromValues(10.0, 10.0, 10.0);
+const lightPosition = vec3.fromValues(0, 5, 5);
 
 /**
  * Setups light properties inputs
@@ -132,9 +132,9 @@ const attenuationFactorInputB = document.getElementById("attenuationB");
 const attenuationFactorInputC = document.getElementById("attenuationC");
 
 const normalMatrixTemp = mat4.create();
-const normalTemp = vec4.create();
+const normal4Temp = vec4.create();
 const normal3Temp = vec3.create();
-const centroidTemp = vec4.create();
+const centroid4Temp = vec4.create();
 const centroid3Temp = vec3.create();
 const lightDirectionTemp = vec3.create();
 const reflectionDirectionTemp = vec3.create();
@@ -147,40 +147,27 @@ const specularColorTemp = vec3.create();
 const diffuseColorTemp = vec3.create();
 const colorTemp = vec3.create();
 const flatShading = () => {
+  /**
+   * Calculates ambient color
+   */
   const ambient = () => {
     const ambientReflection = faceReflection;
-    vec3.set(
-      ambientLightColorTemp,
-      parseFloat(ambientLightInputR.value),
-      parseFloat(ambientLightInputG.value),
-      parseFloat(ambientLightInputB.value)
-    );
-
     vec3.mul(ambientColorTemp, ambientLightColorTemp, ambientReflection);
   };
+  /**
+   * Calculates diffuse color
+   */
   const diffuse = (attenuation, lightDirection, normal) => {
-    const diffuseLightIntensity = parseFloat(diffuseIntensityInput.value);
-    vec3.set(
-      diffuseLightColorTemp,
-      parseFloat(diffuseLightInputR.value),
-      parseFloat(diffuseLightInputG.value),
-      parseFloat(diffuseLightInputB.value)
-    );
     const diffuseReflection = faceReflection;
     const cosine = Math.max(vec3.dot(normal, lightDirection), 0.0);
 
     vec3.mul(diffuseColorTemp, diffuseLightColorTemp, diffuseReflection);
     vec3.scale(diffuseColorTemp, diffuseColorTemp, diffuseLightIntensity * attenuation * cosine);
   };
+  /**
+   * Calculates specular color
+   */
   const specular = (attenuation, reflectionDirection, cameraDirection) => {
-    const specularLightIntensity = parseFloat(specularIntensityInput.value);
-    const specularExponent = parseFloat(specularExponentInput.value);
-    vec3.set(
-      specularLightColorTemp,
-      parseFloat(specularLightInputR.value),
-      parseFloat(specularLightInputG.value),
-      parseFloat(specularLightInputB.value)
-    );
     const specularReflection = faceReflection;
     const cosine = Math.max(vec3.dot(reflectionDirection, cameraDirection), 0.0);
     const specularPower = Math.pow(cosine, specularExponent);
@@ -194,19 +181,40 @@ const flatShading = () => {
   };
 
   // normal matrix
-  // const a = mat4.create()
-  // mat4.identity(a, a)
-  // mat4.mul(a, a, viewMatrix)
-  // mat4.mul(a, a, modelMatrix)
-  // mat4.transpose(normalMatrixTemp, a);
-  // mat4.invert(normalMatrixTemp, normalMatrixTemp);
   mat4.invert(normalMatrixTemp, modelMatrix);
   mat4.transpose(normalMatrixTemp, normalMatrixTemp);
 
-  // attenuation factor
+  // attenuation factors
   const attenuationFactorA = parseFloat(attenuationFactorInputA.value);
   const attenuationFactorB = parseFloat(attenuationFactorInputB.value);
   const attenuationFactorC = parseFloat(attenuationFactorInputC.value);
+
+  // ambient light color
+  vec3.set(
+    ambientLightColorTemp,
+    parseFloat(ambientLightInputR.value),
+    parseFloat(ambientLightInputG.value),
+    parseFloat(ambientLightInputB.value)
+  );
+
+  // diffuse light color and intensity
+  const diffuseLightIntensity = parseFloat(diffuseIntensityInput.value);
+  vec3.set(
+    diffuseLightColorTemp,
+    parseFloat(diffuseLightInputR.value),
+    parseFloat(diffuseLightInputG.value),
+    parseFloat(diffuseLightInputB.value)
+  );
+
+  // specular light color, intensity and exponent
+  const specularLightIntensity = parseFloat(specularIntensityInput.value);
+  const specularExponent = parseFloat(specularExponentInput.value);
+  vec3.set(
+    specularLightColorTemp,
+    parseFloat(specularLightInputR.value),
+    parseFloat(specularLightInputG.value),
+    parseFloat(specularLightInputB.value)
+  );
 
   // iterate every triangles
   for (let i = 0; i < indices.length; i += 3) {
@@ -219,14 +227,15 @@ const flatShading = () => {
     const [x2, y2, z2] = vertices.slice(index2 * 3 + 0, index2 * 3 + 3);
 
     // position
-    vec4.set(centroidTemp, (x0 + x1 + x2) / 3, (y0 + y1 + y2) / 3, (z0 + z1 + z2) / 3, 1);
-    vec4.transformMat4(centroidTemp, centroidTemp, modelMatrix);
-    vec3.set(centroid3Temp, centroidTemp[0], centroidTemp[1], centroidTemp[2]);
-
+    vec4.set(centroid4Temp, (x0 + x1 + x2) / 3, (y0 + y1 + y2) / 3, (z0 + z1 + z2) / 3, 1);
     // normalized position equals normal of a sphere
-    vec3.copy(normalTemp, centroidTemp);
-    vec4.transformMat4(normalTemp, normalTemp, normalMatrixTemp);
-    vec3.set(normal3Temp, normalTemp[0], normalTemp[1], normalTemp[2]);
+    vec4.copy(normal4Temp, centroid4Temp);
+    vec4.transformMat4(centroid4Temp, centroid4Temp, modelMatrix);
+    vec3.set(centroid3Temp, centroid4Temp[0], centroid4Temp[1], centroid4Temp[2]);
+
+    // normal
+    vec4.transformMat4(normal4Temp, normal4Temp, normalMatrixTemp);
+    vec3.set(normal3Temp, normal4Temp[0], normal4Temp[1], normal4Temp[2]);
     vec3.normalize(normal3Temp, normal3Temp);
 
     // light direction
@@ -238,7 +247,7 @@ const flatShading = () => {
     vec3.subtract(reflectionDirectionTemp, reflectionDirectionTemp, lightDirectionTemp);
     vec3.normalize(reflectionDirectionTemp, reflectionDirectionTemp);
 
-    // camera position
+    // camera direction
     vec3.subtract(cameraDirectionTemp, cameraPosition, centroid3Temp);
     vec3.normalize(cameraDirectionTemp, cameraDirectionTemp);
 
@@ -254,7 +263,7 @@ const flatShading = () => {
     diffuse(attenuation, lightDirectionTemp, normal3Temp);
     specular(attenuation, reflectionDirectionTemp, cameraDirectionTemp);
 
-    vec3.zero(colorTemp, colorTemp);
+    vec3.zero(colorTemp);
     vec3.add(colorTemp, colorTemp, ambientColorTemp);
     vec3.add(colorTemp, colorTemp, diffuseColorTemp);
     vec3.add(colorTemp, colorTemp, specularColorTemp);
