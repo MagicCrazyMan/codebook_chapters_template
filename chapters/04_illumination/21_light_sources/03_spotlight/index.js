@@ -73,7 +73,7 @@ const fragmentShader = `
 
     if (limit >= u_SpotlightInnerLimit) {
       return 1.0;
-    } else if (limit < u_SpotlightOuterLimit) {
+    } else if (limit <= u_SpotlightOuterLimit) {
       return 0.0;
     } else {
       return smoothstep(u_SpotlightOuterLimit, u_SpotlightInnerLimit, limit);
@@ -98,14 +98,7 @@ const fragmentShader = `
   }
 
   void main() {
-    vec3 normal = normalize(v_Normal);
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-    reflectionDirection = normalize(reflectionDirection);
-
-    float distanceToLight = distance(v_Position, u_LightPosition);
-    float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
 
     float step = spotlightStep(lightDirection);
     if (step == 0.0) {
@@ -113,6 +106,14 @@ const fragmentShader = `
       gl_FragColor = vec4(v_AmbientColor, 1.0);
     } else {
       // inside spotlight
+      vec3 normal = normalize(v_Normal);
+      vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
+      vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
+      reflectionDirection = normalize(reflectionDirection);
+
+      float distanceToLight = distance(v_Position, u_LightPosition);
+      float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
+
       vec3 diffuseColor = diffuse(step, attenuation, normal, lightDirection);
       vec3 specularColor = specular(step, attenuation, normal, reflectionDirection, cameraDirection);
   
