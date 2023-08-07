@@ -123,7 +123,7 @@ const specularLightInputG = document.getElementById("specularColorG");
 const specularLightInputB = document.getElementById("specularColorB");
 const diffuseIntensityInput = document.getElementById("diffuseIntensity");
 const specularIntensityInput = document.getElementById("specularIntensity");
-const specularExponentInput = document.getElementById("specularShininessExponent");
+const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
 const attenuationFactorInputA = document.getElementById("attenuationA");
 const attenuationFactorInputB = document.getElementById("attenuationB");
 const attenuationFactorInputC = document.getElementById("attenuationC");
@@ -205,7 +205,7 @@ const flatShading = () => {
 
   // specular light color, intensity and exponent
   const specularLightIntensity = parseFloat(specularIntensityInput.value);
-  const specularExponent = parseFloat(specularExponentInput.value);
+  const specularExponent = parseFloat(uLightSpecularShininessExponentInput.value);
   vec3.set(
     specularLightColorTemp,
     parseFloat(specularLightInputR.value),

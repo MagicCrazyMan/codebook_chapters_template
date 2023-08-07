@@ -266,15 +266,15 @@ const setLightAttenuation = () => {
 setLightAttenuation();
 
 /**
- * Setups light Specular Shininess Exponent
+ * Setups light specular shininess exponent
  */
 const uLightSpecularShininessExponent = gl.getUniformLocation(program, "u_LightSpecularShininessExponent");
-const specularExponentInput = document.getElementById("specularShininessExponent");
-specularExponentInput.addEventListener("input", () => {
+const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
+uLightSpecularShininessExponentInput.addEventListener("input", () => {
   setLightSpecularShininessExponent();
 });
 const setLightSpecularShininessExponent = () => {
-  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(specularExponentInput.value));
+  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(uLightSpecularShininessExponentInput.value));
 };
 setLightSpecularShininessExponent();
 

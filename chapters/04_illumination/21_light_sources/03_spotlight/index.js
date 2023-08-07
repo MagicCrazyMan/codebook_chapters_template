@@ -1,4 +1,4 @@
-import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
+import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 import { createSphereTriangulated } from "../../../libs/geom/sphere";
 
@@ -6,28 +6,18 @@ const vertexShader = `
   attribute vec4 a_Position;
   attribute vec4 a_Normal;
   
+  uniform vec3 u_AmbientReflection;
+
   uniform mat4 u_MvpMatrix;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_NormalMatrix;
 
-  uniform vec3 u_CameraPosition;
-
-  uniform vec3 u_AmbientReflection;
-  uniform vec3 u_DiffuseReflection;
-  uniform vec3 u_SpecularReflection;
-
-  uniform vec3 u_LightPosition;
   uniform vec3 u_AmbientLightColor;
-  uniform vec3 u_DiffuseLightColor;
-  uniform vec3 u_SpecularLightColor;
-  uniform float u_LightSpecularShininessExponent;
-  uniform float u_LightDiffuseIntensity;
-  uniform float u_LightSpecularIntensity;
-  uniform float u_LightAttenuationA;
-  uniform float u_LightAttenuationB;
-  uniform float u_LightAttenuationC;
 
-  varying vec3 v_Color;
+  varying vec3 v_AmbientColor;
+
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
 
   /**
    * Calculates ambient reflection color
@@ -36,41 +26,12 @@ const vertexShader = `
     return u_AmbientLightColor * u_AmbientReflection;
   }
 
-  /**
-   * Calculates diffuse reflection color
-   */
-  vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
-    float cosine = max(dot(normal, lightDirection), 0.0);
-    return attenuation * u_LightDiffuseIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
-  }
-
-  /**
-   * Calculates specular reflection color
-   */
-  vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
-    float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
-    float power = pow(cosine, u_LightSpecularShininessExponent);
-    return attenuation * u_LightSpecularIntensity * u_SpecularLightColor * u_SpecularReflection * power;
-  }
-
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
-    vec3 position = vec3(u_ModelMatrix * a_Position);
+    v_Position = vec3(u_ModelMatrix * a_Position);
+    v_Normal = vec3(u_NormalMatrix * a_Normal);
 
-    vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
-    vec3 lightDirection = normalize(u_LightPosition - position);
-    vec3 cameraDirection = normalize(u_CameraPosition - position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-    reflectionDirection = normalize(reflectionDirection);
-
-    float distanceToLight = distance(position, u_LightPosition);
-    float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
-    
-    vec3 ambientColor = ambient();
-    vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-    vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
-
-    v_Color = ambientColor + diffuseColor + specularColor;
+    v_AmbientColor = ambient();
   }
 `;
 const fragmentShader = `
@@ -79,11 +40,84 @@ const fragmentShader = `
   #else
     precision mediump float;
   #endif
-  
-  varying vec3 v_Color;
+
+  uniform vec3 u_LightPosition;
+  uniform vec3 u_DiffuseLightColor;
+  uniform vec3 u_SpecularLightColor;
+  uniform float u_LightSpecularShininessExponent;
+
+  uniform float u_LightDiffuseIntensity;
+  uniform float u_LightSpecularIntensity;
+  uniform float u_LightAttenuationA;
+  uniform float u_LightAttenuationB;
+  uniform float u_LightAttenuationC;
+
+  uniform vec3 u_SpotlightDirection;
+  uniform float u_SpotlightOuterLimit;
+  uniform float u_SpotlightInnerLimit;
+
+  uniform vec3 u_CameraPosition;
+
+  uniform vec3 u_DiffuseReflection;
+  uniform vec3 u_SpecularReflection;
+
+  varying vec3 v_AmbientColor;
+  varying vec3 v_Normal;
+  varying vec3 v_Position;
+
+  /**
+   * Calculates spotlight step
+   */
+  float spotlightStep(vec3 lightDirection) {
+    float limit = dot(-lightDirection, normalize(-u_SpotlightDirection));
+
+    if (limit >= u_SpotlightInnerLimit) {
+      return 1.0;
+    } else if (limit < u_SpotlightOuterLimit) {
+      return 0.0;
+    } else {
+      return smoothstep(u_SpotlightOuterLimit, u_SpotlightInnerLimit, limit);
+    }
+  }
+
+  /**
+   * Calculates diffuse reflection color
+   */
+  vec3 diffuse(float step, float attenuation, vec3 normal, vec3 lightDirection) {
+    float cosine = max(dot(normal, lightDirection), 0.0);
+    return step * attenuation * u_LightDiffuseIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
+  }
+
+  /**
+   * Calculates specular reflection color
+   */
+  vec3 specular(float step, float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
+    float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
+    float power = pow(cosine, u_LightSpecularShininessExponent);
+    return step * attenuation * u_LightSpecularIntensity * u_SpecularLightColor * u_SpecularReflection * power;
+  }
 
   void main() {
-    gl_FragColor = vec4(v_Color, 1.0);
+    vec3 normal = normalize(v_Normal);
+    vec3 lightDirection = normalize(u_LightPosition - v_Position);
+    vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
+    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
+    reflectionDirection = normalize(reflectionDirection);
+
+    float distanceToLight = distance(v_Position, u_LightPosition);
+    float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
+
+    float step = spotlightStep(lightDirection);
+    if (step == 0.0) {
+      // outside outer limits, no spotlight
+      gl_FragColor = vec4(v_AmbientColor, 1.0);
+    } else {
+      // inside spotlight
+      vec3 diffuseColor = diffuse(step, attenuation, normal, lightDirection);
+      vec3 specularColor = specular(step, attenuation, normal, reflectionDirection, cameraDirection);
+  
+      gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
+    }
   }
 `;
 
@@ -137,24 +171,47 @@ setMvpMatrix();
  * Setups light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-const lightPosition = vec4.create();
-const lightOriginPosition = vec4.fromValues(0, 0, 0, 1);
-const lightTranslation = vec3.fromValues(0, 5, 5);
-const lightModelMatrix = mat4.create();
-const rps = glMatrix.toRadian(20); // Radian Per Second
-let lastAnimationTime = 0;
-let currentRotation = 0;
-const updateLightPosition = (time) => {
-  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
-  currentRotation %= 2 * Math.PI;
+gl.uniform3f(uLightPosition, 3, 1, 5);
 
-  mat4.identity(lightModelMatrix, lightModelMatrix);
-  mat4.rotateY(lightModelMatrix, lightModelMatrix, currentRotation);
-  mat4.translate(lightModelMatrix, lightModelMatrix, lightTranslation);
-  vec4.transformMat4(lightPosition, lightOriginPosition, lightModelMatrix);
+/**
+ * Setups spotlight direction
+ */
+const uSpotlightDirection = gl.getUniformLocation(program, "u_SpotlightDirection");
+gl.uniform3f(uSpotlightDirection, 3, 1, 5);
 
-  gl.uniform3f(uLightPosition, lightPosition[0], lightPosition[1], lightPosition[2]);
+/**
+ * Setups spotlight outer limits
+ */
+const uSpotlightOuterLimit = gl.getUniformLocation(program, "u_SpotlightOuterLimit");
+const spotlightOuterLimitInput = document.getElementById("spotlightOuterLimit");
+spotlightOuterLimitInput.addEventListener("input", () => {
+  setSpotlightOuterLimit();
+  render();
+});
+const setSpotlightOuterLimit = () => {
+  gl.uniform1f(
+    uSpotlightOuterLimit,
+    Math.cos(glMatrix.toRadian(parseFloat(spotlightOuterLimitInput.value)))
+  );
 };
+setSpotlightOuterLimit();
+
+/**
+ * Setups spotlight inner limits
+ */
+const uSpotlightInnerLimit = gl.getUniformLocation(program, "u_SpotlightInnerLimit");
+const spotlightInnerLimitInput = document.getElementById("spotlightInnerLimit");
+spotlightInnerLimitInput.addEventListener("input", () => {
+  setSpotlightInnerLimit();
+  render();
+});
+const setSpotlightInnerLimit = () => {
+  gl.uniform1f(
+    uSpotlightInnerLimit,
+    Math.cos(glMatrix.toRadian(parseFloat(spotlightInnerLimitInput.value)))
+  );
+};
+setSpotlightInnerLimit();
 
 /**
  * Setups ambient light color
@@ -168,6 +225,7 @@ const ambientLightColorInputs = [
 ambientLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
+    render();
   });
 });
 const setAmbientLightColor = () => {
@@ -192,6 +250,7 @@ const diffuseLightColorInputs = [
 diffuseLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setDiffuseLightColor();
+    render();
   });
 });
 const setDiffuseLightColor = () => {
@@ -216,6 +275,7 @@ const specularLightColorInputs = [
 specularLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setSpecularLightColor();
+    render();
   });
 });
 const setSpecularLightColor = () => {
@@ -246,6 +306,7 @@ const lightAttenuationInputs = [
 lightAttenuationInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightAttenuation();
+    render();
   });
 });
 const setLightAttenuation = () => {
@@ -260,13 +321,20 @@ setLightAttenuation();
 /**
  * Setups light specular shininess exponent
  */
-const uLightSpecularShininessExponent = gl.getUniformLocation(program, "u_LightSpecularShininessExponent");
+const uLightSpecularShininessExponent = gl.getUniformLocation(
+  program,
+  "u_LightSpecularShininessExponent"
+);
 const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
 uLightSpecularShininessExponentInput.addEventListener("input", () => {
   setLightSpecularShininessExponent();
+  render();
 });
 const setLightSpecularShininessExponent = () => {
-  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(uLightSpecularShininessExponentInput.value));
+  gl.uniform1f(
+    uLightSpecularShininessExponent,
+    parseFloat(uLightSpecularShininessExponentInput.value)
+  );
 };
 setLightSpecularShininessExponent();
 
@@ -315,15 +383,13 @@ gl.uniform3fv(uSpecularReflection, specularReflection);
 gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.cullFace(gl.BACK);
-const render = (time) => {
-  updateLightPosition(time);
-
+const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
-
-  requestAnimationFrame(render);
-  lastAnimationTime = time;
 };
-render(0);
+render();
 
-getCanvasResizeObserver(setMvpMatrix);
+getCanvasResizeObserver(() => {
+  setMvpMatrix();
+  render();
+});

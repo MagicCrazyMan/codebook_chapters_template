@@ -249,7 +249,7 @@ const setSpecularLightColor = () => {
 setSpecularLightColor();
 
 /**
- * Setups light Specular Shininess Exponent
+ * Setups light specular shininess exponent
  */
 const uLightSpecularShininessExponent = gl.getUniformLocation(
   program,
