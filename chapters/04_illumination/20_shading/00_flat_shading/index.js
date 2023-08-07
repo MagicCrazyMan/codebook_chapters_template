@@ -1,6 +1,6 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
-import { createSphere } from "../../../libs/geom/sphere";
+import { createSphereTriangulated } from "../../../libs/geom/sphere";
 
 const vertexShader = `
   attribute vec4 a_Position;
@@ -71,7 +71,7 @@ setMvpMatrix();
  */
 const aPosition = gl.getAttribLocation(program, "a_Position");
 const aColor = gl.getAttribLocation(program, "a_Color");
-const { indices, vertices } = createSphere(2, 24, 24);
+const { vertices } = createSphereTriangulated(2, 24, 48);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -82,9 +82,6 @@ const colorsBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
 gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aColor);
-const indicesBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 /**
  * Sphere reflection.
@@ -126,7 +123,7 @@ const specularLightInputG = document.getElementById("specularColorG");
 const specularLightInputB = document.getElementById("specularColorB");
 const diffuseIntensityInput = document.getElementById("diffuseIntensity");
 const specularIntensityInput = document.getElementById("specularIntensity");
-const specularExponentInput = document.getElementById("specularExponent");
+const specularExponentInput = document.getElementById("specularShininessExponent");
 const attenuationFactorInputA = document.getElementById("attenuationA");
 const attenuationFactorInputB = document.getElementById("attenuationB");
 const attenuationFactorInputC = document.getElementById("attenuationC");
@@ -217,14 +214,10 @@ const flatShading = () => {
   );
 
   // iterate every triangles
-  for (let i = 0; i < indices.length; i += 3) {
-    const index0 = indices[i + 0];
-    const index1 = indices[i + 1];
-    const index2 = indices[i + 2];
-
-    const [x0, y0, z0] = vertices.slice(index0 * 3 + 0, index0 * 3 + 3);
-    const [x1, y1, z1] = vertices.slice(index1 * 3 + 0, index1 * 3 + 3);
-    const [x2, y2, z2] = vertices.slice(index2 * 3 + 0, index2 * 3 + 3);
+  for (let i = 0; i < vertices.length; i += 9) {
+    const [x0, y0, z0] = vertices.slice(i + 0, i + 3);
+    const [x1, y1, z1] = vertices.slice(i + 3, i + 6);
+    const [x2, y2, z2] = vertices.slice(i + 6, i + 9);
 
     // position
     vec4.set(centroid4Temp, (x0 + x1 + x2) / 3, (y0 + y1 + y2) / 3, (z0 + z1 + z2) / 3, 1);
@@ -268,9 +261,9 @@ const flatShading = () => {
     vec3.add(colorTemp, colorTemp, diffuseColorTemp);
     vec3.add(colorTemp, colorTemp, specularColorTemp);
 
-    colors.set(colorTemp, index0 * 3);
-    colors.set(colorTemp, index1 * 3);
-    colors.set(colorTemp, index2 * 3);
+    colors.set(colorTemp, i + 0);
+    colors.set(colorTemp, i + 3);
+    colors.set(colorTemp, i + 6);
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, colorsBuffer);
@@ -285,7 +278,7 @@ const render = (time) => {
   flatShading();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
 
   requestAnimationFrame(render);
   lastAnimationTime = time;

@@ -1269,13 +1269,13 @@ class MTLTokenizer extends CommonTokenizer {
   }
 
   /**
-   * Parse specular exponent
+   * Parse Specular Shininess Exponent
    */
   parseSpecularExponent() {
     const [token] = this.nextToken();
     const number = parseFloat(token);
     if (isNaN(number) || number < 0 || number > 1000)
-      throw new Error(`unexpected specular exponent in line ${this.line + 1}`);
+      throw new Error(`unexpected Specular Shininess Exponent in line ${this.line + 1}`);
 
     this.activatingMaterial.specularExponent = number;
   }

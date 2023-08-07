@@ -36,7 +36,7 @@ const fragmentShader = `
   uniform vec3 u_AmbientLight;
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
-  uniform float u_LightSpecularExponent;
+  uniform float u_LightSpecularShininessExponent;
   uniform float u_LightIntensity;
   uniform vec3 u_LightDirection;
   uniform float u_InnerLightLimit;
@@ -83,7 +83,7 @@ const fragmentShader = `
       vec3 specularProj = 2.0 * normal * dotLightNormal - 1.0 * toLight;
       specularProj = normalize(specularProj);
       float specularCosine = clamp(dot(toCamera, specularProj), 0.0, 1.0);
-      float specularPower = pow(specularCosine, u_LightSpecularExponent);
+      float specularPower = pow(specularCosine, u_LightSpecularShininessExponent);
       vec3 specularColor = falloffLightColor * specularPower;
       vec3 objectColor = v_Color.rgb * (1.0 - specularPower);
   
@@ -209,15 +209,15 @@ gl.uniform3fv(uLightPosition, lightPosition);
 /**
  * Setups light position
  */
-const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularExponent");
-const lightSpecularInput = document.getElementById("specularExponent");
-lightSpecularInput.addEventListener("input", () => {
-  setLightSpecularExponent();
+const uLightSpecularShininessExponent = gl.getUniformLocation(program, "u_LightSpecularShininessExponent");
+const lightspecularShininessExponentInput = document.getElementById("specularShininessExponent");
+lightspecularShininessExponentInput.addEventListener("input", () => {
+  setLightSpecularShininessExponent();
 });
-const setLightSpecularExponent = () => {
-  gl.uniform1f(uLightSpecularExponent, parseFloat(lightSpecularInput.value));
+const setLightSpecularShininessExponent = () => {
+  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(lightspecularShininessExponentInput.value));
 };
-setLightSpecularExponent();
+setLightSpecularShininessExponent();
 /**
  * Setups light intensity
  */

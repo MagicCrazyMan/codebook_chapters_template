@@ -36,7 +36,7 @@ export const createSphere = (radius, verticalSegments, horizontalSegments = vert
     }
   }
 
-  const indices = new Uint16Array((verticalSegments + 1) * horizontalSegments * 6);
+  const indices = new Uint16Array(verticalSegments * horizontalSegments * 2 * 3);
   for (let i = 0; i < verticalSegments; i++) {
     for (let j = 0; j < horizontalSegments; j++) {
       const p0 = i * (horizontalSegments + 1) + j;
@@ -72,95 +72,72 @@ export const createSphereTriangulated = (
   horizontalSegments = verticalSegments
 ) => {
   const verticalOffset = Math.PI / verticalSegments;
-  const horizontalOffset = Math.PI / horizontalSegments;
+  const horizontalOffset = (2 * Math.PI) / horizontalSegments;
 
-  const vertices = [];
+  const vertices = new Float32Array((verticalSegments + 1) * (horizontalSegments + 1) * 3);
   for (let i = 0; i <= verticalSegments; i++) {
     const ri = i * verticalOffset;
     const ci = Math.cos(ri);
     const si = Math.sin(ri);
 
-    for (let j = 0; j <= verticalSegments; j++) {
-      const rj = j * 2 * horizontalOffset;
+    for (let j = 0; j <= horizontalSegments; j++) {
+      const rj = j * horizontalOffset;
       const cj = Math.cos(rj);
       const sj = Math.sin(rj);
 
       const x = radius * si * cj;
       const y = radius * ci;
       const z = radius * si * sj;
-      vertices.push(x, y, z);
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 0] = x;
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 1] = y;
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 2] = z;
     }
   }
 
-  const indices = [];
+  const triangleVertices = new Float32Array(verticalSegments * horizontalSegments * 2 * 3 * 3);
+  const triangleNormals = new Float32Array(verticalSegments * horizontalSegments * 2 * 3 * 3);
   for (let i = 0; i < verticalSegments; i++) {
-    for (let j = 0; j < verticalSegments; j++) {
-      const p0 = i * verticalSegments + j;
-      const p1 = p0 + verticalSegments;
-      const p2 = p1 + 1;
-      const p3 = p0 + 1;
+    for (let j = 0; j < horizontalSegments; j++) {
+      const index0 = i * (horizontalSegments + 1) + j;
+      const index1 = index0 + (horizontalSegments + 1);
+      const index2 = index1 + 1;
+      const index3 = index0 + 1;
 
-      indices.push(p0, p1, p2);
-      indices.push(p0, p2, p3);
+      const vertex0 = vertices.slice(index0 * 3 + 0, index0 * 3 + 3);
+      const vertex1 = vertices.slice(index1 * 3 + 0, index1 * 3 + 3);
+      const vertex2 = vertices.slice(index2 * 3 + 0, index2 * 3 + 3);
+      const vertex3 = vertices.slice(index3 * 3 + 0, index3 * 3 + 3);
+
+      const d0 = Math.hypot(vertex0[0], vertex0[1], vertex0[2]);
+      const normal0 = [vertex0[0] / d0, vertex0[1] / d0, vertex0[2] / d0];
+      const d1 = Math.hypot(vertex1[0], vertex1[1], vertex1[2]);
+      const normal1 = [vertex1[0] / d1, vertex1[1] / d1, vertex1[2] / d1];
+      const d2 = Math.hypot(vertex2[0], vertex2[1], vertex2[2]);
+      const normal2 = [vertex2[0] / d2, vertex2[1] / d2, vertex2[2] / d2];
+      const d3 = Math.hypot(vertex3[0], vertex3[1], vertex3[2]);
+      const normal3 = [vertex3[0] / d3, vertex3[1] / d3, vertex3[2] / d3];
+
+      triangleVertices.set(vertex0, (i * horizontalSegments + j) * 18 + 0);
+      triangleVertices.set(vertex2, (i * horizontalSegments + j) * 18 + 3);
+      triangleVertices.set(vertex1, (i * horizontalSegments + j) * 18 + 6);
+      triangleVertices.set(vertex0, (i * horizontalSegments + j) * 18 + 9);
+      triangleVertices.set(vertex3, (i * horizontalSegments + j) * 18 + 12);
+      triangleVertices.set(vertex2, (i * horizontalSegments + j) * 18 + 15);
+
+      triangleNormals.set(normal0, (i * horizontalSegments + j) * 18 + 0);
+      triangleNormals.set(normal2, (i * horizontalSegments + j) * 18 + 3);
+      triangleNormals.set(normal1, (i * horizontalSegments + j) * 18 + 6);
+      triangleNormals.set(normal0, (i * horizontalSegments + j) * 18 + 9);
+      triangleNormals.set(normal3, (i * horizontalSegments + j) * 18 + 12);
+      triangleNormals.set(normal2, (i * horizontalSegments + j) * 18 + 15);
     }
   }
 
   return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint16Array(indices),
+    vertices: triangleVertices,
+    normals: triangleNormals,
   };
 };
-
-// /**
-//  * Create a sphere mesh
-//  * @param {number} radius Sphere radius
-//  * @param {number} [verticalSegments]
-//  * @param {number} [horizontalSegments]
-//  */
-// export const createSphereTriangles = (
-//   radius,
-//   verticalSegments = 12,
-//   horizontalSegments = verticalSegments
-// ) => {
-//   const verticalOffset = Math.PI / verticalSegments;
-//   const horizontalOffset = Math.PI / horizontalSegments;
-
-//   const vertices = [];
-//   for (let i = 0; i <= verticalSegments; i++) {
-//     const ri = i * verticalOffset;
-//     const ci = Math.cos(ri);
-//     const si = Math.sin(ri);
-
-//     for (let j = 0; j <= verticalSegments; j++) {
-//       const rj = j * 2 * horizontalOffset;
-//       const cj = Math.cos(rj);
-//       const sj = Math.sin(rj);
-
-//       const x = radius * si * cj;
-//       const y = radius * ci;
-//       const z = radius * si * sj;
-//       vertices.push(x, y, z);
-//     }
-//   }
-
-//   const indices = [];
-//   for (let i = 0; i < verticalSegments; i++) {
-//     for (let j = 0; j < verticalSegments; j++) {
-//       const p0 = i * verticalSegments + j;
-//       const p1 = p0 + verticalSegments;
-//       const p2 = p1 + 1;
-//       const p3 = p0 + 1;
-
-//       indices.push(p0, p1, p2);
-//       indices.push(p0, p2, p3);
-//     }
-//   }
-
-//   return {
-//     vertices: new Float32Array(vertices),
-//     indices: new Uint16Array(indices),
-//   };
-// };
 
 export class Sphere extends Geometry {
   /**

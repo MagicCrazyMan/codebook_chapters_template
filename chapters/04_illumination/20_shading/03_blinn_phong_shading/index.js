@@ -72,8 +72,9 @@ const fragmentShader = `
   /**
    * Calculates specular reflection color
    */
-  vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
-    float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
+  vec3 specular(float attenuation, vec3 normal, vec3 lightDirection, vec3 cameraDirection) {
+    vec3 halfway = normalize(lightDirection + cameraDirection);
+    float cosine = max(dot(normal, halfway), 0.0);
     float power = pow(cosine, u_LightSpecularShininessExponent);
     return attenuation * u_LightSpecularIntensity * u_SpecularLightColor * u_SpecularReflection * power;
   }
@@ -82,14 +83,12 @@ const fragmentShader = `
     vec3 normal = normalize(v_Normal);
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
     vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-    reflectionDirection = normalize(reflectionDirection);
 
     float distanceToLight = distance(v_Position, u_LightPosition);
     float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
     
     vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-    vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
+    vec3 specularColor = specular(attenuation, normal, lightDirection, cameraDirection);
 
     gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
   }
