@@ -125,7 +125,7 @@ mat4.transpose(normalMatrix, normalMatrix);
 gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
 gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
 gl.uniform3fv(uCameraPosition, cameraPosition);
-const setProjectionMatrix = () => {
+const setMvpMatrix = () => {
   mat4.perspective(
     projectionMatrix,
     glMatrix.toRadian(50),
@@ -133,14 +133,14 @@ const setProjectionMatrix = () => {
     1,
     1000
   );
-};
-const setMvpMatrix = () => {
+
   mat4.identity(mvpMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, projectionMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, viewMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
+setMvpMatrix();
 
 /**
  * Setups light position
@@ -339,7 +339,4 @@ const render = (time) => {
 };
 render(0);
 
-getCanvasResizeObserver(() => {
-  setProjectionMatrix();
-  setMvpMatrix();
-});
+getCanvasResizeObserver(setMvpMatrix);

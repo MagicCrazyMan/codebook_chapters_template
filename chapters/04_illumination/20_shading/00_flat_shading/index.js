@@ -39,14 +39,7 @@ const program = bindWebGLProgram(gl, [
  * Setups mvp and normal matrix
  */
 const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
-const rps = glMatrix.toRadian(20); // Radian Per Second
-let lastAnimationTime = 0;
-let currentRotation = 0;
-const modelMatrix = mat4.fromRotation(
-  mat4.create(),
-  glMatrix.toRadian(0),
-  vec3.fromValues(1, 0.5, 0)
-);
+const modelMatrix = mat4.create();
 const cameraPosition = vec3.fromValues(0, 0, 6);
 const viewMatrix = mat4.lookAt(
   mat4.create(),
@@ -56,7 +49,7 @@ const viewMatrix = mat4.lookAt(
 );
 const projectionMatrix = mat4.create();
 const mvpMatrix = mat4.create();
-const setProjectionMatrix = () => {
+const setMvpMatrix = () => {
   mat4.perspective(
     projectionMatrix,
     glMatrix.toRadian(50),
@@ -64,22 +57,14 @@ const setProjectionMatrix = () => {
     1,
     1000
   );
-};
-const setModelMatrix = (time) => {
-  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
-  currentRotation %= 2 * Math.PI;
-  mat4.fromYRotation(modelMatrix, currentRotation);
-};
-const setMvpMatrix = () => {
+
   mat4.identity(mvpMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, projectionMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, viewMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
-getCanvasResizeObserver(() => {
-  setProjectionMatrix();
-});
+setMvpMatrix();
 
 /**
  * Setups sphere
@@ -110,7 +95,22 @@ const faceReflection = vec3.fromValues(0.4, 0.4, 1.0);
 /**
  * Light position
  */
-const lightPosition = vec3.fromValues(0, 5, 5);
+const lightPosition = vec4.create();
+const lightOriginPosition = vec4.fromValues(0, 0, 0, 1);
+const lightTranslation = vec3.fromValues(0, 5, 5);
+const lightModelMatrix = mat4.create();
+const rps = glMatrix.toRadian(20); // Radian Per Second
+let lastAnimationTime = 0;
+let currentRotation = 0;
+const updateLightPosition = (time) => {
+  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
+  currentRotation %= 2 * Math.PI;
+
+  mat4.identity(lightModelMatrix, lightModelMatrix);
+  mat4.rotateY(lightModelMatrix, lightModelMatrix, currentRotation);
+  mat4.translate(lightModelMatrix, lightModelMatrix, lightTranslation);
+  vec4.transformMat4(lightPosition, lightOriginPosition, lightModelMatrix);
+};
 
 /**
  * Setups light properties inputs
@@ -281,8 +281,7 @@ gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.cullFace(gl.BACK);
 const render = (time) => {
-  setModelMatrix(time);
-  setMvpMatrix();
+  updateLightPosition(time);
   flatShading();
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -292,3 +291,5 @@ const render = (time) => {
   lastAnimationTime = time;
 };
 render(0);
+
+getCanvasResizeObserver(setMvpMatrix);
