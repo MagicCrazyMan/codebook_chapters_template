@@ -7,44 +7,57 @@ import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../.
  * @param {number} verticalSegments
  * @param {number} horizontalSegments
  */
-const createSphere = (radius, verticalSegments, horizontalSegments = verticalSegments) => {
+const createSphere = (radius, verticalSegments, horizontalSegments = verticalSegments * 2) => {
   const verticalOffset = Math.PI / verticalSegments;
-  const horizontalOffset = Math.PI / horizontalSegments;
+  const horizontalOffset = (2 * Math.PI) / horizontalSegments;
 
-  const vertices = [];
+  const vertices = new Float32Array((verticalSegments + 1) * (horizontalSegments + 1) * 3);
+  const normals = new Float32Array((verticalSegments + 1) * (horizontalSegments + 1) * 3);
   for (let i = 0; i <= verticalSegments; i++) {
     const ri = i * verticalOffset;
     const ci = Math.cos(ri);
     const si = Math.sin(ri);
 
-    for (let j = 0; j <= verticalSegments; j++) {
-      const rj = j * 2 * horizontalOffset;
+    for (let j = 0; j <= horizontalSegments; j++) {
+      const rj = j * horizontalOffset;
       const cj = Math.cos(rj);
       const sj = Math.sin(rj);
 
       const x = radius * si * cj;
       const y = radius * ci;
       const z = radius * si * sj;
-      vertices.push(x, y, z);
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 0] = x;
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 1] = y;
+      vertices[(i * (horizontalSegments + 1) + j) * 3 + 2] = z;
+
+      const length = Math.hypot(x, y, z);
+      normals[(i * (horizontalSegments + 1) + j) * 3 + 0] = x / length;
+      normals[(i * (horizontalSegments + 1) + j) * 3 + 1] = y / length;
+      normals[(i * (horizontalSegments + 1) + j) * 3 + 2] = z / length;
     }
   }
 
-  const indices = [];
+  const indices = new Uint16Array((verticalSegments + 1) * horizontalSegments * 6);
   for (let i = 0; i < verticalSegments; i++) {
-    for (let j = 0; j < verticalSegments; j++) {
-      const p0 = i * verticalSegments + j;
-      const p1 = p0 + verticalSegments;
+    for (let j = 0; j < horizontalSegments; j++) {
+      const p0 = i * (horizontalSegments + 1) + j;
+      const p1 = p0 + (horizontalSegments + 1);
       const p2 = p1 + 1;
       const p3 = p0 + 1;
 
-      indices.push(p0, p1, p2);
-      indices.push(p0, p2, p3);
+      indices[(i * horizontalSegments + j) * 6 + 0] = p0;
+      indices[(i * horizontalSegments + j) * 6 + 1] = p2;
+      indices[(i * horizontalSegments + j) * 6 + 2] = p1;
+      indices[(i * horizontalSegments + j) * 6 + 3] = p0;
+      indices[(i * horizontalSegments + j) * 6 + 4] = p3;
+      indices[(i * horizontalSegments + j) * 6 + 5] = p2;
     }
   }
 
   return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint16Array(indices),
+    vertices,
+    normals,
+    indices,
   };
 };
 
@@ -62,7 +75,7 @@ const vertexShader = `
   void main() {
     gl_Position = u_MvpMatrix * a_Position;
     v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));
+    v_Normal = vec3(u_NormalMatrix * a_Normal);
   }
 `;
 const fragmentShader = `
@@ -72,7 +85,7 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
-  uniform vec4 u_Color;
+  uniform vec3 u_Color;
   uniform vec3 u_LightColor;
   uniform vec3 u_LightPosition;
 
@@ -82,14 +95,13 @@ const fragmentShader = `
   void main() {
     vec3 normal = normalize(v_Normal);
     vec3 light = normalize(u_LightPosition - v_Position);
-    float diffusePower = clamp(dot(normal, light), 0.0, 1.0);
-    vec3 diffuseColor = u_Color.rgb * u_LightColor * diffusePower;
-    gl_FragColor = vec4(diffuseColor, u_Color.a);
+    float diffusePower = max(dot(normal, light), 0.0);
+    vec3 diffuseColor = u_Color * u_LightColor * diffusePower;
+    gl_FragColor = vec4(diffuseColor, 1.0);
   }
 `;
 
 const gl = getWebGLContext();
-gl.enable(gl.DEPTH_TEST);
 const program = bindWebGLProgram(gl, [
   { type: gl.VERTEX_SHADER, source: vertexShader },
   { type: gl.FRAGMENT_SHADER, source: fragmentShader },
@@ -106,27 +118,27 @@ const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
 /**
  * Setups sphere vertices and normals
  */
-const { vertices, indices } = createSphere(2, 36, 36);
+const { vertices, normals, indices } = createSphere(2, 36, 72);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aPosition);
-// in sphere, it is possible to use vertices as normals
+const normalsBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
 gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 0, 0);
 gl.enableVertexAttribArray(aNormal);
-
 const indicesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
-console.log(vertices, indices);
 
 /**
  * Setups mvp matrix and normal matrix
  */
 const modelMatrix = mat4.fromRotation(
   mat4.create(),
-  glMatrix.toRadian(0),
+  -glMatrix.toRadian(80),
   vec3.fromValues(1, 0.5, 0)
 );
 gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
@@ -160,19 +172,22 @@ gl.uniformMatrix4fv(uNormalMatrix, false, normaMatrix);
  * Setups light
  */
 gl.uniform3f(uLightColor, 1, 1, 1);
-gl.uniform3f(uLightPosition, 10, 10, 10);
+gl.uniform3f(uLightPosition, 0, 0, 10);
 
+gl.enable(gl.DEPTH_TEST);
+gl.enable(gl.CULL_FACE);
+gl.cullFace(gl.BACK);
 const render = () => {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   /**
-   * red color for drawing outline
+   * block color for drawing outline
    */
-  gl.uniform4f(uColor, 0, 0, 0, 0.2);
+  gl.uniform3f(uColor, 0, 0, 0);
   gl.drawElements(gl.LINE_STRIP, indices.length, gl.UNSIGNED_SHORT, 0);
   /**
-   * grey color for drawing outline
+   * grey color for drawing triangles
    */
-  gl.uniform4f(uColor, 0.5, 0.5, 0.5, 0.4);
+  gl.uniform3f(uColor, 0.5, 0.5, 0.5);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 };
 render();

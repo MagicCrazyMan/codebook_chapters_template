@@ -295,13 +295,13 @@ setLightAttenuation();
  * Setups light specular exponent
  */
 const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularExponent");
-const specularInput = document.getElementById("specularExponent");
-specularInput.addEventListener("input", () => {
+const specularExponentInput = document.getElementById("specularExponent");
+specularExponentInput.addEventListener("input", () => {
   setLightSpecularExponent();
   render(lastAnimationTime);
 });
 const setLightSpecularExponent = () => {
-  gl.uniform1f(uLightSpecularExponent, parseFloat(specularInput.value));
+  gl.uniform1f(uLightSpecularExponent, parseFloat(specularExponentInput.value));
 };
 setLightSpecularExponent();
 
@@ -384,6 +384,8 @@ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
 gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
 gl.enable(gl.DEPTH_TEST);
+gl.enable(gl.CULL_FACE);
+gl.cullFace(gl.BACK);
 const render = (time) => {
   setModelMatrix(time);
   setNormalMatrix();
