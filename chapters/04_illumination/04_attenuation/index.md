@@ -29,4 +29,4 @@ $$
 E = \dfrac{1}{a + bd + cd^2} (k_d L_d \max((\vec{l} \cdot \vec{n}), 0) + k_s L_s \max((\vec{v} \cdot \vec{r})^{\alpha}, 0)) + k_a L_a
 $$
 
-> 为了更好地展示光衰的变化效果，该章节会使用 [Phong Shading](./20_shading/02_phongshading) 渲染光照。实际应用中可以更改为 Blinn-Phong Shading 以减少计算量。
+> 为了更好地展示光衰的变化效果，该章节会使用 [Phong Shading](./20_shading/02_phongshading) 渲染光照。
