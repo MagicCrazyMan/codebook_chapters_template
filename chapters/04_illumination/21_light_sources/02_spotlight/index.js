@@ -156,7 +156,6 @@ const setNormalMatrix = () => {
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
   setMvpMatrix();
-  render(lastAnimationTime);
 });
 
 /**
@@ -190,7 +189,6 @@ const lightColorInputs = [
 lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightColor();
-    render(lastAnimationTime);
   });
 });
 const setLightColor = () => {
@@ -215,7 +213,6 @@ const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularEx
 const lightSpecularInput = document.getElementById("specularExponent");
 lightSpecularInput.addEventListener("input", () => {
   setLightSpecularExponent();
-  render(lastAnimationTime);
 });
 const setLightSpecularExponent = () => {
   gl.uniform1f(uLightSpecularExponent, parseFloat(lightSpecularInput.value));
@@ -228,7 +225,6 @@ const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
 const lightIntensityInput = document.getElementById("intensity");
 lightIntensityInput.addEventListener("input", () => {
   setLightIntensityExponent();
-  render(lastAnimationTime);
 });
 const setLightIntensityExponent = () => {
   gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
@@ -241,7 +237,6 @@ const uInnerLightLimit = gl.getUniformLocation(program, "u_InnerLightLimit");
 const innerLightLimitInput = document.getElementById("innerLimit");
 innerLightLimitInput.addEventListener("input", () => {
   setInnerLightLimit();
-  render(lastAnimationTime);
 });
 const setInnerLightLimit = () => {
   gl.uniform1f(
@@ -254,7 +249,6 @@ const uOuterLightLimit = gl.getUniformLocation(program, "u_OuterLightLimit");
 const outerLightLimitInput = document.getElementById("outerLimit");
 outerLightLimitInput.addEventListener("input", () => {
   setOuterLightLimit();
-  render(lastAnimationTime);
 });
 const setOuterLightLimit = () => {
   gl.uniform1f(
@@ -282,7 +276,6 @@ const ambientInputs = [
 ambientInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
-    render(lastAnimationTime);
   });
 });
 const setAmbientLightColor = () => {

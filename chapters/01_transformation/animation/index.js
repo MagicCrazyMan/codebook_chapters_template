@@ -40,42 +40,12 @@ dpsInput.addEventListener("input", () => {
 });
 
 /**
- * Setups FPS(Frame Per Second) input
- */
-let lastTime = null;
-const fpsInput = document.getElementById("fps");
-let framePerSecond = parseFloat(fpsInput.value);
-fpsInput.addEventListener("input", () => {
-  framePerSecond = parseFloat(fpsInput.value);
-});
-// Calculate actual fps
-let renderedFrames = 0;
-const actualFPSOutput = document.getElementById("actualFPS");
-setInterval(() => {
-  actualFPSOutput.innerText = renderedFrames;
-  renderedFrames = 0;
-}, 1000);
-
-/**
  * Setups model matrix
  */
 const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const modelMatrix = mat4.create();
 /**@type {FrameRequestCallback} */
 const render = (time) => {
-  if (!lastTime) {
-    lastTime = time;
-    requestAnimationFrame(render);
-    return;
-  }
-
-  // limit fps
-  const offset = time - lastTime;
-  if (offset <= 1000 / framePerSecond) {
-    requestAnimationFrame(render);
-    return;
-  }
-
   // calculate degree that should be used in current frame
   const degrees = ((time / 1000) * degreePerSecond) % 360;
 
@@ -89,8 +59,6 @@ const render = (time) => {
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-  lastTime = time;
-  renderedFrames++;
   requestAnimationFrame(render);
 };
 

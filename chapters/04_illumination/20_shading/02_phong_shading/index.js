@@ -1,4 +1,4 @@
-import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 import { createSphere } from "../../../libs/geom/sphere";
 
@@ -82,7 +82,7 @@ const fragmentShader = `
     vec3 normal = normalize(v_Position);
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
     vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) * normal - lightDirection;
+    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
     reflectionDirection = normalize(reflectionDirection);
 
     float distanceToLight = distance(v_Position, u_LightPosition);
@@ -108,16 +108,9 @@ const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
 const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
 const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
 const uCameraPosition = gl.getUniformLocation(program, "u_CameraPosition");
-const rps = glMatrix.toRadian(20); // Radian Per Second
-let lastAnimationTime = 0;
-let currentRotation = 0;
-const modelMatrix = mat4.fromRotation(
-  mat4.create(),
-  glMatrix.toRadian(0),
-  vec3.fromValues(1, 0.5, 0)
-);
+// const modelMatrix = mat4.create();
+const modelMatrix = mat4.fromYRotation(mat4.create(), glMatrix.toRadian(30));
 const cameraPosition = vec3.fromValues(0, 0, 6);
-gl.uniform3fv(uCameraPosition, cameraPosition); // set camera position
 const viewMatrix = mat4.lookAt(
   mat4.create(),
   cameraPosition,
@@ -127,6 +120,11 @@ const viewMatrix = mat4.lookAt(
 const projectionMatrix = mat4.create();
 const mvpMatrix = mat4.create();
 const normalMatrix = mat4.create();
+mat4.invert(normalMatrix, modelMatrix);
+mat4.transpose(normalMatrix, normalMatrix);
+gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
+gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
+gl.uniform3fv(uCameraPosition, cameraPosition);
 const setProjectionMatrix = () => {
   mat4.perspective(
     projectionMatrix,
@@ -136,17 +134,6 @@ const setProjectionMatrix = () => {
     1000
   );
 };
-const setModelMatrix = (time) => {
-  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
-  currentRotation %= 2 * Math.PI;
-  mat4.fromYRotation(modelMatrix, currentRotation);
-  gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
-};
-const setNormalMatrix = () => {
-  mat4.invert(normalMatrix, modelMatrix);
-  mat4.transpose(normalMatrix, normalMatrix);
-  gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
-};
 const setMvpMatrix = () => {
   mat4.identity(mvpMatrix);
   mat4.multiply(mvpMatrix, mvpMatrix, projectionMatrix);
@@ -154,17 +141,29 @@ const setMvpMatrix = () => {
   mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
   gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
 };
-getCanvasResizeObserver(() => {
-  setProjectionMatrix();
-  setMvpMatrix();
-  render(lastAnimationTime);
-});
 
 /**
  * Setups light position
  */
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 5, 5, 5);
+const lightPosition = vec4.create();
+const lightOriginPosition = vec4.fromValues(0, 0, 0, 1);
+const lightTranslation = vec3.fromValues(-5, 5, 5);
+const lightModelMatrix = mat4.create();
+const rps = glMatrix.toRadian(20); // Radian Per Second
+let lastAnimationTime = 0;
+let currentRotation = 0;
+const updateLightPosition = (time) => {
+  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
+  currentRotation %= 2 * Math.PI;
+
+  mat4.identity(lightModelMatrix, lightModelMatrix);
+  mat4.rotateY(lightModelMatrix, lightModelMatrix, currentRotation);
+  mat4.translate(lightModelMatrix, lightModelMatrix, lightTranslation);
+  vec4.transformMat4(lightPosition, lightOriginPosition, lightModelMatrix);
+
+  gl.uniform3f(uLightPosition, lightPosition[0], lightPosition[1], lightPosition[2]);
+};
 
 /**
  * Setups ambient light color
@@ -178,7 +177,6 @@ const ambientLightColorInputs = [
 ambientLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
-    render(lastAnimationTime);
   });
 });
 const setAmbientLightColor = () => {
@@ -203,7 +201,6 @@ const diffuseLightColorInputs = [
 diffuseLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setDiffuseLightColor();
-    render(lastAnimationTime);
   });
 });
 const setDiffuseLightColor = () => {
@@ -228,7 +225,6 @@ const specularLightColorInputs = [
 specularLightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setSpecularLightColor();
-    render(lastAnimationTime);
   });
 });
 const setSpecularLightColor = () => {
@@ -259,7 +255,6 @@ const lightAttenuationInputs = [
 lightAttenuationInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightAttenuation();
-    render(lastAnimationTime);
   });
 });
 const setLightAttenuation = () => {
@@ -278,7 +273,6 @@ const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularEx
 const specularExponentInput = document.getElementById("specularExponent");
 specularExponentInput.addEventListener("input", () => {
   setLightSpecularExponent();
-  render(lastAnimationTime);
 });
 const setLightSpecularExponent = () => {
   gl.uniform1f(uLightSpecularExponent, parseFloat(specularExponentInput.value));
@@ -290,7 +284,7 @@ setLightSpecularExponent();
  */
 const uNormal = gl.getAttribLocation(program, "a_Normal");
 const aPosition = gl.getAttribLocation(program, "a_Position");
-const { normals, vertices, indices } = createSphere(2, 36, 72);
+const { normals, vertices, indices } = createSphere(2, 24, 24);
 const verticesBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
 gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
@@ -334,9 +328,7 @@ gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.cullFace(gl.BACK);
 const render = (time) => {
-  setModelMatrix(time);
-  setNormalMatrix();
-  setMvpMatrix();
+  updateLightPosition(time);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
@@ -346,3 +338,8 @@ const render = (time) => {
   lastAnimationTime = time;
 };
 render(0);
+
+getCanvasResizeObserver(() => {
+  setProjectionMatrix();
+  setMvpMatrix();
+});

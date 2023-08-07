@@ -129,7 +129,6 @@ const setNormalMatrix = () => {
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
   setMvpMatrix();
-  render(lastAnimationTime);
 });
 
 /**
@@ -163,7 +162,6 @@ const lightColorInputs = [
 lightColorInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setLightColor();
-    render(lastAnimationTime);
   });
 });
 const setLightColor = () => {
@@ -187,7 +185,6 @@ const uLightSpecularExponent = gl.getUniformLocation(program, "u_LightSpecularEx
 const lightSpecularInput = document.getElementById("specularExponent");
 lightSpecularInput.addEventListener("input", () => {
   setLightSpecularExponent();
-  render(lastAnimationTime);
 });
 const setLightSpecularExponent = () => {
   gl.uniform1f(uLightSpecularExponent, parseFloat(lightSpecularInput.value));
@@ -200,7 +197,6 @@ const uLightIntensity = gl.getUniformLocation(program, "u_LightIntensity");
 const lightIntensityInput = document.getElementById("intensity");
 lightIntensityInput.addEventListener("input", () => {
   setLightIntensityExponent();
-  render(lastAnimationTime);
 });
 const setLightIntensityExponent = () => {
   gl.uniform1f(uLightIntensity, parseFloat(lightIntensityInput.value));
@@ -219,7 +215,6 @@ const ambientInputs = [
 ambientInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
-    render(lastAnimationTime);
   });
 });
 const setAmbientLightColor = () => {

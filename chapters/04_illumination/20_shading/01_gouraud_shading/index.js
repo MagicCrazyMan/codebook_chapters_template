@@ -95,7 +95,6 @@ const setNormalMatrix = () => {
 };
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
-  render(lastAnimationTime);
 });
 
 /**
@@ -129,7 +128,6 @@ const diffuseInputs = [
 diffuseInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setDiffuseLightColor();
-    render(lastAnimationTime);
   });
 });
 const setDiffuseLightColor = () => {
@@ -160,7 +158,6 @@ const ambientInputs = [
 ambientInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
-    render(lastAnimationTime);
   });
 });
 const setAmbientLightColor = () => {

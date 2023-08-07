@@ -77,7 +77,6 @@ const setMvpMatrix = () => {
 };
 getCanvasResizeObserver(() => {
   setProjectionMatrix();
-  render(lastAnimationTime);
 });
 
 /**
@@ -100,7 +99,6 @@ const ambientInputs = [
 ambientInputs.forEach((input) => {
   input.addEventListener("input", () => {
     setAmbientLightColor();
-    render(lastAnimationTime);
   });
 });
 const setAmbientLightColor = () => {
