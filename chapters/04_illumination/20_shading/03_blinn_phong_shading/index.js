@@ -85,7 +85,8 @@ const fragmentShader = `
     vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
 
     float distanceToLight = distance(v_Position, u_LightPosition);
-    float attenuation = 1.0 / (u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0));
+    float attenuationComponent = u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0);
+    float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
     
     vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
     vec3 specularColor = specular(attenuation, normal, lightDirection, cameraDirection);

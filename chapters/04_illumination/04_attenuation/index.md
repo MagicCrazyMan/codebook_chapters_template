@@ -29,4 +29,6 @@ $$
 E = \dfrac{1}{a + bd + cd^2} (k_d L_d \max((\vec{l} \cdot \vec{n}), 0) + k_s L_s \max((\vec{v} \cdot \vec{r})^{\alpha}, 0)) + k_a L_a
 $$
 
+_实际应用中需要额外注意，当光衰因子的分母为 0 时，公式是无效的，注意边界处理。_
+
 > 为了更好地展示光衰的变化效果，该章节会使用 [Phong Shading](./20_shading/02_phongshading) 渲染光照。
