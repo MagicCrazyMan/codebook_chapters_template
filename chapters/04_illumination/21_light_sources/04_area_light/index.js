@@ -84,8 +84,7 @@ const fragmentShader = `
       return 0.0;
 
     // returns 0.0 if position behind area light plane
-    vec3 planeToPosition = v_Position - u_AreaLightViewingPlanePosition;
-    float cosineAnglePlane = dot(planeToPosition, u_AreaLightViewingPlaneNormal);
+    float cosineAnglePlane = dot(v_Position - u_AreaLightViewingPlanePosition, u_AreaLightViewingPlaneNormal);
     if (cosineAnglePlane < 0.0)
       return 0.0;
 
@@ -103,8 +102,8 @@ const fragmentShader = `
     float y = invertTransformed.y;
 
     if (x >= u_AreaLightMinX && x <= u_AreaLightMaxX && y >= u_AreaLightMinY && y <= u_AreaLightMaxY) {
-      float smoothX = smoothstep(1.0, 0.0, abs(x) / u_AreaLightMaxX);
-      float smoothY = smoothstep(1.0, 0.0, abs(y) / u_AreaLightMaxY);
+      float smoothX = smoothstep(u_AreaLightMaxX, 0.0, abs(x));
+      float smoothY = smoothstep(u_AreaLightMaxY, 0.0, abs(y));
       return min(smoothX, smoothY);
     } else {
       return 0.0;
