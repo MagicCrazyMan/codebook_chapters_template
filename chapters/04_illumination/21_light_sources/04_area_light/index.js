@@ -1,4 +1,4 @@
-import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { glMatrix, mat4, quat, vec3, vec4 } from "gl-matrix";
 import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
 import { createSphereTriangulated } from "../../../libs/geom/sphere";
 
@@ -41,7 +41,6 @@ const fragmentShader = `
     precision mediump float;
   #endif
 
-  uniform vec3 u_LightPosition;
   uniform vec3 u_DiffuseLightColor;
   uniform vec3 u_SpecularLightColor;
   uniform float u_LightSpecularShininessExponent;
@@ -51,10 +50,16 @@ const fragmentShader = `
   uniform float u_LightAttenuationA;
   uniform float u_LightAttenuationB;
   uniform float u_LightAttenuationC;
-
-  uniform vec3 u_SpotlightViewDirection;
-  uniform float u_SpotlightOuterLimit;
-  uniform float u_SpotlightInnerLimit;
+  
+  uniform vec3 u_LightPosition;
+  uniform vec3 u_AreaLightViewingPlaneNormal; // this is also viewing direction
+  uniform vec3 u_AreaLightViewingPlanePosition;
+  uniform float u_AreaLightViewingPlaneDistance;
+  uniform mat4 u_AreaLightInvertModelMatrix;
+  uniform float u_AreaLightMinX;
+  uniform float u_AreaLightMaxX;
+  uniform float u_AreaLightMinY;
+  uniform float u_AreaLightMaxY;
 
   uniform vec3 u_CameraPosition;
 
@@ -66,17 +71,43 @@ const fragmentShader = `
   varying vec3 v_Position;
 
   /**
-   * Calculates spotlight step
+   * Calculates area light visibility
    */
-  float spotlightStep(vec3 lightDirection) {
-    float limit = dot(-lightDirection, u_SpotlightViewDirection);
-
-    if (limit >= u_SpotlightInnerLimit) {
-      return 1.0;
-    } else if (limit <= u_SpotlightOuterLimit) {
+  float areaLightStep(vec3 lightDirection) {
+    // return 0.0 if width or height is 0.0
+    if (u_AreaLightMaxX - u_AreaLightMinX == 0.0 || u_AreaLightMaxY - u_AreaLightMinY == 0.0)
       return 0.0;
+      
+    // returns 0.0 if position behind area light
+    float cosineAngle = dot(-lightDirection, u_AreaLightViewingPlaneNormal);
+    if (cosineAngle < 0.0)
+      return 0.0;
+
+    // returns 0.0 if position behind area light plane
+    vec3 planeToPosition = v_Position - u_AreaLightViewingPlanePosition;
+    float cosineAnglePlane = dot(planeToPosition, u_AreaLightViewingPlaneNormal);
+    if (cosineAnglePlane < 0.0)
+      return 0.0;
+
+    // projects current position to area light plane and normalizes to XY plane
+    float distBase = distance(vec3(0.0, 0.0, 0.0), u_AreaLightViewingPlaneNormal);
+    float distToPlane = cosineAnglePlane / distBase;
+    float scale = distToPlane / cosineAngle;
+    vec3 forward = lightDirection * scale;
+    vec3 projected = v_Position + forward;
+
+    vec4 invertTransformed = u_AreaLightInvertModelMatrix * vec4(projected, 1.0);
+
+    // after invert transformation, point stays on XY plane
+    float x = invertTransformed.x;
+    float y = invertTransformed.y;
+
+    if (x >= u_AreaLightMinX && x <= u_AreaLightMaxX && y >= u_AreaLightMinY && y <= u_AreaLightMaxY) {
+      float smoothX = smoothstep(1.0, 0.0, abs(x) / u_AreaLightMaxX);
+      float smoothY = smoothstep(1.0, 0.0, abs(y) / u_AreaLightMaxY);
+      return min(smoothX, smoothY);
     } else {
-      return smoothstep(u_SpotlightOuterLimit, u_SpotlightInnerLimit, limit);
+      return 0.0;
     }
   }
 
@@ -100,12 +131,12 @@ const fragmentShader = `
   void main() {
     vec3 lightDirection = normalize(u_LightPosition - v_Position);
 
-    float step = spotlightStep(lightDirection);
+    float step = areaLightStep(lightDirection);
     if (step == 0.0) {
-      // outside outer limits, no spotlight
+      // outside outer limits, no area light
       gl_FragColor = vec4(v_AmbientColor, 1.0);
     } else {
-      // inside spotlight
+      // inside area light
       vec3 normal = normalize(v_Normal);
       vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
       vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
@@ -169,50 +200,78 @@ const setMvpMatrix = () => {
 setMvpMatrix();
 
 /**
- * Setups light position
+ * Setups area light
  */
+const areaLightPosition = vec4.fromValues(0, 0, 0, 1);
+const areaLightViewingPlaneNormal = vec4.fromValues(0, 0, 1, 0); // normalized, also light viewing direction
+const areaLightViewingPlaneDistance = 1;
+const areaLightViewingPlanePosition = vec4.create();
+// calculates plane position
+{
+  const lightPosition = areaLightPosition.slice(0, 3);
+  const planeNormal = areaLightViewingPlaneNormal.slice(0, 3);
+  const forward = vec3.scale(vec3.create(), planeNormal, areaLightViewingPlaneDistance);
+  const planePosition = vec3.add(forward, lightPosition, forward);
+  vec4.set(areaLightViewingPlanePosition, planePosition[0], planePosition[1], planePosition[2], 1);
+}
+const areaLightModelMatrix = mat4.fromRotationTranslation(
+  mat4.create(),
+  quat.fromEuler(quat.create(), 0, 180, 0),
+  vec3.fromValues(0.8, 0, 4)
+);
+const areaLightInvertModelMatrix = mat4.invert(mat4.create(), areaLightModelMatrix);
+const areaLightNormalMatrix = mat4.transpose(mat4.create(), areaLightInvertModelMatrix);
+// transform light
+vec4.transformMat4(areaLightPosition, areaLightPosition, areaLightModelMatrix);
+vec4.transformMat4(
+  areaLightViewingPlanePosition,
+  areaLightViewingPlanePosition,
+  areaLightModelMatrix
+);
+vec4.transformMat4(areaLightViewingPlaneNormal, areaLightViewingPlaneNormal, areaLightNormalMatrix);
 const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-gl.uniform3f(uLightPosition, 3, 1, 5);
+const uAreaLightPlaneNormal = gl.getUniformLocation(program, "u_AreaLightViewingPlaneNormal");
+const uAreaLightPlanePosition = gl.getUniformLocation(program, "u_AreaLightViewingPlanePosition");
+const uAreaLightInvertModelMatrix = gl.getUniformLocation(program, "u_AreaLightInvertModelMatrix");
+const uAreaLightViewingPlaneDistance = gl.getUniformLocation(
+  program,
+  "u_AreaLightViewingPlaneDistance"
+);
+const uAreaLightMaxX = gl.getUniformLocation(program, "u_AreaLightMaxX");
+const uAreaLightMaxY = gl.getUniformLocation(program, "u_AreaLightMaxY");
+const uAreaLightMinX = gl.getUniformLocation(program, "u_AreaLightMinX");
+const uAreaLightMinY = gl.getUniformLocation(program, "u_AreaLightMinY");
+gl.uniform3fv(uLightPosition, areaLightPosition.slice(0, 3));
+gl.uniform3fv(uAreaLightPlaneNormal, areaLightViewingPlaneNormal.slice(0, 3));
+gl.uniform3fv(uAreaLightPlanePosition, areaLightViewingPlanePosition.slice(0, 3));
+gl.uniformMatrix4fv(uAreaLightInvertModelMatrix, false, areaLightInvertModelMatrix);
+gl.uniform1f(uAreaLightViewingPlaneDistance, areaLightViewingPlaneDistance);
 
-/**
- * Setups spotlight viewing direction
- */
-const uSpotlightViewDirection = gl.getUniformLocation(program, "u_SpotlightViewDirection");
-gl.uniform3fv(uSpotlightViewDirection, vec3.normalize(vec3.create(), vec3.fromValues(-3, -1, -5)));
-
-/**
- * Setups spotlight outer limits
- */
-const uSpotlightOuterLimit = gl.getUniformLocation(program, "u_SpotlightOuterLimit");
-const spotlightOuterLimitInput = document.getElementById("spotlightOuterLimit");
-spotlightOuterLimitInput.addEventListener("input", () => {
-  setSpotlightOuterLimit();
-  render();
+const areaLightExtentInputs = [
+  document.getElementById("areaLightWidth"),
+  document.getElementById("areaLightHeight"),
+];
+areaLightExtentInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    setAreaLightExtent();
+    render();
+  });
 });
-const setSpotlightOuterLimit = () => {
-  gl.uniform1f(
-    uSpotlightOuterLimit,
-    Math.cos(glMatrix.toRadian(parseFloat(spotlightOuterLimitInput.value)))
-  );
-};
-setSpotlightOuterLimit();
+const setAreaLightExtent = () => {
+  const width = parseFloat(areaLightExtentInputs[0].value);
+  const height = parseFloat(areaLightExtentInputs[1].value);
 
-/**
- * Setups spotlight inner limits
- */
-const uSpotlightInnerLimit = gl.getUniformLocation(program, "u_SpotlightInnerLimit");
-const spotlightInnerLimitInput = document.getElementById("spotlightInnerLimit");
-spotlightInnerLimitInput.addEventListener("input", () => {
-  setSpotlightInnerLimit();
-  render();
-});
-const setSpotlightInnerLimit = () => {
-  gl.uniform1f(
-    uSpotlightInnerLimit,
-    Math.cos(glMatrix.toRadian(parseFloat(spotlightInnerLimitInput.value)))
-  );
+  const maxx = width / 2;
+  const maxy = height / 2;
+  const minx = -maxx;
+  const miny = -maxy;
+
+  gl.uniform1f(uAreaLightMinX, minx);
+  gl.uniform1f(uAreaLightMinY, miny);
+  gl.uniform1f(uAreaLightMaxX, maxx);
+  gl.uniform1f(uAreaLightMaxY, maxy);
 };
-setSpotlightInnerLimit();
+setAreaLightExtent();
 
 /**
  * Setups ambient light color
