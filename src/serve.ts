@@ -1,7 +1,6 @@
 import cors from "@koa/cors";
 import chalk from "chalk";
 import chokidar from "chokidar";
-import { IncomingMessage, Server, ServerResponse } from "http";
 import Koa, { ParameterizedContext } from "koa";
 import mime from "mime-types";
 import { extname, join, posix } from "path";
@@ -165,37 +164,47 @@ const createServer = () => {
  * @param sseStreams Server-Side Event streams
  */
 const watch = (sseStreams: PassThrough[]) => {
-  const watcher = chokidar.watch(SOURCE_DIRECTORY_PATH);
-  watcher.on("change", async () => {
-    log(chalk.greenBright("source files modified, rebuilding..."));
-    try {
-      await build();
-      log(chalk.greenBright("rebuild finished"));
+  // startup a interval timer to rebuild chapters
+  let rebuildMarker = false;
+  const timer = setInterval(() => {
+    if (!rebuildMarker) return;
 
-      sseStreams.forEach((stream) => {
-        sendSSEMessage(stream, { type: SSEEvent.Rebuild });
+    log(chalk.greenBright("source files modified, rebuilding..."));
+    build()
+      .then(() => {
+        rebuildMarker = false;
+
+        sseStreams.forEach((stream) => {
+          sendSSEMessage(stream, { type: SSEEvent.Rebuild });
+        });
+
+        log(chalk.greenBright("rebuild finished"));
+      })
+      .catch((err) => {
+        console.error(err);
+
+        log(chalk.redBright(`rebuild failed ${err instanceof Error ? err.message : err}`));
       });
-    } catch (err) {
-      console.error(err);
-      log(chalk.redBright(`rebuild failed ${err instanceof Error ? err.message : err}`));
-    }
+  }, 200);
+
+  const watcher = chokidar.watch(SOURCE_DIRECTORY_PATH);
+  watcher.on("all", () => {
+    rebuildMarker = true;
   });
 
   log("start watching source files for modification");
 
-  return watcher;
+  return { watcher, timer };
 };
 
-let watcher: chokidar.FSWatcher | null;
-let server: Server<typeof IncomingMessage, typeof ServerResponse> | null;
 /**
  * Build and start serving
  */
 export const serve = async () => {
   await build();
   const { koa, sseStreams } = createServer();
-  watcher = watch(sseStreams);
-  server = koa.listen(LISTEN_PORT, LISTEN_ADDRESS);
+  const { watcher, timer } = watch(sseStreams);
+  const server = koa.listen(LISTEN_PORT, LISTEN_ADDRESS);
   await new Promise((resolve) => {
     server?.addListener("listening", resolve);
   });
@@ -211,6 +220,7 @@ export const serve = async () => {
   });
 
   await watcher.close();
+  clearInterval(timer);
   await new Promise((resolve) => {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     server!.close(resolve);
