@@ -1,4 +1,4 @@
-import { basename, dirname, extname, join, resolve as resolvePath } from "node:path";
+import { basename, extname, join, resolve as resolvePath } from "node:path";
 import parseImports from "parse-imports";
 import {
   DESCRIPTION_FILENAME,
@@ -14,21 +14,32 @@ import {
 } from "./index.js";
 
 /**
+ * Chapter descriptor type
+ */
+enum ChapterDescriptorType {
+  /**
+   * Introduction chapter, with code and canvas zone hidden
+   */
+  Intro = "intro",
+  /**
+   * Code example chapter, with code and canvas zone shown
+   */
+  Code = "code",
+  /**
+   * Directory entry
+   */
+  Directory = "dir",
+}
+
+/**
  * Chapter introduction
  */
 type ChapterIntroduction = {
+  type: ChapterDescriptorType;
   zIndex?: number;
   title?: string;
   intro?: string;
 };
-
-/**
- * Chapter descriptor type
- */
-enum ChapterDescriptorType {
-  Instance = 0,
-  Directory = 1,
-}
 
 /**
  * Chapter descriptor
@@ -40,7 +51,7 @@ type ChapterDescriptor = ChapterInstance | ChapterDirectory;
  */
 type ChapterInstance = {
   zIndex?: number;
-  type: ChapterDescriptorType.Instance;
+  type: ChapterDescriptorType.Code | ChapterDescriptorType.Intro;
   entry: string;
   libs: [];
   title?: string;
@@ -144,23 +155,35 @@ const collectLocalImports = async (entry: string) => {
 /**
  * Resolve chapter instance
  * @param entry Entry
+ * @param introduction Introduction of the directory, if not provided, read from `index.json` under current entry automatically.
  * @returns Chapter instance
  */
-const resolveInstance = async (entry: string) => {
+const resolveInstance = async (entry: string, introduction = readIntroduction(entry)) => {
+  const { type, title, intro, zIndex } = introduction;
+
   const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
-
-  // read introduction
-  const { title, intro, zIndex } = readIntroduction(entry);
-
-  const hasHTML = distributionFs.existsSync(join(entryFullPath, HTML_FILENAME));
-  const hasStylesheet = distributionFs.existsSync(join(entryFullPath, STYLESHEET_FILENAME));
-  const hasDescription = distributionFs.existsSync(join(entryFullPath, DESCRIPTION_FILENAME));
-  const hasPreviewImage = distributionFs.existsSync(join(entryFullPath, PREVIEW_IMAGE_FILENAME));
-  const libs = await collectLocalImports(entry);
+  let hasHTML: boolean;
+  let hasStylesheet: boolean;
+  let hasDescription: boolean;
+  let hasPreviewImage: boolean;
+  let libs: string[];
+  if (type === ChapterDescriptorType.Code) {
+    hasHTML = distributionFs.existsSync(join(entryFullPath, HTML_FILENAME));
+    hasStylesheet = distributionFs.existsSync(join(entryFullPath, STYLESHEET_FILENAME));
+    hasDescription = distributionFs.existsSync(join(entryFullPath, DESCRIPTION_FILENAME));
+    hasPreviewImage = distributionFs.existsSync(join(entryFullPath, PREVIEW_IMAGE_FILENAME));
+    libs = await collectLocalImports(entry);
+  } else {
+    hasHTML = false;
+    hasStylesheet = false;
+    hasDescription = distributionFs.existsSync(join(entryFullPath, DESCRIPTION_FILENAME));
+    hasPreviewImage = false;
+    libs = [];
+  }
 
   return {
     zIndex,
-    type: ChapterDescriptorType.Instance,
+    type,
     entry: basename(entry),
     libs,
     title: title ?? entry,
@@ -174,34 +197,44 @@ const resolveInstance = async (entry: string) => {
 
 /**
  * Resolve chapter directory
- * @param entry Entry, relative path
  * @param noResolves Directories that only copy
+ * @param entry Entry, relative path
+ * @param introduction Introduction of the directory, if not provided, read from `index.json` under current entry automatically.
  * @returns Chapter instance
  */
-const resolveDirectory = async (noResolves: string[], entry = "") => {
-  const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
-
-  // read introduction
-  const { title, intro, zIndex } = readIntroduction(entry);
+const resolveDirectory = async (
+  noResolves: string[],
+  entry = "",
+  introduction = readIntroduction(entry)
+) => {
+  const { title, intro, zIndex } = introduction;
 
   // iterate entries and resolve
+  const entryFullPath = resolvePath(DISTRIBUTION_DIRECTORY_PATH, entry);
   const children: ChapterDescriptor[] = [];
   for (const subentry of distributionFs.readdirSync(entryFullPath)) {
-    // not resolve directories
     const subentryFullPath = join(entryFullPath, subentry);
+    const subentryRelativePath = join(entry, subentry);
+    // not resolve directories
     if (noResolves.some((path) => subentryFullPath.startsWith(path))) continue;
 
     // not resolve non-directory entries
     if (!distributionFs.lstatSync(subentryFullPath, { throwIfNoEntry: false })?.isDirectory())
       continue;
 
-    // check if entry is instance
-    const isInstance = distributionFs.existsSync(join(subentryFullPath, JAVASCRIPT_FILENAME));
+    // read child introduction
+    const childIntroduction = readIntroduction(subentryRelativePath);
+
     let child: ChapterDescriptor;
-    if (isInstance) {
-      child = await resolveInstance(join(entry, subentry));
+    if (
+      childIntroduction.type === ChapterDescriptorType.Code ||
+      childIntroduction.type === ChapterDescriptorType.Intro
+    ) {
+      child = await resolveInstance(subentryRelativePath, childIntroduction);
+    } else if (childIntroduction.type === ChapterDescriptorType.Directory) {
+      child = await resolveDirectory(noResolves, subentryRelativePath, childIntroduction);
     } else {
-      child = await resolveDirectory(noResolves, join(entry, subentry));
+      throw new Error(`unknown type ${childIntroduction.type} in entry ${subentryRelativePath}`);
     }
 
     children.push(child);
