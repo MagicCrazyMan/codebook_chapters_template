@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Shape Keeping",
   "intro": "Keep shape of an object using scale matrix",
   "zIndex": 3

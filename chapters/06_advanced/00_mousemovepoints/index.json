@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Draw Points on Mouse Moving",
   "intro": "Draw points or lines on mouse moving",
   "zIndex": 0

@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Solid Color Cube",
   "intro": "Draw a cube with solid colors for each face",
   "zIndex": 7

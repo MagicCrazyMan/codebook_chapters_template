@@ -1,4 +1,5 @@
 {
+  "type": "dir",
   "zIndex": 0,
   "title": "Basic",
   "intro": "Basic Concepts of WebGL"

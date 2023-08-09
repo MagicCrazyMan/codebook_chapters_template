@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Draw Point",
   "intro": "Draw a point with WebGL",
   "zIndex": 0

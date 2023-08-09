@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Gouraud Shading",
   "intro": "平滑光照",
   "zIndex": 1

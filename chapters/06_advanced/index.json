@@ -1,4 +1,5 @@
 {
+  "type": "dir",
   "title": "Advanced",
   "intro": "Advanced skills in WebGL",
   "zIndex": 6

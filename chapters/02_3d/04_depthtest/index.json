@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Depth Test",
   "intro": "Use Z axis correctly",
   "zIndex": 4

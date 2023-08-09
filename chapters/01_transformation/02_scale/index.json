@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Scale",
   "intro": "Scale an object using matrix",
   "zIndex": 2

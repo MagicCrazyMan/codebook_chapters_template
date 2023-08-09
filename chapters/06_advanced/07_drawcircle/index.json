@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "Draw Circle",
   "intro": "Draw a rounded point",
   "zIndex": 7

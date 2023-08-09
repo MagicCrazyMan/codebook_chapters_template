@@ -1,4 +1,5 @@
 {
+  "type": "code",
   "title": "矩形范围光",
   "intro": "通用范围限制光源",
   "zIndex": 4
