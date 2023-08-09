@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Perspective Projection",
-  "intro": "Use perspective projection to define visible area",
-  "zIndex": 3
+  "intro": "Use perspective projection to define visible area"
 }

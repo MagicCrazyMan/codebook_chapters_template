@@ -1,6 +1,5 @@
 {
   "type": "dir",
   "title": "Model",
-  "intro": "Controls complex multiple model",
-  "zIndex": 5
+  "intro": "Controls complex multiple model"
 }

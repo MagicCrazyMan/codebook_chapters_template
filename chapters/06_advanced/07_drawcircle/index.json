@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Draw Circle",
-  "intro": "Draw a rounded point",
-  "zIndex": 7
+  "intro": "Draw a rounded point"
 }

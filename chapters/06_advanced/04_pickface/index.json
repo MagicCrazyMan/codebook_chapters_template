@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Pick Face",
-  "intro": "Pick a face from cube",
-  "zIndex": 4
+  "intro": "Pick a face from cube"
 }

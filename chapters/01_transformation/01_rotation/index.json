@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Rotation",
-  "intro": "Rotate an object using matrix",
-  "zIndex": 1
+  "intro": "Rotate an object using matrix"
 }

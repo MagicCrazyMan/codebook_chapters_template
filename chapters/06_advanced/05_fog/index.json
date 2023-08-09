@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Fog",
-  "intro": "Linear fog",
-  "zIndex": 5
+  "intro": "Linear fog"
 }

@@ -1,6 +1,5 @@
 {
   "type": "dir",
   "title": "Transformations",
-  "intro": "Affine transformations in WebGL",
-  "zIndex": 1
+  "intro": "Affine transformations in WebGL"
 }

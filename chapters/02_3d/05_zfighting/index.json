@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Z Fighting",
-  "intro": "Offset polygon when they having a same depth value",
-  "zIndex": 5
+  "intro": "Offset polygon when they having a same depth value"
 }

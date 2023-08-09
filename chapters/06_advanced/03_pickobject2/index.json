@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Pick Object 2",
-  "intro": "Test whether object is picked using another way",
-  "zIndex": 3
+  "intro": "Test whether object is picked using another way"
 }

@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Draw Triangle",
-  "intro": "Draw a triangle with WebGL",
-  "zIndex": 2
+  "intro": "Draw a triangle with WebGL"
 }

@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Translation",
-  "intro": "Translate an object using matrix",
-  "zIndex": 0
+  "intro": "Translate an object using matrix"
 }

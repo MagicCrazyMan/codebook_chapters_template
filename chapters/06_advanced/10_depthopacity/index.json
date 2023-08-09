@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Depth & Opacity",
-  "intro": "Draw object with depth and opacity",
-  "zIndex": 10
+  "intro": "Draw object with depth and opacity"
 }

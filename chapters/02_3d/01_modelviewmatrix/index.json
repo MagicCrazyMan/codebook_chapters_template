@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Model View Matrix",
-  "intro": "Combine view matrix and model matrix",
-  "zIndex": 1
+  "intro": "Combine view matrix and model matrix"
 }

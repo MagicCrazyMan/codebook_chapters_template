@@ -1,6 +1,5 @@
 {
   "type": "code",
   "title": "Rotate Cube using Mouse",
-  "intro": "Rotate a cube using mouse",
-  "zIndex": 1
+  "intro": "Rotate a cube using mouse"
 }
