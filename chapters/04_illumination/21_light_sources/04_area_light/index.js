@@ -138,8 +138,7 @@ const fragmentShader = `
       // inside area light
       vec3 normal = normalize(v_Normal);
       vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-      vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-      reflectionDirection = normalize(reflectionDirection);
+      vec3 reflectionDirection = reflect(-lightDirection, normal);
 
       float distanceToLight = distance(v_Position, u_LightPosition);
       float attenuationComponent = u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0);

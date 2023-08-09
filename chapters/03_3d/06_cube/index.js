@@ -35,7 +35,7 @@ const program = bindWebGLProgram(gl, [
 /**
  * Setups model view projection matrix
  */
-const uProjectionMatrix = gl.getUniformLocation(program, "u_ModelViewProjectionMatrix");
+const uModelViewProjectionMatrix = gl.getUniformLocation(program, "u_ModelViewProjectionMatrix");
 const eyeRadius = 8;
 let rotationX = glMatrix.toRadian(30);
 let rotationY = glMatrix.toRadian(30);
@@ -77,7 +77,7 @@ const setModelViewProjectionMatrix = () => {
   mat4.multiply(modelViewProjectionMatrix, modelViewProjectionMatrix, projectionMatrix);
   mat4.multiply(modelViewProjectionMatrix, modelViewProjectionMatrix, viewMatrix);
   mat4.multiply(modelViewProjectionMatrix, modelViewProjectionMatrix, modelMatrix);
-  gl.uniformMatrix4fv(uProjectionMatrix, false, modelViewProjectionMatrix);
+  gl.uniformMatrix4fv(uModelViewProjectionMatrix, false, modelViewProjectionMatrix);
 };
 setModelViewProjectionMatrix();
 getCanvasResizeObserver(() => {

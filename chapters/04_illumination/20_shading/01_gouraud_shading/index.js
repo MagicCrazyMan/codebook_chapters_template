@@ -60,8 +60,7 @@ const vertexShader = `
     vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));
     vec3 lightDirection = normalize(u_LightPosition - position);
     vec3 cameraDirection = normalize(u_CameraPosition - position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-    reflectionDirection = normalize(reflectionDirection);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
 
     float distanceToLight = distance(position, u_LightPosition);
     float attenuationComponent = u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0);

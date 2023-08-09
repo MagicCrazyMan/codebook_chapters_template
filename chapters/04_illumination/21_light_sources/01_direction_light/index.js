@@ -64,8 +64,7 @@ const fragmentShader = `
     vec3 normal = normalize(v_Normal);
     vec3 lightDirection = normalize(u_LightDirection);
     vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-    vec3 reflectionDirection = 2.0 * normal * dot(normal, lightDirection) - lightDirection;
-    reflectionDirection = normalize(reflectionDirection);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
 
     vec3 diffuseColor = diffuse(normal, lightDirection);
     vec3 specularColor = specular(normal, reflectionDirection, cameraDirection);
