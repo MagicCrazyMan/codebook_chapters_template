@@ -82,16 +82,32 @@ type Prelude = {
   descriptors: ChapterDescriptor[];
 };
 
+const ENTRY_NAME_Z_INDEX_SPLITTER = "_";
+const ENTRY_NAME_Z_INDEX_ARRAY_INDEX = 0;
+
 /**
  * Reads introduction json file
  * @param entry Entry
  * @returns ChapterIntroduction
  */
 const readIntroduction = (entry: string) => {
-  // read introduction
   const introPath = join(DISTRIBUTION_DIRECTORY_PATH, entry, INTRODUCTION_FILENAME);
   if (distributionFs.lstatSync(introPath, { throwIfNoEntry: false })?.isFile()) {
-    return JSON.parse(distributionFs.readFileSync(introPath, "utf-8")) as ChapterIntroduction;
+    const intro = JSON.parse(
+      distributionFs.readFileSync(introPath, "utf-8")
+    ) as ChapterIntroduction;
+
+    // if zIndex not provided, try zIndex from entry name
+    if (typeof intro?.zIndex !== "number") {
+      const entrySplitted = entry.split(ENTRY_NAME_Z_INDEX_SPLITTER);
+      try {
+        intro.zIndex = parseInt(entrySplitted[ENTRY_NAME_Z_INDEX_ARRAY_INDEX]);
+      } catch {
+        // do nothing if parse error
+      }
+    }
+
+    return intro as ChapterIntroduction;
   }
 
   return {} as ChapterIntroduction;
