@@ -39,6 +39,7 @@ type ChapterIntroduction = {
   zIndex?: number;
   title?: string;
   intro?: string;
+  disabled?: boolean;
 };
 
 /**
@@ -241,7 +242,10 @@ const resolveDirectory = async (
     // read child introduction
     const childIntroduction = readIntroduction(subentryRelativePath);
 
-    let child: ChapterDescriptor;
+    // skip if disabled
+    if (childIntroduction.disabled) continue;
+
+    let child: ChapterDescriptor | undefined;
     if (
       childIntroduction.type === ChapterDescriptorType.Code ||
       childIntroduction.type === ChapterDescriptorType.Intro
@@ -253,7 +257,9 @@ const resolveDirectory = async (
       throw new Error(`unknown type ${childIntroduction.type} in entry ${subentryRelativePath}`);
     }
 
-    children.push(child);
+    if (child) {
+      children.push(child);
+    }
   }
 
   // sort children which contains zIndex, all children which has no zIndex append to last in original order
