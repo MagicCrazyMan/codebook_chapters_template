@@ -3,7 +3,7 @@ import { fs as memfs } from "memfs";
 import { join, resolve } from "node:path";
 import { basename } from "path";
 import { options } from "./args.js";
-import { resolvePrelude } from "./prelude.js";
+import { resolvePrelude } from "./chapter.js";
 import { serve } from "./serve.js";
 import { log } from "./log.js";
 import chalk from "chalk";
