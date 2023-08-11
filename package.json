@@ -23,7 +23,8 @@
     "mime-types": "^2.1.35",
     "parse-imports": "^1.1.2",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@tsconfig/node18": "^1.0.3",

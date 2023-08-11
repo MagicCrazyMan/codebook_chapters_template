@@ -1,12 +1,22 @@
-import { Geometry } from "./geometry.js";
+import {
+  BufferAttributeDataType,
+  BufferTarget,
+  BufferUsage,
+  DrawType,
+  RenderableObject,
+} from "../core/renderable_object.js";
 
 /**
  * Create a sphere indexed mesh
  * @param {number} radius Sphere radius
- * @param {number} [verticalSegments]
- * @param {number} [horizontalSegments]
+ * @param {number} [verticalSegments] vertical segments count, default `12`
+ * @param {number} [horizontalSegments] horizontal segments count, default `verticalSegments * 2`
  */
-export const createSphere = (radius, verticalSegments, horizontalSegments = verticalSegments) => {
+export const createSphere = (
+  radius,
+  verticalSegments = 12,
+  horizontalSegments = 2 * verticalSegments
+) => {
   const verticalOffset = Math.PI / verticalSegments;
   const horizontalOffset = (2 * Math.PI) / horizontalSegments;
 
@@ -63,13 +73,13 @@ export const createSphere = (radius, verticalSegments, horizontalSegments = vert
 /**
  * Create a sphere triangulated mesh
  * @param {number} radius Sphere radius
- * @param {number} [verticalSegments]
- * @param {number} [horizontalSegments]
+ * @param {number} [verticalSegments] vertical segments count, default `12`
+ * @param {number} [horizontalSegments] horizontal segments count, default `verticalSegments * 2`
  */
 export const createSphereTriangulated = (
   radius,
   verticalSegments = 12,
-  horizontalSegments = verticalSegments
+  horizontalSegments = 2 * verticalSegments
 ) => {
   const verticalOffset = Math.PI / verticalSegments;
   const horizontalOffset = (2 * Math.PI) / horizontalSegments;
@@ -139,51 +149,84 @@ export const createSphereTriangulated = (
   };
 };
 
-export class Sphere extends Geometry {
+export class Sphere extends RenderableObject {
   /**
+   * Sphere radius.
    * @type {number}
    * @readonly
    */
   radius;
   /**
+   * Sphere vertical segment counts.
    * @type {number}
    * @readonly
    */
   verticalSegments;
   /**
+   * Sphere horizontal segment counts.
    * @type {number}
    * @readonly
    */
   horizontalSegments;
 
   /**
-   * @type {Float32Array}
-   * @private
-   */
-  _vertices;
-
-  /**
-   * @type {Uint16Array}
-   * @private
-   */
-  _indices;
-
-  /**
    * Constructs a sphere geometry
    * @param {number} radius Sphere radius
-   * @param {number} [verticalSegments]
-   * @param {number} [horizontalSegments]
-   * @param {import("gl-matrix").ReadonlyVec3} [position]
-   * @param {import("gl-matrix").ReadonlyVec3} [rotation]
-   * @param {import("gl-matrix").ReadonlyVec3} [scale]
+   * @param {number} [verticalSegments] vertical segments count, default `12`
+   * @param {number} [horizontalSegments] horizontal segments count, default `verticalSegments * 2`
+   * @param {import("gl-matrix").ReadonlyVec3} [position] Geometry position
+   * @param {import("gl-matrix").ReadonlyVec3} [translation] Geometry translation
+   * @param {import("gl-matrix").ReadonlyVec3} [rotation] Geometry rotation
+   * @param {import("gl-matrix").ReadonlyVec3} [scaling] Geometry scaling
    */
-  constructor(radius, verticalSegments, horizontalSegments, position, rotation, scale) {
-    super(position, rotation, scale);
+  constructor(
+    radius,
+    verticalSegments,
+    horizontalSegments,
+    position,
+    translation,
+    rotation,
+    scaling
+  ) {
+    super(DrawType.Triangles, position, translation, rotation, scaling);
     this.radius = radius;
     this.verticalSegments = verticalSegments;
     this.horizontalSegments = horizontalSegments;
-    const sphere = createSphere(radius, verticalSegments, horizontalSegments);
-    this._vertices = sphere.vertices;
-    this._indices = sphere.indices;
+
+    const { vertices, normals } = createSphereTriangulated(
+      radius,
+      verticalSegments,
+      horizontalSegments
+    );
+
+    this.setBuffer("vertices", {
+      arraybuffer: vertices,
+      target: BufferTarget.ArrayBuffer,
+      usage: BufferUsage.StaticDraw,
+    });
+    this.setBuffer("normals", {
+      arraybuffer: normals,
+      target: BufferTarget.ArrayBuffer,
+      usage: BufferUsage.StaticDraw,
+    });
+    this.setBufferAttribute(
+      RenderableObject.BasicAttributeVariableNames.Position,
+      "vertices",
+      3,
+      BufferAttributeDataType.Float,
+      false,
+      0,
+      0
+    );
+    this.setBufferAttribute(
+      RenderableObject.BasicAttributeVariableNames.Normal,
+      "normals",
+      3,
+      BufferAttributeDataType.Float,
+      false,
+      0,
+      0
+    );
+    this.verticesCount = vertices.length / 3;
   }
 }

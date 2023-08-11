@@ -1,13 +1,13 @@
+import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { PerspectiveCamera } from "../../libs/camera/perspective";
 import {
   compileShader,
   createProgram,
   getCanvasResizeObserver,
   getWebGLContext,
 } from "../../libs/common";
-import { PerspectiveCamera } from "../../libs/camera/perspective";
-import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { RenderGeometry } from "../../libs/geom/rendergeometry";
-import { PointLight } from "../../libs/pointlight";
+import { PointLight } from "../../libs/lights/pointlight";
+import { TransformObject } from "../../libs/core/transform_object";
 
 class MTLPhongMaterial {
   /**
@@ -192,11 +192,11 @@ class MTLPhongMaterial {
     gl.uniformMatrix4fv(
       MTLPhongMaterial.uniformLocations["u_ModelMatrix"],
       false,
-      state.instance.getModelMatrix()
+      state.instance.modelMatrix
     );
     // bind normal matrix
     mat4.identity(this._normalMatrix);
-    mat4.invert(this._normalMatrix, state.instance.getModelMatrix());
+    mat4.invert(this._normalMatrix, state.instance.modelMatrix);
     mat4.transpose(this._normalMatrix, this._normalMatrix);
     gl.uniformMatrix4fv(
       MTLPhongMaterial.uniformLocations["u_NormalMatrix"],
@@ -214,15 +214,9 @@ class MTLPhongMaterial {
     // bind ambient color
     gl.uniform3fv(MTLPhongMaterial.uniformLocations["u_AmbientLightColor"], this.ambientColor);
     // bind point light color
-    gl.uniform3fv(
-      MTLPhongMaterial.uniformLocations["u_PointLightColor"],
-      state.light.getLightColor()
-    );
+    gl.uniform3fv(MTLPhongMaterial.uniformLocations["u_PointLightColor"], state.light.lightColor);
     // bind point light position
-    gl.uniform3fv(
-      MTLPhongMaterial.uniformLocations["u_PointLightPosition"],
-      state.light.getPosition()
-    );
+    gl.uniform3fv(MTLPhongMaterial.uniformLocations["u_PointLightPosition"], state.light.position);
     // bind point light power
     gl.uniform1f(
       MTLPhongMaterial.uniformLocations["u_PointLightIntensity"],
@@ -349,7 +343,7 @@ class OBJFace {
   }
 }
 
-class OBJInstance extends RenderGeometry {
+class OBJInstance extends TransformObject{
   /**
    * Default material.
    * @readonly
@@ -377,7 +371,6 @@ class OBJInstance extends RenderGeometry {
   geometries;
 
   constructor(geometries, materials) {
-    super();
     this.materials = materials;
     this.geometries = geometries;
   }
@@ -394,8 +387,8 @@ class OBJInstance extends RenderGeometry {
    */
   render(gl, camera, light) {
     mat4.identity(this._tempMvpMatrix);
-    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, camera.getViewProjMatrix());
-    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, this.getModelMatrix());
+    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, camera.viewProjectionMatrix);
+    mat4.multiply(this._tempMvpMatrix, this._tempMvpMatrix, this.modelMatrix);
 
     const state = {
       light,
@@ -1350,7 +1343,7 @@ class OBJReader {
   }
 }
 
-const instance = await fetch("/resources/car.obj")
+const instance = await fetch("/resources/cube.obj")
   .then((res) => res.text())
   .then((obj) =>
     new OBJReader(obj, {
@@ -1361,24 +1354,24 @@ const instance = await fetch("/resources/car.obj")
 const rotation = vec3.create();
 instance.setRotation(rotation);
 instance.updateModelMatrix();
-console.log(instance);
+// console.log(instance);
 
 const gl = getWebGLContext();
 gl.enable(gl.DEPTH_TEST);
 const camera = new PerspectiveCamera(
-  vec3.fromValues(0.0, 10.0, 4.0),
-  vec3.fromValues(0.0, 0.0, 0.0),
   glMatrix.toRadian(30),
   gl.canvas.width / gl.canvas.height,
   1,
-  5000
+  5000,
+  vec3.fromValues(0.0, 10.0, 4.0),
+  vec3.fromValues(0.0, 0.0, 0.0)
 );
 const light = new PointLight(vec3.fromValues(1, 1, 1), 300, vec3.fromValues(0.0, 40.0, 4.0));
 
 let lastRenderTime = 0;
 const render = (renderTime) => {
   // update rotation
-  const r = ((lastRenderTime / 1000) * 60) % 360;
+  const r = ((lastRenderTime / 1000) * 2) % 360;
   rotation[0] = r;
   rotation[2] = r;
   instance.setRotation(rotation);
@@ -1397,7 +1390,6 @@ const render = (renderTime) => {
 render(lastRenderTime);
 
 getCanvasResizeObserver(() => {
-  camera.setAspect(gl.canvas.width / gl.canvas.height);
-  camera.updateViewProjectMatrix();
+  camera.setAspect(gl.canvas.width / gl.canvas.height, true);
   render(lastRenderTime);
 });

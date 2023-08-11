@@ -1,145 +1,97 @@
-import { mat4, vec3 } from "gl-matrix";
+import { mat4 } from "gl-matrix";
+import { Camera } from "./camera.js";
 
 /**
  * Perspective Camera
  */
-export class PerspectiveCamera {
-  /**@readonly */
-  position = vec3.create();
-  /**@readonly */
-  lookAt = vec3.create();
-  /**@readonly */
+export class PerspectiveCamera extends Camera {
+  /**
+   * Perspective camera vertical field of view, in radians.
+   * @type {number}
+   * @readonly
+   */
   fovy = 0;
-  /**@readonly */
-  aspect = 0;
-  /**@readonly */
+  /**
+   * Near bound of the frustum.
+   * @type {number}
+   * @readonly
+   */
   near = 0;
-  /**@readonly */
-  far = 0;
-
-  /**@private */
-  viewMatrix = mat4.create();
-  /**@private */
-  projMatrix = mat4.create();
-  /**@private */
-  viewProjMatrix = mat4.create();
+  /**
+   * Far bound of the frustum.
+   * @type {number | null}
+   * @readonly
+   */
+  far = null;
 
   /**
    * Constructs a perspective camera
-   * @param {import("gl-matrix").ReadonlyVec3} position Camera position
-   * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at target
    * @param {number} fovy Camera vertical field of view, in radians
    * @param {number} aspect Camera aspect ratio. typically viewport width/height
    * @param {number} near Near bound of the frustum
-   * @param {number | null} far Far bound of the frustum, can be null or Infinity
+   * @param {number | null} far Far bound of the frustum, can be `null` or `Infinity`
+   * @param {import("gl-matrix").ReadonlyVec3} [position] Camera position, default `vec3(0, 0, 0)`
+   * @param {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position, default `vec3(0, 0, 0)`
+   * @param {import("gl-matrix").ReadonlyVec3} [up] Camera up vector, default `vec3(0, 1, 0)`
    */
-  constructor(position, lookAt, fovy, aspect, near, far) {
-    this.setView(position, lookAt);
-    this.setPerspective(fovy, aspect, near, far);
-    this.updateViewProjectMatrix();
-  }
+  constructor(fovy, aspect, near, far, position, lookAt, up) {
+    super(position, lookAt, up, aspect);
+    this.fovy = fovy;
+    this.near = near;
+    this.far = far ?? null;
 
-  /**
-   * Sets camera position.
-   * @param {import("gl-matrix").ReadonlyVec3} position Camera position
-   */
-  setPosition(position) {
-    vec3.copy(this.position, position)
-  }
-
-  /**
-   * Sets camera look at target.
-   * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at target
-   */
-  setLookAt(lookAt) {
-    vec3.copy(this.lookAt, lookAt)
+    this.updateProjectionMatrix();
+    this.updateViewProjectionMatrix();
   }
 
   /**
    * Sets camera vertical field of view.
    * @param {number} fovy Camera vertical field of view, in radians
+   * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
-  setFovy(fovy) {
+  setFovy(fovy, update = false) {
     this.fovy = fovy;
-  }
 
-  /**
-   * Sets camera aspect ratio.
-   * @param {number} aspect Camera aspect ratio. typically viewport width/height
-   */
-  setAspect(aspect) {
-    this.aspect = aspect;
+    if (update) {
+      this.updateProjectionMatrix();
+      this.updateViewProjectionMatrix();
+    }
   }
 
   /**
    * Sets near bound of the frustum of camera.
    * @param {number} near Near bound of the frustum
+   * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
-  setNear(near) {
+  setNear(near, update = false) {
     this.near = near;
+
+    if (update) {
+      this.updateProjectionMatrix();
+      this.updateViewProjectionMatrix();
+    }
   }
 
   /**
    * Sets far bound of the frustum of camera.
    * @param {number | null} far Far bound of the frustum, can be null or Infinity
+   * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
-  setFar(far) {
+  setFar(far, update = false) {
     this.far = far;
+
+    if (update) {
+      this.updateProjectionMatrix();
+      this.updateViewProjectionMatrix();
+    }
   }
 
   /**
-   * Sets camera view.
-   * @param {import("gl-matrix").ReadonlyVec3} position Camera position
-   * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at target
-   */
-  setView(position, lookAt) {
-    vec3.copy(this.position, position)
-    vec3.copy(this.lookAt, lookAt)
-  }
-
-  /**
-   * Sets camera projection.
-   * @param {number} fovy Camera vertical field of view, in radians
-   * @param {number} aspect Camera aspect ratio. typically viewport width/height
-   * @param {number} near Near bound of the frustum
-   * @param {number | null} far Far bound of the frustum, can be null or Infinity
-   */
-  setPerspective(fovy, aspect, near, far) {
-    this.fovy = fovy;
-    this.aspect = aspect;
-    this.near = near;
-    this.far = far;
-  }
-
-  /**
-   * Updates view matrix
-   */
-  updateViewMatrix() {
-    mat4.lookAt(this.viewMatrix, this.position, this.lookAt, vec3.fromValues(0, 1, 0));
-  }
-
-  /**
-   * Updates projection matrix
+   * Updates projection matrix.
+   * This method does not update view projection matrix.
+   * @override
    */
   updateProjectionMatrix() {
-    mat4.perspective(this.projMatrix, this.fovy, this.aspect, this.near, this.far);
-  }
-
-  /**
-   * Updates view-projection matrix
-   */
-  updateViewProjectMatrix() {
-    this.updateViewMatrix();
-    this.updateProjectionMatrix();
-    mat4.identity(this.viewProjMatrix);
-    mat4.multiply(this.viewProjMatrix, this.viewProjMatrix, this.projMatrix);
-    mat4.multiply(this.viewProjMatrix, this.viewProjMatrix, this.viewMatrix);
-  }
-
-  /**
-   * Gets view-projection matrix
-   */
-  getViewProjMatrix() {
-    return this.viewProjMatrix;
+    mat4.perspective(this.projectionMatrix, this.fovy, this.aspect, this.near, this.far);
   }
 }

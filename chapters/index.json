@@ -4,6 +4,7 @@
     "resources"
   ],
   "imports": {
-    "gl-matrix": "https://unpkg.com/gl-matrix@3.4.3/esm/index.js"
+    "gl-matrix": "https://unpkg.com/gl-matrix@3.4.3/esm/index.js",
+    "uuid": "https://www.unpkg.com/uuid@9.0.0/dist/esm-browser/index.js"
   }
 }
