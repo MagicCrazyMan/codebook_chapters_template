@@ -311,8 +311,8 @@ export class WebGLRenderer {
           attribute.size,
           glBufferAttributeDataType(gl, attribute.descriptor.type),
           attribute.normalized,
-          attribute.stride,
-          attribute.offset
+          attribute.byteStride,
+          attribute.byteOffset
         );
         gl.enableVertexAttribArray(location);
 

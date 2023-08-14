@@ -278,12 +278,25 @@ class FlatShading extends Material {
     this.setNormalMatrix(entity);
 
     // iterate every triangles
-    /**@type {import("../../../libs/Attribute").BufferDescriptor} */
-    const vertices = entity.attributes.get(EntityAttributeNames.Position).descriptor;
-    for (let i = 0; i < vertices.data.length; i += 9) {
-      const vertex0 = vertices.data.slice(i + 0, i + 3);
-      const vertex1 = vertices.data.slice(i + 3, i + 6);
-      const vertex2 = vertices.data.slice(i + 6, i + 9);
+    /**@type {import("../../../libs/Attribute").BufferAttribute} */
+    const verticesAttribute = entity.attributes.get(EntityAttributeNames.Position);
+    const valuesPerVertex = verticesAttribute.size;
+    const valuesOffset =
+      verticesAttribute.byteOffset / verticesAttribute.descriptor.bytesPerElement;
+    for (let i = 0; i < entity.verticesCount * valuesPerVertex; i += valuesPerVertex * 3) {
+      const valueIndex = i + valuesOffset;
+      const vertex0 = verticesAttribute.descriptor.data.slice(
+        valueIndex + valuesPerVertex * 0,
+        valueIndex + valuesPerVertex * 1
+      );
+      const vertex1 = verticesAttribute.descriptor.data.slice(
+        valueIndex + valuesPerVertex * 1,
+        valueIndex + valuesPerVertex * 2
+      );
+      const vertex2 = verticesAttribute.descriptor.data.slice(
+        valueIndex + valuesPerVertex * 2,
+        valueIndex + valuesPerVertex * 3
+      );
 
       this.setCentroid(vertex0, vertex1, vertex2, entity);
       this.setNormal();

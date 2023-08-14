@@ -1,5 +1,5 @@
 import { v4 } from "uuid";
-import { BufferTarget, BufferUsage } from "./Constants.js";
+import { BufferAttributeDataType, BufferTarget, BufferUsage } from "./Constants.js";
 
 /**
  * Attribute from array
@@ -31,23 +31,6 @@ export class ArrayAttribute {
 }
 
 /**
- * Buffer attribute data types, mapping to WebGL enums.
- * @enum {number}
- */
-export const BufferAttributeDataType = {
-  Byte: 0,
-  Short: 1,
-  UnsignedByte: 2,
-  UnsignedShort: 3,
-  Float: 4,
-  HalfFloat: 5,
-  Int: 6,
-  UnsignedInt: 7,
-  Int_2_10_10_10_Rev: 8,
-  UnsignedInt_2_10_10_10_Rev: 9,
-};
-
-/**
  * Buffer descriptor
  */
 export class BufferDescriptor {
@@ -68,6 +51,33 @@ export class BufferDescriptor {
    * @readonly
    */
   type;
+
+  get bytesPerElement() {
+    switch (this.type) {
+      case BufferAttributeDataType.Byte:
+        return 1;
+      case BufferAttributeDataType.Float:
+        return 4;
+      case BufferAttributeDataType.HalfFloat:
+        return 2;
+      case BufferAttributeDataType.Int:
+        return 4;
+      case BufferAttributeDataType.Int_2_10_10_10_Rev:
+        return 4;
+      case BufferAttributeDataType.Short:
+        return 2;
+      case BufferAttributeDataType.UnsignedByte:
+        return 1;
+      case BufferAttributeDataType.UnsignedInt:
+        return 4;
+      case BufferAttributeDataType.UnsignedInt_2_10_10_10_Rev:
+        return 4;
+      case BufferAttributeDataType.UnsignedShort:
+        return 2;
+      default:
+        throw new Error(`unknown buffer attribute data type ${this.type}`);
+    }
+  }
 
   /**
    * @type {BufferTarget}
@@ -135,27 +145,27 @@ export class BufferAttribute {
    * @type {number}
    * @readonly
    */
-  stride;
+  byteStride;
 
   /**
    * @type {number}
    * @readonly
    */
-  offset;
+  byteOffset;
 
   /**
    *
    * @param {BufferDescriptor} descriptor
    * @param {number} size
    * @param {boolean} [normalized]
-   * @param {number} [stride]
-   * @param {number} [offset]
+   * @param {number} [byteStride]
+   * @param {number} [byteOffset]
    */
-  constructor(descriptor, size, normalized = false, stride = 0, offset = 0) {
+  constructor(descriptor, size, normalized = false, byteStride = 0, byteOffset = 0) {
     this.descriptor = descriptor;
     this.size = size;
     this.normalized = normalized;
-    this.stride = stride;
-    this.offset = offset;
+    this.byteStride = byteStride;
+    this.byteOffset = byteOffset;
   }
 }

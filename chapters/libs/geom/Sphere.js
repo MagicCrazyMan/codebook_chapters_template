@@ -196,14 +196,14 @@ export class Sphere extends RenderEntity {
       horizontalSegments
     );
 
-    this.attributes.set(
-      EntityAttributeNames.Position,
-      new BufferAttribute(new BufferDescriptor(vertices), 3)
-    );
+    // merge vertices and normals into one buffer
+    const descriptor = new BufferDescriptor(new Float32Array([...vertices, ...normals]));
+    this.attributes.set(EntityAttributeNames.Position, new BufferAttribute(descriptor, 3));
     this.attributes.set(
       EntityAttributeNames.Normal,
-      new BufferAttribute(new BufferDescriptor(normals), 3)
+      new BufferAttribute(descriptor, 3, false, 0, vertices.byteLength)
     );
+
     this.uniforms.set(
       EntityUniformNames.ModelMatrix,
       new Uniform(UniformType.Mat4, this.composedModelMatrix)
