@@ -24,7 +24,7 @@ export class FrameEvent extends Event {
  * @typedef {Object} Options
  * @property {import("./camera/Camera.js").Camera} [camera] Main camera, default {@link PerspectiveCamera}
  * @property {boolean} [enableDepthTest] Enable depth test, default `true`
- * @property {import("./WebGLRenderer.js").CullFace} [enableCullFace] Enable cull face
+ * @property {import("./WebGLRenderer.js").CullFace} [cullFace] Enable cull face
  * @property {import("gl-matrix").ReadonlyVec4} [clearColor] WebGl clear color, default `vec4 (0, 0, 0 ,0)`
  * @property {WebGLContextAttributes} [contextAttributes] WebGL context attributes
  */
@@ -127,14 +127,9 @@ export class Scene {
       scene: this,
     };
 
-    // performance.mark("a")
-
     this.event.dispatchEvent(new FrameEvent("prerender", frameState));
     this.renderer.render(frameState);
     this.event.dispatchEvent(new FrameEvent("postrender", frameState));
-
-    // const b = performance.measure("b", "a")
-    // console.log(b.duration);
 
     this._lastRenderTime = time;
 

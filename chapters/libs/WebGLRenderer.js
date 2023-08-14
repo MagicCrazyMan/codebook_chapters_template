@@ -85,6 +85,12 @@ export class WebGLRenderer {
   materialPool = new MaterialPool();
 
   /**
+   * @type {WebGLProgram | undefined}
+   * @private
+   */
+  lastProgram;
+
+  /**
    * Constructs simple renderer
    * @param {WebGL2RenderingContext} gl
    * @param {Options} [opts]
@@ -134,7 +140,11 @@ export class WebGLRenderer {
     const grouped = this.collectEntitiesByMaterials(frameState);
     // render each material group
     grouped.forEach((entities, materialName) => {
-      const materialItem = this.materialPool.useMaterial(gl, materialName);
+      const materialItem = this.materialPool.getMaterial(gl, materialName);
+      if (this.lastProgram !== materialItem.program) {
+        gl.useProgram(materialItem.program);
+        this.lastProgram = materialItem.program;
+      }
 
       entities.forEach((entity) => {
         this.setMaterialUniforms(gl, materialItem, entity, frameState);
@@ -567,6 +577,7 @@ class MaterialItem {
     });
 
     this.program = program;
+    this.compiled = true;
   }
 }
 
@@ -592,15 +603,13 @@ class MaterialPool {
    * @param {WebGL2RenderingContext} gl
    * @param {string} name
    */
-  useMaterial(gl, name) {
+  getMaterial(gl, name) {
     const material = this.materials.get(name);
     if (!material) throw new Error(`material ${name} not found`);
 
     if (!material.compiled) {
       material.compile(gl);
     }
-
-    gl.useProgram(material.program);
 
     return material;
   }
