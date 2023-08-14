@@ -3,7 +3,7 @@ import { DrawMode, UniformType } from "../Constants.js";
 import { Uniform } from "../Uniform.js";
 import { EntityAttributeNames, EntityUniformNames } from "../entity/RenderEntity.js";
 import {
-  AttributeBinding,
+  EntityAttributeBinding,
   EntityUniformBinding,
   Material,
   MaterialUniformBinding,
@@ -55,10 +55,10 @@ export class ColorMaterial extends Material {
 
   /**
    * Returns attribute bindings for WebGL program.
-   * @returns {AttributeBinding[]}
+   * @returns {EntityAttributeBinding[]}
    */
   attributesBindings() {
-    return [new AttributeBinding(EntityAttributeNames.Position)];
+    return [new EntityAttributeBinding(EntityAttributeNames.Position)];
   }
 
   /**

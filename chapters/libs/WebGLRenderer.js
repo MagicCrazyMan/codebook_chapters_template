@@ -11,8 +11,10 @@ import {
 import { RenderEntity } from "./entity/RenderEntity.js";
 import { ColorMaterial } from "./material/ColorMaterial.js";
 import {
+  EntityAttributeBinding,
   EntityUniformBinding,
   MainCameraUniformBinding,
+  MaterialAttributeBinding,
   MaterialUniformBinding,
 } from "./material/Material.js";
 
@@ -150,7 +152,7 @@ export class WebGLRenderer {
       entities.forEach((entity) => {
         const material = entity.material ?? WebGLRenderer.DefaultMaterial;
         material.prerender(entity, frameState);
-        
+
         this.setMaterialUniforms(gl, materialItem, entity, frameState);
         this.setMaterialAttributes(gl, materialItem, entity);
         this.drawEntity(gl, materialItem, entity);
@@ -287,8 +289,14 @@ export class WebGLRenderer {
    * @param {RenderEntity} entity
    */
   setMaterialAttributes(gl, materialItem, entity) {
-    materialItem.attributes.forEach(({ location }, name) => {
-      const attribute = entity.attributes.get(name);
+    materialItem.attributes.forEach(({ location, binding }, name) => {
+      let attribute;
+      if (binding instanceof EntityAttributeBinding) {
+        attribute = entity.attributes.get(name);
+      } else if (binding instanceof MaterialAttributeBinding) {
+        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        attribute = material.attributes.get(name);
+      }
       if (!attribute) {
         console.warn(`unspecified attribute data: ${name}`);
         return;
@@ -457,14 +465,14 @@ class MaterialAttribute {
    */
   location;
   /**
-   * @type {import("./material/Material.js").AttributeBinding}
+   * @type {import("./material/Material.js").EntityAttributeBinding}
    */
   binding;
 
   /**
    *
    * @param {number} location
-   * @param {import("./material/Material.js").AttributeBinding} binding
+   * @param {import("./material/Material.js").EntityAttributeBinding} binding
    */
   constructor(location, binding) {
     this.location = location;
@@ -503,7 +511,7 @@ class MaterialItem {
    */
   fragmentShaderSource;
   /**
-   * @type {import("./material/Material.js").AttributeBinding[]}
+   * @type {import("./material/Material.js").EntityAttributeBinding[]}
    */
   attributesBindings;
   /**

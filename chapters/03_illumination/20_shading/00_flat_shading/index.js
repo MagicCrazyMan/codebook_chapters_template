@@ -8,7 +8,12 @@ import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
-import { AttributeBinding, EntityUniformBinding, Material } from "../../../libs/material/Material";
+import {
+  EntityAttributeBinding,
+  EntityUniformBinding,
+  Material,
+  MaterialAttributeBinding,
+} from "../../../libs/material/Material";
 
 class FlatShading extends Material {
   name() {
@@ -48,7 +53,10 @@ class FlatShading extends Material {
   }
 
   attributesBindings() {
-    return [new AttributeBinding(EntityAttributeNames.Position), new AttributeBinding("a_Color")];
+    return [
+      new EntityAttributeBinding(EntityAttributeNames.Position),
+      new MaterialAttributeBinding("a_Color"),
+    ];
   }
 
   uniformBindings() {
@@ -89,6 +97,25 @@ class FlatShading extends Material {
   specularColor = vec3.create();
   diffuseColor = vec3.create();
   color = vec3.create();
+
+  /**
+   * Creates color buffer attribute
+   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
+   * @returns {import("../../../libs/Attribute").BufferAttribute}
+   */
+  setColorAttribute(entity) {
+    // create color buffer if not created
+    let attribute = this.attributes.get("a_Color");
+    if (!attribute) {
+      attribute = new BufferAttribute(
+        new BufferDescriptor(new Float32Array(entity.verticesCount * 3)),
+        3
+      );
+      this.attributes.set("a_Color", attribute);
+    }
+
+    return attribute;
+  }
 
   /**
    * Calculates light position
@@ -245,14 +272,14 @@ class FlatShading extends Material {
    * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
    */
   prerender(entity, frameState) {
+    const colorAttribute = this.setColorAttribute(entity);
+
     this.rotateLight(frameState);
     this.setNormalMatrix(entity);
 
     // iterate every triangles
     /**@type {import("../../../libs/Attribute").BufferDescriptor} */
     const vertices = entity.attributes.get(EntityAttributeNames.Position).descriptor;
-    /**@type {import("../../../libs/Attribute").BufferDescriptor} */
-    const colors = entity.attributes.get("a_Color").descriptor;
     for (let i = 0; i < vertices.data.length; i += 9) {
       const vertex0 = vertices.data.slice(i + 0, i + 3);
       const vertex1 = vertices.data.slice(i + 3, i + 6);
@@ -270,26 +297,21 @@ class FlatShading extends Material {
       this.setSpecularColor(entity);
       this.composeColor();
 
-      colors.data.set(this.color, i + 0);
-      colors.data.set(this.color, i + 3);
-      colors.data.set(this.color, i + 6);
+      colorAttribute.descriptor.data.set(this.color, i + 0);
+      colorAttribute.descriptor.data.set(this.color, i + 3);
+      colorAttribute.descriptor.data.set(this.color, i + 6);
     }
 
-    colors.updated = true;
+    colorAttribute.descriptor.updated = true;
   }
 }
-
-const flatShading = new FlatShading();
 
 /**
  * Create sphere object and set uniforms
  */
 const sphere = new Sphere(2, 24);
+const flatShading = new FlatShading(sphere.verticesCount);
 sphere.material = flatShading;
-sphere.attributes.set(
-  "a_Color",
-  new BufferAttribute(new BufferDescriptor(new Float32Array(sphere.verticesCount * 3)), 3)
-);
 sphere.uniforms.set(
   "u_SpecularLightShininessExponent",
   new Uniform(UniformType.FloatVector1, new Float32Array([512]))

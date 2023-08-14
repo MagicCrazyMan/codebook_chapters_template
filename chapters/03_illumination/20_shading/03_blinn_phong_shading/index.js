@@ -8,7 +8,7 @@ import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
-  AttributeBinding,
+  EntityAttributeBinding,
   EntityUniformBinding,
   MainCameraUniformBinding,
   Material,
@@ -119,8 +119,8 @@ class BlinnPhongShading extends Material {
 
   attributesBindings() {
     return [
-      new AttributeBinding(EntityAttributeNames.Position),
-      new AttributeBinding(EntityAttributeNames.Normal),
+      new EntityAttributeBinding(EntityAttributeNames.Position),
+      new EntityAttributeBinding(EntityAttributeNames.Normal),
     ];
   }
 

@@ -2,9 +2,27 @@
 import { abstractMethod } from "../Utils.js";
 
 /**
- * Material attribute binding
+ * Material attribute binding requiring data from entity.
  */
-export class AttributeBinding {
+export class EntityAttributeBinding {
+  /**
+   * @type {string}
+   */
+  name;
+
+  /**
+   *
+   * @param {string} name
+   */
+  constructor(name) {
+    this.name = name;
+  }
+}
+
+/**
+ * Material attribute binding requiring data from material.
+ */
+export class MaterialAttributeBinding {
   /**
    * @type {string}
    */
@@ -103,7 +121,7 @@ export class Material {
 
   /**
    * Returns attribute bindings for WebGL program.
-   * @returns {AttributeBinding[]}
+   * @returns {EntityAttributeBinding[]}
    */
   attributesBindings() {
     abstractMethod();
@@ -124,6 +142,13 @@ export class Material {
   drawMode() {
     abstractMethod();
   }
+
+  /**
+   * Attributes
+   * @type {Map<string, import("../Attribute.js").BufferAttribute | import("../Attribute.js").ArrayAttribute>}
+   * @readonly
+   */
+  attributes = new Map();
 
   /**
    * Uniforms
