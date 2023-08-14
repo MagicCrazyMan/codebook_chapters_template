@@ -1,27 +1,27 @@
 import { mat4, quat, vec3 } from "gl-matrix";
 import { v4 } from "uuid";
-import { fromRadians } from "../utils.js";
+import { fromRadians } from "../Utils.js";
 
 export class ObjectFrameEvent extends Event {
   /**
    * object
    * @readonly
-   * @type {TransformObject}
+   * @type {BaseEntity}
    */
   object;
 
   /**
    * object
    * @readonly
-   * @type {import("../renderer.js").FrameState}
+   * @type {import("../WebGLRenderer.js").FrameState}
    */
   frameState;
 
   /**
    * Object event
    * @param {string} type
-   * @param {TransformObject} object
-   * @param {import("../renderer.js").FrameState} frameState
+   * @param {BaseEntity} object
+   * @param {import("../WebGLRenderer.js").FrameState} frameState
    */
   constructor(type, object, frameState) {
     super(type);
@@ -42,48 +42,41 @@ export class ObjectFrameEvent extends Event {
  * A basic object providing local position, world transformation and etc.
  * @abstract
  */
-export class TransformObject {
+export class BaseEntity {
   /**
-   * Object name
+   * Entity name
    * @type {string}
    * @readonly
    */
   name;
 
   /**
-   * Object translation.
+   * Translation of the entity.
    * @type {vec3}
    * @readonly
    */
   translation = vec3.create();
 
   /**
-   * Object rotation in quaternion.
+   * Rotation in quaternion of the entity.
    * @type {quat}
    * @readonly
    */
   rotationQuaternion = quat.create();
 
   /**
-   * Object scaling.
+   * Scaling of the entity.
    * @type {vec3}
    * @readonly
    */
   scaling = vec3.fromValues(1, 1, 1);
 
   /**
-   * Object model matrix.
+   * Model matrix of the entity.
    * @type {mat4}
    * @readonly
    */
   modelMatrix = mat4.create();
-
-  /**
-   * Object normal matrix.
-   * @type {mat4}
-   * @readonly
-   */
-  composeNormalMatrix = mat4.create();
 
   /**
    * Should this object updates frame state before rendering.
@@ -93,27 +86,34 @@ export class TransformObject {
   shouldUpdateFrameState = true;
 
   /**
-   * Composed model matrix of object tree.
+   * Composed model matrix of the entity in tree in last render frame.
    * @readonly
    */
   composedModelMatrix = mat4.create();
 
   /**
-   * Model-View-Projection matrix of this object in last render frame.
+   * Composed normal matrix of the entity in tree in last render frame.
+   * @type {mat4}
    * @readonly
    */
-  mvpMatrix = mat4.create();
+  composedNormalMatrix = mat4.create();
+
+  /**
+   * Composed Model-View-Projection matrix of the entity in tree in last render frame.
+   * @readonly
+   */
+  composedMvpMatrix = mat4.create();
 
   /**
    * Parent object.
-   * @type {TransformObject | null}
+   * @type {BaseEntity | null}
    * @readonly
    */
   parent = null;
 
   /**
    * Children objects.
-   * @type {TransformObject[]}
+   * @type {BaseEntity[]}
    * @readonly
    */
   children = [];
@@ -232,7 +232,7 @@ export class TransformObject {
   /**
    * Update frame state.
    * @public
-   * @param {import("../renderer.js").FrameState} frameState frame state
+   * @param {import("../WebGLRenderer.js").FrameState} frameState frame state
    */
   updateFrameState(frameState) {
     this.event.dispatchEvent(new ObjectFrameEvent("beforeUpdateFrameState", this, frameState));
@@ -243,14 +243,14 @@ export class TransformObject {
       mat4.copy(this.composedModelMatrix, this.modelMatrix);
     }
     mat4.mul(
-      this.mvpMatrix,
-      frameState.scene.camera.viewProjectionMatrix,
+      this.composedMvpMatrix,
+      frameState.scene.mainCamera.viewProjectionMatrix,
       this.composedModelMatrix
     );
 
     // normal matrix
-    mat4.invert(this.composeNormalMatrix, this.composedModelMatrix);
-    mat4.transpose(this.composeNormalMatrix, this.composeNormalMatrix);
+    mat4.invert(this.composedNormalMatrix, this.composedModelMatrix);
+    mat4.transpose(this.composedNormalMatrix, this.composedNormalMatrix);
 
     this.shouldUpdateFrameState = false;
 
@@ -264,7 +264,7 @@ export class TransformObject {
 
   /**
    * Add child object to this object.
-   * @param {TransformObject} child Child object
+   * @param {BaseEntity} child Child object
    */
   addChild(child) {
     if (child.parent) {

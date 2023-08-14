@@ -3,8 +3,8 @@ import {
   BufferTarget,
   BufferUsage,
   DrawType,
-  RenderableObject,
-} from "../core/renderable_object.js";
+  RenderEntity,
+} from "../entity/RenderEntity.js";
 
 /**
  * Create a sphere indexed mesh
@@ -149,7 +149,7 @@ export const createSphereTriangulated = (
   };
 };
 
-export class Sphere extends RenderableObject {
+export class Sphere extends RenderEntity {
   /**
    * Sphere radius.
    * @type {number}
@@ -210,7 +210,7 @@ export class Sphere extends RenderableObject {
       usage: BufferUsage.StaticDraw,
     });
     this.setBufferAttribute(
-      RenderableObject.BasicAttributeVariableNames.Position,
+      RenderEntity.BasicAttributeVariableNames.Position,
       "vertices",
       3,
       BufferAttributeDataType.Float,
@@ -219,7 +219,7 @@ export class Sphere extends RenderableObject {
       0
     );
     this.setBufferAttribute(
-      RenderableObject.BasicAttributeVariableNames.Normal,
+      RenderEntity.BasicAttributeVariableNames.Normal,
       "normals",
       3,
       BufferAttributeDataType.Float,

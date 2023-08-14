@@ -1,5 +1,5 @@
 import { mat4 } from "gl-matrix";
-import { Camera } from "./camera.js";
+import { Camera } from "./Camera.js";
 
 /**
  * Perspective Camera

@@ -1,13 +1,30 @@
 import { glMatrix } from "gl-matrix";
-import { PerspectiveCamera } from "./camera/perspective.js";
-import { TransformObject } from "./core/transform_object.js";
-import { Renderer } from "./renderer.js";
+import { PerspectiveCamera } from "./camera/Perspective.js";
+import { BaseEntity } from "./entity/BaseEntity.js";
+import { WebGLRenderer } from "./WebGLRenderer.js";
+
+export class FrameEvent extends Event {
+  /**
+   * @type {import("./WebGLRenderer.js").FrameState}
+   */
+  frameState;
+
+  /**
+   *
+   * @param {string} type
+   * @param {import("./WebGLRenderer.js").FrameState} frameState
+   */
+  constructor(type, frameState) {
+    super(type);
+    this.frameState = frameState;
+  }
+}
 
 /**
  * @typedef {Object} Options
- * @property {import("./camera/camera").Camera} [camera] Main camera, default {@link PerspectiveCamera}
+ * @property {import("./camera/Camera.js").Camera} [camera] Main camera, default {@link PerspectiveCamera}
  * @property {boolean} [enableDepthTest] Enable depth test, default `true`
- * @property {import("./renderer.js").CullFaceSide} [enableCullFace] Enable cull face
+ * @property {import("./WebGLRenderer.js").CullFace} [enableCullFace] Enable cull face
  * @property {import("gl-matrix").ReadonlyVec4} [clearColor] WebGl clear color, default `vec4 (0, 0, 0 ,0)`
  * @property {WebGLContextAttributes} [contextAttributes] WebGL context attributes
  */
@@ -28,10 +45,10 @@ export class Scene {
 
   /**
    * Main camera
-   * @type {import("./camera/camera").Camera}
+   * @type {import("./camera/Camera.js").Camera}
    * @readonly
    */
-  camera;
+  mainCamera;
 
   /**
    * WebGL rendering context
@@ -42,7 +59,7 @@ export class Scene {
 
   /**
    * Renderer
-   * @type {Renderer}
+   * @type {WebGLRenderer}
    * @readonly
    */
   renderer;
@@ -62,10 +79,12 @@ export class Scene {
 
   /**
    * Root object
-   * @type {TransformObject}
+   * @type {BaseEntity}
    * @readonly
    */
-  root = new TransformObject();
+  root = new BaseEntity();
+
+  event = new EventTarget();
 
   /**
    * Constructs a new scene
@@ -76,9 +95,9 @@ export class Scene {
     this.canvas = target instanceof HTMLCanvasElement ? target : document.getElementById(target);
 
     this.gl = this.canvas.getContext("webgl2", opts.contextAttributes);
-    this.renderer = new Renderer(this.gl, opts);
+    this.renderer = new WebGLRenderer(this.gl, opts);
 
-    this.camera =
+    this.mainCamera =
       opts.camera ??
       new PerspectiveCamera(
         glMatrix.toRadian(60),
@@ -91,8 +110,8 @@ export class Scene {
       this.canvas.width = this.canvas.clientWidth;
       this.canvas.height = this.canvas.clientHeight;
       this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-      this.camera.setAspect(this.gl.canvas.width / this.gl.canvas.height, true);
-      this.render();
+      this.mainCamera.setAspect(this.gl.canvas.width / this.gl.canvas.height, true);
+      this.renderFrame();
     });
     this.resizeObserver.observe(this.canvas);
   }
@@ -102,10 +121,20 @@ export class Scene {
    * @private
    */
   render(time = this._lastRenderTime) {
-    this.renderer.render({
+    const frameState = {
       time,
+      previousTime: this._lastRenderTime,
       scene: this,
-    });
+    };
+
+    // performance.mark("a")
+
+    this.event.dispatchEvent(new FrameEvent("prerender", frameState));
+    this.renderer.render(frameState);
+    this.event.dispatchEvent(new FrameEvent("postrender", frameState));
+
+    // const b = performance.measure("b", "a")
+    // console.log(b.duration);
 
     this._lastRenderTime = time;
 

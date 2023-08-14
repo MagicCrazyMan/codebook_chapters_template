@@ -268,13 +268,19 @@ setLightAttenuation();
 /**
  * Setups light specular shininess exponent
  */
-const uLightSpecularShininessExponent = gl.getUniformLocation(program, "u_LightSpecularShininessExponent");
+const uLightSpecularShininessExponent = gl.getUniformLocation(
+  program,
+  "u_LightSpecularShininessExponent"
+);
 const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
 uLightSpecularShininessExponentInput.addEventListener("input", () => {
   setLightSpecularShininessExponent();
 });
 const setLightSpecularShininessExponent = () => {
-  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(uLightSpecularShininessExponentInput.value));
+  gl.uniform1f(
+    uLightSpecularShininessExponent,
+    parseFloat(uLightSpecularShininessExponentInput.value)
+  );
 };
 setLightSpecularShininessExponent();
 
@@ -324,13 +330,18 @@ gl.enable(gl.DEPTH_TEST);
 gl.enable(gl.CULL_FACE);
 gl.cullFace(gl.BACK);
 const render = (time) => {
+  // performance.mark("a");
+
   updateLightPosition(time);
 
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
 
-  requestAnimationFrame(render);
+  // const b = performance.measure("b", "a");
+  // console.log(b.duration);
+
   lastAnimationTime = time;
+  requestAnimationFrame(render);
 };
 render(0);
 

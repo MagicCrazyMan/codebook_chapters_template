@@ -1,5 +1,13 @@
 import { mat4, vec3 } from "gl-matrix";
-import { abstractMethod } from "../utils.js";
+import { abstractMethod } from "../Utils.js";
+import { ArrayUniform, UniformType } from "../Uniform.js";
+
+/**
+ * @enum {string}
+ */
+export const CameraUniformNames = {
+  Position: "u_CameraPosition",
+};
 
 /**
  * Abstract camera.
@@ -56,6 +64,13 @@ export class Camera {
   shouldUpdateFrameState = true;
 
   /**
+   * Uniforms
+   * @type {Map<string, ArrayUniform>}
+   * @readonly
+   */
+  uniforms = new Map();
+
+  /**
    * Abstract constructor.
    * @param {import("gl-matrix").ReadonlyVec3} [position] Camera position, default `vec3(0, 0, 0)`
    * @param {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position, default `vec3(0, 0, 0)`
@@ -69,6 +84,10 @@ export class Camera {
     if (aspect) this.setAspect(aspect);
 
     this.updateViewMatrix();
+    this.uniforms.set(
+      CameraUniformNames.Position,
+      new ArrayUniform(UniformType.FloatVector3, this.position)
+    );
   }
 
   /**
