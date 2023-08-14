@@ -1,17 +1,16 @@
 import { vec4 } from "gl-matrix";
+import { ArrayAttribute, BufferAttribute } from "./Attribute.js";
 import {
-  ArrayAttribute,
   ArrayAttributeType,
-  BufferAttribute,
-  BufferAttributeDataType,
-  ReuseBufferAttribute,
-} from "./Attribute.js";
-import { UniformType } from "./Uniform.js";
+  UniformType,
+  glBufferAttributeDataType,
+  glBufferTarget,
+  glBufferUsage,
+  glDrawMode,
+} from "./Constants.js";
 import { RenderEntity } from "./entity/RenderEntity.js";
 import { ColorMaterial } from "./material/ColorMaterial.js";
 import {
-  AttributeBinding,
-  DrawMode,
   EntityUniformBinding,
   MainCameraUniformBinding,
   MaterialUniformBinding,
@@ -94,11 +93,11 @@ export class WebGLRenderer {
     this.gl = gl;
 
     this.enableDepthTest = opts.enableDepthTest ?? true;
-    this.enableCullFace = opts.cullFace ?? CullFace.None;
+    this.cullFace = opts.cullFace ?? CullFace.None;
     vec4.copy(this.clearColor, opts.clearColor ?? vec4.fromValues(0, 0, 0, 0));
 
     if (this.enableDepthTest) gl.enable(this.gl.DEPTH_TEST);
-    switch (this.enableCullFace) {
+    switch (this.cullFace) {
       case CullFace.None:
         gl.disable(gl.CULL_FACE);
         break;
@@ -168,12 +167,15 @@ export class WebGLRenderer {
 
       // collect only render entity and the render entity should has some vertices
       if (entity instanceof RenderEntity && entity.verticesCount !== 0) {
-        const materialName = entity.material.name();
-        let list = grouped.get(materialName);
+        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        this.materialPool.setMaterial(material);
+
+        let list = grouped.get(material.name());
         if (!list) {
           list = [];
-          grouped.set(materialName, list);
+          grouped.set(material.name(), list);
         }
+
         list.push(entity);
       }
     }
@@ -192,10 +194,11 @@ export class WebGLRenderer {
    */
   setMaterialUniforms(gl, materialItem, entity, frameState) {
     materialItem.uniforms.forEach(({ location, binding }, name) => {
-      /**@type {import("./Uniform.js").ArrayUniform | undefined} */
+      /**@type {import("./Uniform.js").Uniform | undefined} */
       let uniform;
       if (binding instanceof MaterialUniformBinding) {
-        uniform = entity.material.uniforms.get(name);
+        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        uniform = material.uniforms.get(name);
       } else if (binding instanceof EntityUniformBinding) {
         uniform = entity.uniforms.get(name);
       } else if (binding instanceof MainCameraUniformBinding) {
@@ -277,57 +280,21 @@ export class WebGLRenderer {
         return;
       }
 
-      if (attribute instanceof BufferAttribute || attribute instanceof ReuseBufferAttribute) {
-        if (attribute instanceof BufferAttribute) {
-          this.bufferPool.setBuffer(attribute);
-        }
-        this.bufferPool.bindBuffer(gl, attribute);
-
-        let type;
-        switch (attribute.type) {
-          case BufferAttributeDataType.Byte:
-            type = gl.BYTE;
-            break;
-          case BufferAttributeDataType.Float:
-            type = gl.FLOAT;
-            break;
-          case BufferAttributeDataType.HalfFloat:
-            type = gl.HALF_FLOAT;
-            break;
-          case BufferAttributeDataType.Int:
-            type = gl.INT;
-            break;
-          case BufferAttributeDataType.Int_2_10_10_10_Rev:
-            type = gl.INT_2_10_10_10_REV;
-            break;
-          case BufferAttributeDataType.Short:
-            type = gl.SHORT;
-            break;
-          case BufferAttributeDataType.UnsignedShort:
-            type = gl.UNSIGNED_SHORT;
-            break;
-          case BufferAttributeDataType.UnsignedByte:
-            type = gl.UNSIGNED_BYTE;
-            break;
-          case BufferAttributeDataType.UnsignedInt:
-            type = gl.UNSIGNED_INT;
-            break;
-          case BufferAttributeDataType.UnsignedInt_2_10_10_10_Rev:
-            type = gl.UNSIGNED_INT_2_10_10_10_REV;
-            break;
-        }
+      if (attribute instanceof BufferAttribute) {
+        this.bufferPool.setBuffer(attribute.descriptor);
+        this.bufferPool.bindBuffer(gl, attribute.descriptor);
 
         gl.vertexAttribPointer(
           location,
           attribute.size,
-          type,
+          glBufferAttributeDataType(gl, attribute.descriptor.type),
           attribute.normalized,
           attribute.stride,
           attribute.offset
         );
         gl.enableVertexAttribArray(location);
 
-        this.bufferPool.unbindBuffer(gl, attribute);
+        this.bufferPool.unbindBuffer(gl, attribute.descriptor);
       } else if (attribute instanceof ArrayAttribute) {
         switch (attribute.type) {
           case ArrayAttributeType.FloatVector1:
@@ -360,123 +327,16 @@ export class WebGLRenderer {
    * @param {RenderEntity} entity
    */
   drawEntity(gl, materialItem, entity) {
-    let mode;
-    switch (materialItem.drawMode) {
-      case DrawMode.Points:
-        mode = gl.POINTS;
-        break;
-      case DrawMode.Lines:
-        mode = gl.LINES;
-        break;
-      case DrawMode.LineStrip:
-        mode = gl.LINE_STRIP;
-        break;
-      case DrawMode.LineLoop:
-        mode = gl.LINE_LOOP;
-        break;
-      case DrawMode.Triangles:
-        mode = gl.TRIANGLES;
-        break;
-      case DrawMode.TrianglesFan:
-        mode = gl.TRIANGLE_FAN;
-        break;
-      case DrawMode.TrianglesStrip:
-        mode = gl.TRIANGLE_STRIP;
-        break;
-    }
-    gl.drawArrays(mode, entity.verticesOffset, entity.verticesCount);
+    console.log(entity);
+    console.log(materialItem.drawMode);
+    console.log(glDrawMode(gl, materialItem.drawMode));
+    gl.drawArrays(
+      glDrawMode(gl, materialItem.drawMode),
+      entity.verticesOffset,
+      entity.verticesCount
+    );
   }
 }
-
-/**
- * Buffer usages, mapping to WebGL enums.
- * @enum {number}
- */
-export const BufferUsage = {
-  StaticDraw: 0,
-  DynamicDraw: 1,
-  StreamDraw: 2,
-  StaticRead: 3,
-  DynamicRead: 4,
-  StreamRead: 5,
-  StaticCopy: 6,
-  DynamicCopy: 7,
-  StreamCopy: 8,
-};
-
-/**
- * Buffer targets, mapping to WebGL enums.
- * @enum {number}
- */
-export const BufferTarget = {
-  ArrayBuffer: 0,
-  ElementArrayBuffer: 1,
-  CopyReadBuffer: 2,
-  CopyWriteBuffer: 3,
-  TransformFeedbackBuffer: 4,
-  UniformBUffer: 5,
-  PixelPackBuffer: 6,
-  PixelUnpackBuffer: 7,
-};
-
-/**
- *
- * @param {WebGL2RenderingContext} gl
- * @param {BufferTarget} target
- * @returns {GLenum}
- */
-const getWebGLBufferTarget = (gl, target) => {
-  switch (target) {
-    case BufferTarget.ArrayBuffer:
-      return gl.ARRAY_BUFFER;
-    case BufferTarget.CopyReadBuffer:
-      return gl.COPY_READ_BUFFER;
-    case BufferTarget.CopyWriteBuffer:
-      return gl.COPY_WRITE_BUFFER;
-    case BufferTarget.ElementArrayBuffer:
-      return gl.ELEMENT_ARRAY_BUFFER;
-    case BufferTarget.PixelPackBuffer:
-      return gl.PIXEL_PACK_BUFFER;
-    case BufferTarget.PixelUnpackBuffer:
-      return gl.PIXEL_PACK_BUFFER;
-    case BufferTarget.TransformFeedbackBuffer:
-      return gl.TRANSFORM_FEEDBACK_BUFFER;
-    case BufferTarget.UniformBUffer:
-      return gl.UNIFORM_BUFFER;
-    default:
-      throw new Error(`unknown WebGL buffer target ${target}`);
-  }
-};
-/**
- *
- * @param {WebGL2RenderingContext} gl
- * @param {BufferTarget} usage
- * @returns {GLenum}
- */
-const getWebGLBufferUsage = (gl, usage) => {
-  switch (usage) {
-    case BufferUsage.DynamicCopy:
-      return gl.DYNAMIC_COPY;
-    case BufferUsage.DynamicDraw:
-      return gl.DYNAMIC_DRAW;
-    case BufferUsage.DynamicRead:
-      return gl.DYNAMIC_READ;
-    case BufferUsage.StaticCopy:
-      return gl.STATIC_COPY;
-    case BufferUsage.StaticDraw:
-      return gl.STATIC_DRAW;
-    case BufferUsage.StaticRead:
-      return gl.STATIC_READ;
-    case BufferUsage.StreamCopy:
-      return gl.STREAM_COPY;
-    case BufferUsage.StreamDraw:
-      return gl.STREAM_DRAW;
-    case BufferUsage.StreamRead:
-      return gl.STREAM_READ;
-    default:
-      throw new Error(`unknown WebGL buffer usage ${usage}`);
-  }
-};
 
 class BufferItem {
   /**
@@ -494,52 +354,39 @@ class BufferItem {
 
 class BufferPool {
   /**
-   * @type {WeakMap<BufferAttribute | ReuseBufferAttribute, BufferItem>}
+   * @type {WeakMap<import("./Attribute.js").BufferDescriptor, BufferItem>}
    */
   pool = new WeakMap();
 
   /**
-   * Tries to get buffer cache, throws error if not found
-   * @private
-   * @param {BufferAttribute | ReuseBufferAttribute} attribute
-   * @returns {BufferItem}
-   */
-  tryBuffer(attribute) {
-    const bufferCache = this.pool.get(attribute);
-    if (!bufferCache) throw new Error(`buffer ${attribute.bufferName} not found`);
-  }
-
-  /**
    * Adds a new buffer
-   * @param {BufferAttribute | ReuseBufferAttribute} attribute
+   * @param {import("./Attribute.js").BufferDescriptor} descriptor
    */
-  setBuffer(attribute) {
-    const buffer = this.pool.getBuffer(attribute);
+  setBuffer(descriptor) {
+    const buffer = this.pool.get(descriptor);
     if (buffer) return;
 
-    if (attribute instanceof BufferAttribute) {
-      this.pool.set(attribute, new BufferItem());
-    } else if (attribute instanceof ReuseBufferAttribute) {
-      this.pool.get;
-    }
+    this.pool.set(descriptor, new BufferItem());
   }
 
   /**
    * Binds a buffer
    * @param {WebGL2RenderingContext} gl
-   * @param {BufferAttribute | ReuseBufferAttribute} attribute
+   * @param {import("./Attribute.js").BufferDescriptor} descriptor
    */
-  bindBuffer(gl, attribute) {
-    const bufferItem = this.tryBuffer(attribute);
+  bindBuffer(gl, descriptor) {
+    const bufferItem = this.pool.get(descriptor);
+    if (!bufferItem) throw new Error(`buffer ${descriptor.name} not found`);
 
-    const target = getWebGLBufferTarget(gl, attribute.target);
+    const target = glBufferTarget(gl, descriptor.target);
     if (!bufferItem.buffered) {
       // if not buffered, bind and buffer data
       const buffer = gl.createBuffer();
       gl.bindBuffer(target, buffer);
-      gl.bufferData(target, attribute.data, getWebGLBufferUsage(gl, attribute.usage));
+      gl.bufferData(target, descriptor.data, glBufferUsage(gl, descriptor.usage));
+      console.log(gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE));
       bufferItem.buffer = buffer;
-    } else if (attribute.updated) {
+    } else if (descriptor.updated) {
       // if updated,
       // check whether current webgl buffer has enough size to store new data.
       // If true, reuse the WebGL buffer
@@ -548,24 +395,24 @@ class BufferPool {
       if (currentBufferSize >= bufferItem.data.byteLength) {
         gl.bufferSubData(target, 0, bufferItem.data);
       } else {
-        gl.bufferData(target, attribute.data, getWebGLBufferUsage(gl, attribute.usage));
+        gl.bufferData(target, descriptor.data, glBufferUsage(gl, descriptor.usage));
       }
     } else {
       // if buffered, bind buffer only
       gl.bindBuffer(target, bufferItem.buffer);
     }
 
-    bufferItem.updated = false;
+    descriptor.updated = false;
     bufferItem.buffered = true;
   }
 
   /**
    * Unbinds a buffer
    * @param {WebGL2RenderingContext} gl
-   * @param {BufferAttribute} attribute
+   * @param {import("./Attribute.js").BufferDescriptor} descriptor
    */
-  unbindBuffer(gl, attribute) {
-    gl.bindBuffer(getWebGLBufferTarget(gl, attribute.target), null);
+  unbindBuffer(gl, descriptor) {
+    gl.bindBuffer(glBufferTarget(gl, descriptor.target), null);
   }
 }
 
@@ -600,14 +447,14 @@ class MaterialAttribute {
    */
   location;
   /**
-   * @type {AttributeBinding}
+   * @type {import("./material/Material.js").AttributeBinding}
    */
   binding;
 
   /**
    *
    * @param {number} location
-   * @param {AttributeBinding} binding
+   * @param {import("./material/Material.js").AttributeBinding} binding
    */
   constructor(location, binding) {
     this.location = location;
@@ -650,11 +497,11 @@ class MaterialItem {
    */
   attributesBindings;
   /**
-   * @type {import("./material/Material.js").UniformBinding[]}
+   * @type {(import("./material/Material.js").MaterialUniformBinding | import("./material/Material.js").EntityUniformBinding | import("./material/Material.js").MainCameraUniformBinding)[]}
    */
   uniformBindings;
   /**
-   * @type {import("./material/Material.js").DrawMode}
+   * @type {import("./Constants.js").DrawMode}
    */
   drawMode;
 
@@ -714,13 +561,13 @@ class MaterialItem {
       const location = gl.getAttribLocation(program, binding.name);
       if (location < 0) throw new Error(`failed to get attribute location of ${binding.name}`);
 
-      this.attributes.set(name, new MaterialAttribute(location, binding));
+      this.attributes.set(binding.name, new MaterialAttribute(location, binding));
     });
     this.uniformBindings.forEach((binding) => {
       const location = gl.getUniformLocation(program, binding.name);
       if (location === null) throw new Error(`failed to get uniform location of ${binding.name}`);
 
-      this.uniforms.set(name, new MaterialUniform(location, binding));
+      this.uniforms.set(binding.name, new MaterialUniform(location, binding));
     });
 
     this.program = program;
@@ -735,30 +582,13 @@ class MaterialPool {
 
   /**
    * Sets a new material.
-   * @param {string} name
-   * @returns {MaterialItem | undefined}
-   */
-  getMaterial(name) {
-    this.materials.get(name);
-  }
-
-  /**
-   * Sets a new material.
    * @param {import("./material/Material.js").Material} material
    */
   setMaterial(material) {
     const name = material.name();
-    if (this.materials.has(name)) throw new Error(`material ${name} already existing`);
+    if (this.materials.has(name)) return;
 
     this.materials.set(name, new MaterialItem(material));
-  }
-
-  /**
-   * Remove an existing material
-   * @param {string} name
-   */
-  deleteMaterial(name) {
-    this.materials.delete(name);
   }
 
   /**

@@ -1,18 +1,9 @@
-import { BufferTarget, BufferUsage } from "./WebGLRenderer";
+import { v4 } from "uuid";
+import { BufferTarget, BufferUsage } from "./Constants.js";
 
 /**
- * Attribute types, mapping to WebGL enums.
- * @enum {number}
+ * Attribute from array
  */
-export const ArrayAttributeType = {
-  FloatVector1: 0,
-  FloatVector2: 1,
-  FloatVector3: 2,
-  FloatVector4: 3,
-  IntVector4: 4,
-  UnsignedIntVector4: 5,
-};
-
 export class ArrayAttribute {
   /**
    * ArrayBuffer source
@@ -23,7 +14,7 @@ export class ArrayAttribute {
 
   /**
    * Attribute type
-   * @type {ArrayAttributeType}
+   * @type {import("./Constants.js").ArrayAttributeType}
    * @readonly
    */
   type;
@@ -31,7 +22,7 @@ export class ArrayAttribute {
   /**
    *
    * @param {BufferSource} data
-   * @param {ArrayAttributeType} type
+   * @param {import("./Constants.js").ArrayAttributeType} type
    */
   constructor(data, type) {
     this.data = data;
@@ -56,8 +47,17 @@ export const BufferAttributeDataType = {
   UnsignedInt_2_10_10_10_Rev: 9,
 };
 
+/**
+ * Buffer descriptor
+ */
 export class BufferDescriptor {
   /**
+   * @type {string}
+   * @readonly
+   */
+  name;
+
+  /**
    * @type {BufferSource}
    * @readonly
    */
@@ -92,26 +92,32 @@ export class BufferDescriptor {
    * @param {BufferAttributeDataType} [type]
    * @param {BufferTarget} [target]
    * @param {BufferUsage} [usage]
+   * @param {string} [name]
    */
   constructor(
     data,
     type = BufferAttributeDataType.Float,
     target = BufferTarget.ArrayBuffer,
-    usage = BufferUsage.StaticDraw
+    usage = BufferUsage.StaticDraw,
+    name = v4()
   ) {
     this.data = data;
     this.type = type;
     this.target = target;
     this.usage = usage;
+    this.name = name;
   }
 }
 
+/**
+ * Attribute from buffer
+ */
 export class BufferAttribute {
   /**
-   * @type {string}
+   * @type {BufferDescriptor}
    * @readonly
    */
-  bufferName;
+  descriptor;
 
   /**
    * @type {BufferSource}
@@ -120,101 +126,6 @@ export class BufferAttribute {
   data;
 
   /**
-   * @type {boolean}
-   */
-  updated;
-
-  /**
-   * @type {BufferAttributeDataType}
-   * @readonly
-   */
-  type;
-
-  /**
-   * @type {number}
-   * @readonly
-   */
-  size;
-
-  /**
-   * @type {boolean}
-   * @readonly
-   */
-  normalized;
-
-  /**
-   * @type {number}
-   * @readonly
-   */
-  stride;
-
-  /**
-   * @type {number}
-   * @readonly
-   */
-  offset;
-
-  /**
-   * @type {BufferTarget}
-   * @readonly
-   */
-  target;
-
-  /**
-   * @type {BufferUsage}
-   * @readonly
-   */
-  usage;
-
-  /**
-   *
-   * @param {string} bufferName
-   * @param {BufferSource} data
-   * @param {number} size
-   * @param {BufferAttributeDataType} [type]
-   * @param {boolean} [normalized]
-   * @param {number} [stride]
-   * @param {number} [offset]
-   * @param {BufferTarget} [target]
-   * @param {BufferUsage} [usage]
-   */
-  constructor(
-    bufferName,
-    data,
-    size,
-    type = BufferAttributeDataType.Float,
-    normalized = false,
-    stride = 0,
-    offset = 0,
-    target = BufferTarget.ArrayBuffer,
-    usage = BufferUsage.StaticDraw
-  ) {
-    this.bufferName = bufferName;
-    this.data = data;
-    this.type = type;
-    this.size = size;
-    this.normalized = normalized;
-    this.stride = stride;
-    this.offset = offset;
-    this.target = target;
-    this.usage = usage;
-  }
-}
-
-export class ReuseBufferAttribute {
-  /**
-   * @type {string}
-   * @readonly
-   */
-  bufferName;
-
-  /**
-   * @type {BufferAttributeDataType}
-   * @readonly
-   */
-  type;
-
-  /**
    * @type {number}
    * @readonly
    */
@@ -240,16 +151,14 @@ export class ReuseBufferAttribute {
 
   /**
    *
-   * @param {string} bufferName
+   * @param {BufferDescriptor} descriptor
    * @param {number} size
-   * @param {BufferAttributeDataType} [type]
    * @param {boolean} [normalized]
    * @param {number} [stride]
    * @param {number} [offset]
    */
-  constructor(bufferName, size, type, normalized, stride, offset) {
-    this.bufferName = bufferName;
-    this.type = type;
+  constructor(descriptor, size, normalized = false, stride = 0, offset = 0) {
+    this.descriptor = descriptor;
     this.size = size;
     this.normalized = normalized;
     this.stride = stride;

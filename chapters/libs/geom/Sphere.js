@@ -1,10 +1,6 @@
-import {
-  BufferAttributeDataType,
-  BufferTarget,
-  BufferUsage,
-  DrawType,
-  RenderEntity,
-} from "../entity/RenderEntity.js";
+import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
+import { Uniform } from "../Uniform.js";
+import { EntityAttributeNames, EntityUniformNames, RenderEntity } from "../entity/RenderEntity.js";
 
 /**
  * Create a sphere indexed mesh
@@ -188,7 +184,7 @@ export class Sphere extends RenderEntity {
     rotation,
     scaling
   ) {
-    super(DrawType.Triangles, position, translation, rotation, scaling);
+    super(position, translation, rotation, scaling);
     this.radius = radius;
     this.verticalSegments = verticalSegments;
     this.horizontalSegments = horizontalSegments;
@@ -199,34 +195,17 @@ export class Sphere extends RenderEntity {
       horizontalSegments
     );
 
-    this.setBuffer("vertices", {
-      arraybuffer: vertices,
-      target: BufferTarget.ArrayBuffer,
-      usage: BufferUsage.StaticDraw,
-    });
-    this.setBuffer("normals", {
-      arraybuffer: normals,
-      target: BufferTarget.ArrayBuffer,
-      usage: BufferUsage.StaticDraw,
-    });
-    this.setBufferAttribute(
-      RenderEntity.BasicAttributeVariableNames.Position,
-      "vertices",
-      3,
-      BufferAttributeDataType.Float,
-      false,
-      0,
-      0
+    this.attributes.set(
+      EntityAttributeNames.Position,
+      new BufferAttribute(new BufferDescriptor(vertices), 3)
     );
-    this.setBufferAttribute(
-      RenderEntity.BasicAttributeVariableNames.Normal,
-      "normals",
-      3,
-      BufferAttributeDataType.Float,
-      false,
-      0,
-      0
+    this.attributes.set(
+      EntityAttributeNames.Normal,
+      new BufferAttribute(new BufferDescriptor(normals), 3)
     );
+    this.uniforms.set(EntityUniformNames.ModelMatrix, new Uniform(this.composedModelMatrix));
+    this.uniforms.set(EntityUniformNames.NormalMatrix, new Uniform(this.composedNormalMatrix));
+    this.uniforms.set(EntityUniformNames.MvpMatrix, new Uniform(this.composedMvpMatrix));
     this.verticesCount = vertices.length / 3;
   }
 }

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ArrayAttribute, BufferAttribute, ReuseBufferAttribute } from "../Attribute.js";
-import { ArrayUniform, UniformType } from "../Uniform.js";
+import { ArrayAttribute, BufferAttribute } from "../Attribute.js";
+import { UniformType } from "../Constants.js";
+import { Uniform } from "../Uniform.js";
 import { BaseEntity } from "./BaseEntity.js";
 
 /**
@@ -39,14 +40,14 @@ export const EntityUniformNames = {
 export class RenderEntity extends BaseEntity {
   /**
    * Attributes
-   * @type {Map<string, ArrayAttribute | BufferAttribute | ReuseBufferAttribute>}
+   * @type {Map<string, ArrayAttribute | BufferAttribute>}
    * @readonly
    */
   attributes = new Map();
 
   /**
    * Uniforms
-   * @type {Map<string, ArrayUniform>}
+   * @type {Map<string, Uniform>}
    * @readonly
    */
   uniforms = new Map();
@@ -81,15 +82,15 @@ export class RenderEntity extends BaseEntity {
 
     this.uniforms.set(
       EntityUniformNames.ModelMatrix,
-      new ArrayUniform(UniformType.Mat4, this.composedModelMatrix)
+      new Uniform(UniformType.Mat4, this.composedModelMatrix)
     );
     this.uniforms.set(
       EntityUniformNames.NormalMatrix,
-      new ArrayUniform(UniformType.Mat4, this.composedNormalMatrix)
+      new Uniform(UniformType.Mat4, this.composedNormalMatrix)
     );
     this.uniforms.set(
       EntityUniformNames.MvpMatrix,
-      new ArrayUniform(UniformType.Mat4, this.composedMvpMatrix)
+      new Uniform(UniformType.Mat4, this.composedMvpMatrix)
     );
   }
 }

@@ -1,7 +1,13 @@
 import { vec4 } from "gl-matrix";
-import { ArrayUniform, UniformType } from "../Uniform.js";
+import { DrawMode, UniformType } from "../Constants.js";
+import { Uniform } from "../Uniform.js";
 import { EntityAttributeNames, EntityUniformNames } from "../entity/RenderEntity.js";
-import { AttributeBinding, DrawMode, EntityUniformBinding, Material } from "./Material.js";
+import {
+  AttributeBinding,
+  EntityUniformBinding,
+  Material,
+  MaterialUniformBinding,
+} from "./Material.js";
 
 export class ColorMaterial extends Material {
   /**
@@ -61,8 +67,8 @@ export class ColorMaterial extends Material {
    */
   uniformBindings() {
     return [
-      // new UniformBinding(EntityUniformNames.ModelMatrix, UniformType.Mat4, UniformSource.Entity),
-      new EntityUniformBinding(EntityUniformNames.ModelMatrix, UniformType.Mat4),
+      new MaterialUniformBinding("u_Color", UniformType.FloatVector4),
+      new EntityUniformBinding(EntityUniformNames.MvpMatrix, UniformType.Mat4),
     ];
   }
 
@@ -92,7 +98,7 @@ export class ColorMaterial extends Material {
     super();
     this.setColor(r, g, b, a);
 
-    this.uniforms.set("u_Color", new ArrayUniform(UniformType.FloatVector4, this.color));
+    this.uniforms.set("u_Color", new Uniform(this.color));
   }
 
   /**

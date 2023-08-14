@@ -11,11 +11,11 @@ export class AttributeBinding {
   name;
 
   /**
-   * 
-   * @param {string} name 
+   *
+   * @param {string} name
    */
   constructor(name) {
-    this.name = name
+    this.name = name;
   }
 }
 
@@ -28,18 +28,18 @@ export class MaterialUniformBinding {
    */
   name;
   /**
-   * @type {import("../Uniform.js").UniformType}
+   * @type {import("../Constants.js").UniformType}
    */
   type;
 
   /**
-   * 
-   * @param {string} name 
-   * @param {import("../Uniform.js").UniformType} type 
+   *
+   * @param {string} name
+   * @param {import("../Constants.js").UniformType} type
    */
   constructor(name, type) {
-    this.name = name
-    this.type = type
+    this.name = name;
+    this.type = type;
   }
 }
 
@@ -52,18 +52,18 @@ export class EntityUniformBinding {
    */
   name;
   /**
-   * @type {import("../Uniform.js").UniformType}
+   * @type {import("../Constants.js").UniformType}
    */
   type;
 
   /**
-   * 
-   * @param {string} name 
-   * @param {import("../Uniform.js").UniformType} type 
+   *
+   * @param {string} name
+   * @param {import("../Constants.js").UniformType} type
    */
   constructor(name, type) {
-    this.name = name
-    this.type = type
+    this.name = name;
+    this.type = type;
   }
 }
 
@@ -76,34 +76,21 @@ export class MainCameraUniformBinding {
    */
   name;
   /**
-   * @type {import("../Uniform.js").UniformType}
+   * @type {import("../Constants.js").UniformType}
    */
   type;
 
   /**
-   * 
-   * @param {string} name 
-   * @param {import("../Uniform.js").UniformType} type 
+   *
+   * @param {string} name
+   * @param {import("../Constants.js").UniformType} type
    */
   constructor(name, type) {
-    this.name = name
-    this.type = type
+    this.name = name;
+    this.type = type;
   }
 }
 
-/**
- * Draw modes, mapping to WebGL enums.
- * @enum {number}
- */
-export const DrawMode = {
-  Points: 0,
-  Lines: 1,
-  LineStrip: 2,
-  LineLoop: 3,
-  Triangles: 4,
-  TrianglesFan: 5,
-  TrianglesStrip: 6,
-};
 /**
  * Abstract material
  * @abstract
@@ -150,7 +137,7 @@ export class Material {
 
   /**
    * Returns draw mode of this material
-   * @returns {DrawMode}
+   * @returns {import("../Constants.js").DrawMode}
    */
   drawMode() {
     abstractMethod();
@@ -158,7 +145,7 @@ export class Material {
 
   /**
    * Uniforms
-   * @type {Map<string, import("../Uniform.js").ArrayUniform>}
+   * @type {Map<string, import("../Uniform.js").Uniform>}
    * @readonly
    */
   uniforms = new Map();

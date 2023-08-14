@@ -1,6 +1,7 @@
 import { mat4, vec3 } from "gl-matrix";
 import { abstractMethod } from "../Utils.js";
-import { ArrayUniform, UniformType } from "../Uniform.js";
+import { Uniform } from "../Uniform.js";
+import { UniformType } from "../Constants.js";
 
 /**
  * @enum {string}
@@ -65,7 +66,7 @@ export class Camera {
 
   /**
    * Uniforms
-   * @type {Map<string, ArrayUniform>}
+   * @type {Map<string, Uniform>}
    * @readonly
    */
   uniforms = new Map();
@@ -86,7 +87,7 @@ export class Camera {
     this.updateViewMatrix();
     this.uniforms.set(
       CameraUniformNames.Position,
-      new ArrayUniform(UniformType.FloatVector3, this.position)
+      new Uniform(UniformType.FloatVector3, this.position)
     );
   }
 
