@@ -120,12 +120,6 @@ export class BufferAttribute {
   descriptor;
 
   /**
-   * @type {BufferSource}
-   * @readonly
-   */
-  data;
-
-  /**
    * @type {number}
    * @readonly
    */

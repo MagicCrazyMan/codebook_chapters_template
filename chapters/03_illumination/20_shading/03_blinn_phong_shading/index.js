@@ -16,9 +16,9 @@ import {
 } from "../../../libs/material/Material";
 import { Uniform } from "../../../libs/Uniform";
 
-class BlinnPhongMaterial extends Material {
+class BlinnPhongShading extends Material {
   name() {
-    return "BlinnPhongMaterial";
+    return "BlinnPhongShading";
   }
 
   vertexShaderSource() {
@@ -184,15 +184,32 @@ class BlinnPhongMaterial extends Material {
       new Uniform(UniformType.FloatVector3, this.lightAttenuations)
     );
   }
+
+  rps = glMatrix.toRadian(20);
+  lightBasePosition = vec3.fromValues(0, 5, 5);
+  lightPositionModelMatrix = mat4.create();
+
+  /**
+   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
+   * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
+   */
+  prerender(entity, frameState) {
+    /**
+     * Rotates light position per frame
+     */
+    const rotationOffset = ((frameState.time - frameState.previousTime) / 1000) * this.rps;
+    mat4.rotateY(this.lightPositionModelMatrix, this.lightPositionModelMatrix, rotationOffset);
+    vec3.transformMat4(this.lightPosition, this.lightBasePosition, this.lightPositionModelMatrix);
+  }
 }
 
-const blinnPhongMaterial = new BlinnPhongMaterial();
+const blinnPhongShading = new BlinnPhongShading();
 
 /**
  * Create sphere object and set uniforms
  */
 const sphere = new Sphere(2, 24);
-sphere.material = blinnPhongMaterial;
+sphere.material = blinnPhongShading;
 sphere.uniforms.set(
   "u_SpecularLightShininessExponent",
   new Uniform(UniformType.FloatVector1, new Float32Array([512]))
@@ -229,55 +246,40 @@ const scene = new Scene(canvas, {
 scene.root.addChild(sphere); // add sphere object into scene
 
 /**
- * Updates light rotation per frame
- */
-const rps = glMatrix.toRadian(20);
-const lightBasePosition = vec3.fromValues(0, 5, 5);
-const lightPositionModelMatrix = mat4.create();
-scene.event.addEventListener("prerender", (event) => {
-  /**@type {import("../../../libs/WebGLRenderer").FrameState} */
-  const frameState = event.frameState;
-
-  const rotationOffset = ((frameState.time - frameState.previousTime) / 1000) * rps;
-  mat4.rotateY(lightPositionModelMatrix, lightPositionModelMatrix, rotationOffset);
-  vec3.transformMat4(blinnPhongMaterial.lightPosition, lightBasePosition, lightPositionModelMatrix);
-});
-
-/**
  * Setups ambient light color
  */
 watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongMaterial.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(blinnPhongShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups diffuse light color
  */
 watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongMaterial.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(blinnPhongShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups specular light color
  */
 watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongMaterial.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(blinnPhongShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups diffuse light intensity
  */
 watchInput("diffuseIntensity", (value) => {
-  blinnPhongMaterial.diffuseLightIntensity[0] = parseFloat(value);
+  blinnPhongShading.diffuseLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups specular light intensity
  */
 watchInput("specularIntensity", (value) => {
-  blinnPhongMaterial.specularLightIntensity[0] = parseFloat(value);
+  blinnPhongShading.specularLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups light attenuations
  */
 watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
-  vec3.set(blinnPhongMaterial.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
+  vec3.set(blinnPhongShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
 });
 /**
  * Setups specular light shininess exponent

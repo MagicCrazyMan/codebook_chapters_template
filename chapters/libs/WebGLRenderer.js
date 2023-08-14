@@ -140,6 +140,7 @@ export class WebGLRenderer {
     const grouped = this.collectEntitiesByMaterials(frameState);
     // render each material group
     grouped.forEach((entities, materialName) => {
+      // use material, all entities in the same group use the same program
       const materialItem = this.materialPool.getMaterial(gl, materialName);
       if (this.lastProgram !== materialItem.program) {
         gl.useProgram(materialItem.program);
@@ -147,6 +148,9 @@ export class WebGLRenderer {
       }
 
       entities.forEach((entity) => {
+        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        material.prerender(entity, frameState);
+        
         this.setMaterialUniforms(gl, materialItem, entity, frameState);
         this.setMaterialAttributes(gl, materialItem, entity);
         this.drawEntity(gl, materialItem, entity);
@@ -180,13 +184,13 @@ export class WebGLRenderer {
         const material = entity.material ?? WebGLRenderer.DefaultMaterial;
         this.materialPool.setMaterial(material);
 
-        let list = grouped.get(material.name());
-        if (!list) {
-          list = [];
-          grouped.set(material.name(), list);
+        let entities = grouped.get(material.name());
+        if (!entities) {
+          entities = [];
+          grouped.set(material.name(), entities);
         }
 
-        list.push(entity);
+        entities.push(entity);
       }
     }
 
@@ -398,8 +402,8 @@ class BufferPool {
       // If true, reuse the WebGL buffer
       gl.bindBuffer(target, bufferItem.buffer);
       const currentBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-      if (currentBufferSize >= bufferItem.data.byteLength) {
-        gl.bufferSubData(target, 0, bufferItem.data);
+      if (currentBufferSize >= descriptor.data.byteLength) {
+        gl.bufferSubData(target, 0, descriptor.data);
       } else {
         gl.bufferData(target, descriptor.data, glBufferUsage(gl, descriptor.usage));
       }

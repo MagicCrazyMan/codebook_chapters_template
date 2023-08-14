@@ -131,4 +131,15 @@ export class Material {
    * @readonly
    */
   uniforms = new Map();
+
+  /**
+   * Updates material before rendering.
+   * 
+   * If material never change, left this method empty.
+   * @param {import("../entity/RenderEntity.js").RenderEntity} entity 
+   * @param {import("../WebGLRenderer.js").FrameState} frameState 
+   */
+  prerender(entity, frameState) {
+    //
+  }
 }

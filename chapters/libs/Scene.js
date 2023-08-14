@@ -78,6 +78,11 @@ export class Scene {
   _lastRenderTime = 0;
 
   /**
+   * @type {number}
+   */
+  _frameCount = 0;
+
+  /**
    * Root object
    * @type {BaseEntity}
    * @readonly
@@ -125,6 +130,7 @@ export class Scene {
       time,
       previousTime: this._lastRenderTime,
       scene: this,
+      frameCount: this._frameCount,
     };
 
     this.event.dispatchEvent(new FrameEvent("prerender", frameState));
@@ -132,6 +138,7 @@ export class Scene {
     this.event.dispatchEvent(new FrameEvent("postrender", frameState));
 
     this._lastRenderTime = time;
+    this._frameCount++;
 
     if (this._requestAnimating) {
       requestAnimationFrame(this.render.bind(this));
