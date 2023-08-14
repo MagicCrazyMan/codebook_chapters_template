@@ -16,9 +16,9 @@ import {
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
 
-class BlinnPhongShading extends Material {
+class PhongShading extends Material {
   name() {
-    return "BlinnPhongShading";
+    return "PhongShading";
   }
 
   vertexShaderSource() {
@@ -203,13 +203,13 @@ class BlinnPhongShading extends Material {
   }
 }
 
-const blinnPhongShading = new BlinnPhongShading();
+const phongShading = new PhongShading();
 
 /**
  * Create sphere object and set uniforms
  */
 const sphere = new Sphere(2, 24);
-sphere.material = blinnPhongShading;
+sphere.material = phongShading;
 sphere.uniforms.set(
   "u_SpecularLightShininessExponent",
   new Uniform(UniformType.FloatVector1, new Float32Array([512]))
@@ -249,37 +249,37 @@ scene.root.addChild(sphere); // add sphere object into scene
  * Setups ambient light color
  */
 watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(phongShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups diffuse light color
  */
 watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(phongShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups specular light color
  */
 watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(blinnPhongShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+  vec3.set(phongShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
 /**
  * Setups diffuse light intensity
  */
 watchInput("diffuseIntensity", (value) => {
-  blinnPhongShading.diffuseLightIntensity[0] = parseFloat(value);
+  phongShading.diffuseLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups specular light intensity
  */
 watchInput("specularIntensity", (value) => {
-  blinnPhongShading.specularLightIntensity[0] = parseFloat(value);
+  phongShading.specularLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups light attenuations
  */
 watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
-  vec3.set(blinnPhongShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
+  vec3.set(phongShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
 });
 /**
  * Setups specular light shininess exponent
