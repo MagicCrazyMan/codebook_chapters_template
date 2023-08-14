@@ -1,337 +1,294 @@
-import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
-import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
-import { createSphereTriangulated } from "../../../libs/geom/Sphere";
+import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { DrawMode, UniformType } from "../../../libs/Constants";
+import { Scene } from "../../../libs/Scene";
+import { Uniform } from "../../../libs/Uniform";
+import { CullFace } from "../../../libs/WebGLRenderer";
+import { CameraUniformNames } from "../../../libs/camera/Camera";
+import { PerspectiveCamera } from "../../../libs/camera/Perspective";
+import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
+import { Sphere } from "../../../libs/geom/Sphere";
+import {
+  EntityAttributeBinding,
+  EntityUniformBinding,
+  MainCameraUniformBinding,
+  Material,
+  MaterialUniformBinding,
+} from "../../../libs/material/Material";
 
-const vertexShader = `
-  attribute vec4 a_Position;
-  attribute vec4 a_Normal;
-  
-  uniform vec3 u_AmbientReflection;
-
-  uniform mat4 u_MvpMatrix;
-  uniform mat4 u_ModelMatrix;
-  uniform mat4 u_NormalMatrix;
-
-  uniform vec3 u_AmbientLightColor;
-
-  varying vec3 v_AmbientColor;
-
-  varying vec3 v_Normal;
-  varying vec3 v_Position;
-
-  /**
-   * Calculates ambient reflection color
-   */
-  vec3 ambient() {
-    return u_AmbientLightColor * u_AmbientReflection;
+class BlinnPhongShading extends Material {
+  name() {
+    return "BlinnPhongShading";
   }
 
-  void main() {
-    gl_Position = u_MvpMatrix * a_Position;
-    v_Position = vec3(u_ModelMatrix * a_Position);
-    v_Normal = vec3(u_NormalMatrix * a_Normal);
+  vertexShaderSource() {
+    return `
+      attribute vec4 a_Position;
+      attribute vec4 a_Normal;
+      
+      uniform vec3 u_AmbientReflection;
 
-    v_AmbientColor = ambient();
-  }
-`;
-const fragmentShader = `
-  #ifdef GL_FRAGMENT_PRECISION_HIGH
-    precision highp float;
-  #else
-    precision mediump float;
-  #endif
+      uniform mat4 u_MvpMatrix;
+      uniform mat4 u_ModelMatrix;
+      uniform mat4 u_NormalMatrix;
 
-  uniform vec3 u_LightPosition;
-  uniform vec3 u_DiffuseLightColor;
-  uniform vec3 u_SpecularLightColor;
-  uniform float u_LightSpecularShininessExponent;
+      uniform vec3 u_AmbientLightColor;
 
-  uniform float u_LightDiffuseIntensity;
-  uniform float u_LightSpecularIntensity;
-  uniform float u_LightAttenuationA;
-  uniform float u_LightAttenuationB;
-  uniform float u_LightAttenuationC;
+      varying vec3 v_AmbientColor;
 
-  uniform vec3 u_CameraPosition;
+      varying vec3 v_Normal;
+      varying vec3 v_Position;
 
-  uniform vec3 u_DiffuseReflection;
-  uniform vec3 u_SpecularReflection;
-  varying vec3 v_AmbientColor;
+      /**
+       * Calculates ambient reflection color
+       */
+      vec3 ambient() {
+        return u_AmbientLightColor * u_AmbientReflection;
+      }
 
-  varying vec3 v_Normal;
-  varying vec3 v_Position;
+      void main() {
+        gl_Position = u_MvpMatrix * a_Position;
+        v_Position = vec3(u_ModelMatrix * a_Position);
+        v_Normal = vec3(u_NormalMatrix * a_Normal);
 
-  /**
-   * Calculates diffuse reflection color
-   */
-  vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
-    float cosine = max(dot(normal, lightDirection), 0.0);
-    return attenuation * u_LightDiffuseIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
+        v_AmbientColor = ambient();
+      }
+    `;
   }
 
-  /**
-   * Calculates specular reflection color
-   */
-  vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
-    float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
-    float power = pow(cosine, u_LightSpecularShininessExponent);
-    return attenuation * u_LightSpecularIntensity * u_SpecularLightColor * u_SpecularReflection * power;
-  }
-
-  void main() {
-    vec3 normal = normalize(v_Normal);
-    vec3 lightDirection = normalize(u_LightPosition - v_Position);
-    vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-    vec3 reflectionDirection = reflect(-lightDirection, normal);
-
-    float distanceToLight = distance(v_Position, u_LightPosition);
-    float attenuationComponent = u_LightAttenuationA + u_LightAttenuationB * distanceToLight + u_LightAttenuationC * pow(distanceToLight, 2.0);
-    float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
+  fragmentShaderSource() {
+    return `
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+      #else
+        precision mediump float;
+      #endif
     
-    vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-    vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
-
-    gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
+      uniform vec3 u_LightPosition;
+      uniform vec3 u_DiffuseLightColor;
+      uniform vec3 u_SpecularLightColor;
+      uniform float u_SpecularLightShininessExponent;
+    
+      uniform float u_DiffuseLightIntensity;
+      uniform float u_SpecularLightIntensity;
+      uniform vec3 u_LightAttenuations;
+    
+      uniform vec3 u_CameraPosition;
+    
+      uniform vec3 u_DiffuseReflection;
+      uniform vec3 u_SpecularReflection;
+      varying vec3 v_AmbientColor;
+    
+      varying vec3 v_Normal;
+      varying vec3 v_Position;
+    
+      /**
+       * Calculates diffuse reflection color
+       */
+      vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
+        float cosine = max(dot(normal, lightDirection), 0.0);
+        return attenuation * u_DiffuseLightIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
+      }
+    
+      /**
+       * Calculates specular reflection color
+       */
+      vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
+        float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
+        float power = pow(cosine, u_SpecularLightShininessExponent);
+        return attenuation * u_SpecularLightIntensity * u_SpecularLightColor * u_SpecularReflection * power;
+      }
+    
+      void main() {
+        vec3 normal = normalize(v_Normal);
+        vec3 lightDirection = normalize(u_LightPosition - v_Position);
+        vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
+        vec3 reflectionDirection = reflect(-lightDirection, normal);
+    
+        float distanceToLight = distance(v_Position, u_LightPosition);
+        float attenuationComponent = u_LightAttenuations.x + u_LightAttenuations.y * distanceToLight + u_LightAttenuations.z * pow(distanceToLight, 2.0);
+        float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
+        
+        vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
+        vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
+    
+        gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
+      }
+    `;
   }
-`;
 
-const gl = getWebGLContext();
-const program = bindWebGLProgram(gl, [
-  { source: vertexShader, type: gl.VERTEX_SHADER },
-  { source: fragmentShader, type: gl.FRAGMENT_SHADER },
-]);
+  attributesBindings() {
+    return [
+      new EntityAttributeBinding(EntityAttributeNames.Position),
+      new EntityAttributeBinding(EntityAttributeNames.Normal),
+    ];
+  }
+
+  uniformBindings() {
+    return [
+      new EntityUniformBinding(EntityUniformNames.ModelMatrix),
+      new EntityUniformBinding(EntityUniformNames.NormalMatrix),
+      new EntityUniformBinding(EntityUniformNames.MvpMatrix),
+      new EntityUniformBinding("u_SpecularLightShininessExponent"),
+      new EntityUniformBinding("u_AmbientReflection"),
+      new EntityUniformBinding("u_DiffuseReflection"),
+      new EntityUniformBinding("u_SpecularReflection"),
+      new MaterialUniformBinding("u_LightPosition"),
+      new MaterialUniformBinding("u_AmbientLightColor"),
+      new MaterialUniformBinding("u_DiffuseLightColor"),
+      new MaterialUniformBinding("u_SpecularLightColor"),
+      new MaterialUniformBinding("u_DiffuseLightIntensity"),
+      new MaterialUniformBinding("u_SpecularLightIntensity"),
+      new MaterialUniformBinding("u_LightAttenuations"),
+      new MainCameraUniformBinding(CameraUniformNames.Position),
+    ];
+  }
+
+  drawMode() {
+    return DrawMode.Triangles;
+  }
+
+  lightPosition = vec3.create();
+  ambientLightColor = vec3.create();
+  diffuseLightColor = vec3.create();
+  specularLightColor = vec3.create();
+  diffuseLightIntensity = new Float32Array(1);
+  specularLightIntensity = new Float32Array(1);
+  lightAttenuations = vec3.create();
+
+  constructor() {
+    super();
+    this.uniforms.set("u_LightPosition", new Uniform(UniformType.FloatVector3, this.lightPosition));
+    this.uniforms.set(
+      "u_AmbientLightColor",
+      new Uniform(UniformType.FloatVector3, this.ambientLightColor)
+    );
+    this.uniforms.set(
+      "u_DiffuseLightColor",
+      new Uniform(UniformType.FloatVector3, this.diffuseLightColor)
+    );
+    this.uniforms.set(
+      "u_SpecularLightColor",
+      new Uniform(UniformType.FloatVector3, this.specularLightColor)
+    );
+    this.uniforms.set(
+      "u_DiffuseLightIntensity",
+      new Uniform(UniformType.FloatVector1, this.diffuseLightIntensity)
+    );
+    this.uniforms.set(
+      "u_SpecularLightIntensity",
+      new Uniform(UniformType.FloatVector1, this.specularLightIntensity)
+    );
+    this.uniforms.set(
+      "u_LightAttenuations",
+      new Uniform(UniformType.FloatVector3, this.lightAttenuations)
+    );
+  }
+
+  rps = glMatrix.toRadian(20);
+  lightBasePosition = vec3.fromValues(0, 5, 5);
+  lightPositionModelMatrix = mat4.create();
+
+  /**
+   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
+   * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
+   */
+  prerender(entity, frameState) {
+    /**
+     * Rotates light position per frame
+     */
+    const rotationOffset = ((frameState.time - frameState.previousTime) / 1000) * this.rps;
+    mat4.rotateY(this.lightPositionModelMatrix, this.lightPositionModelMatrix, rotationOffset);
+    vec3.transformMat4(this.lightPosition, this.lightBasePosition, this.lightPositionModelMatrix);
+  }
+}
+
+const blinnPhongShading = new BlinnPhongShading();
 
 /**
- * Setups mvp, normal matrix and camera position
+ * Create sphere object and set uniforms
  */
-const uMvpMatrix = gl.getUniformLocation(program, "u_MvpMatrix");
-const uModelMatrix = gl.getUniformLocation(program, "u_ModelMatrix");
-const uNormalMatrix = gl.getUniformLocation(program, "u_NormalMatrix");
-const uCameraPosition = gl.getUniformLocation(program, "u_CameraPosition");
-const modelMatrix = mat4.create();
-const cameraPosition = vec3.fromValues(0, 0, 6);
-const viewMatrix = mat4.lookAt(
-  mat4.create(),
-  cameraPosition,
-  vec3.fromValues(0, 0, 0),
-  vec3.fromValues(0, 1, 0)
+const sphere = new Sphere(2, 24);
+sphere.material = blinnPhongShading;
+sphere.uniforms.set(
+  "u_SpecularLightShininessExponent",
+  new Uniform(UniformType.FloatVector1, new Float32Array([512]))
 );
-const projectionMatrix = mat4.create();
-const mvpMatrix = mat4.create();
-const normalMatrix = mat4.create();
-mat4.invert(normalMatrix, modelMatrix);
-mat4.transpose(normalMatrix, normalMatrix);
-gl.uniformMatrix4fv(uModelMatrix, false, modelMatrix);
-gl.uniformMatrix4fv(uNormalMatrix, false, normalMatrix);
-gl.uniform3fv(uCameraPosition, cameraPosition);
-const setMvpMatrix = () => {
-  mat4.perspective(
-    projectionMatrix,
-    glMatrix.toRadian(50),
-    gl.canvas.width / gl.canvas.height,
-    1,
-    1000
-  );
-
-  mat4.identity(mvpMatrix);
-  mat4.multiply(mvpMatrix, mvpMatrix, projectionMatrix);
-  mat4.multiply(mvpMatrix, mvpMatrix, viewMatrix);
-  mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
-  gl.uniformMatrix4fv(uMvpMatrix, false, mvpMatrix);
-};
-setMvpMatrix();
+sphere.uniforms.set(
+  "u_AmbientReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
+sphere.uniforms.set(
+  "u_DiffuseReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
+sphere.uniforms.set(
+  "u_SpecularReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
 
 /**
- * Setups light position
+ * Create scene
  */
-const uLightPosition = gl.getUniformLocation(program, "u_LightPosition");
-const lightPosition = vec4.create();
-const lightOriginPosition = vec4.fromValues(0, 0, 0, 1);
-const lightTranslation = vec3.fromValues(0, 5, 5);
-const lightModelMatrix = mat4.create();
-const rps = glMatrix.toRadian(20); // Radian Per Second
-let lastAnimationTime = 0;
-let currentRotation = 0;
-const updateLightPosition = (time) => {
-  currentRotation += ((time - lastAnimationTime) / 1000) * rps;
-  currentRotation %= 2 * Math.PI;
-
-  mat4.identity(lightModelMatrix, lightModelMatrix);
-  mat4.rotateY(lightModelMatrix, lightModelMatrix, currentRotation);
-  mat4.translate(lightModelMatrix, lightModelMatrix, lightTranslation);
-  vec4.transformMat4(lightPosition, lightOriginPosition, lightModelMatrix);
-
-  gl.uniform3f(uLightPosition, lightPosition[0], lightPosition[1], lightPosition[2]);
-};
+const canvas = getCanvas();
+const scene = new Scene(canvas, {
+  cullFace: CullFace.Back,
+  camera: new PerspectiveCamera(
+    glMatrix.toRadian(50),
+    canvas.width / canvas.height,
+    1,
+    1000,
+    vec3.fromValues(0, 0, 6),
+    vec3.fromValues(0, 0, 0),
+    vec3.fromValues(0, 1, 0)
+  ),
+});
+scene.root.addChild(sphere); // add sphere object into scene
 
 /**
  * Setups ambient light color
  */
-const uAmbientLightColor = gl.getUniformLocation(program, "u_AmbientLightColor");
-const ambientLightColorInputs = [
-  document.getElementById("ambientColorR"),
-  document.getElementById("ambientColorG"),
-  document.getElementById("ambientColorB"),
-];
-ambientLightColorInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setAmbientLightColor();
-  });
+watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-const setAmbientLightColor = () => {
-  gl.uniform3f(
-    uAmbientLightColor,
-    parseFloat(ambientLightColorInputs[0].value),
-    parseFloat(ambientLightColorInputs[1].value),
-    parseFloat(ambientLightColorInputs[2].value)
-  );
-};
-setAmbientLightColor();
-
 /**
  * Setups diffuse light color
  */
-const uDiffuseLightColor = gl.getUniformLocation(program, "u_DiffuseLightColor");
-const diffuseLightColorInputs = [
-  document.getElementById("diffuseColorR"),
-  document.getElementById("diffuseColorG"),
-  document.getElementById("diffuseColorB"),
-];
-diffuseLightColorInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setDiffuseLightColor();
-  });
+watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-const setDiffuseLightColor = () => {
-  gl.uniform3f(
-    uDiffuseLightColor,
-    parseFloat(diffuseLightColorInputs[0].value),
-    parseFloat(diffuseLightColorInputs[1].value),
-    parseFloat(diffuseLightColorInputs[2].value)
-  );
-};
-setDiffuseLightColor();
-
 /**
  * Setups specular light color
  */
-const uSpecularLightColor = gl.getUniformLocation(program, "u_SpecularLightColor");
-const specularLightColorInputs = [
-  document.getElementById("specularColorR"),
-  document.getElementById("specularColorG"),
-  document.getElementById("specularColorB"),
-];
-specularLightColorInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setSpecularLightColor();
-  });
+watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-const setSpecularLightColor = () => {
-  gl.uniform3f(
-    uSpecularLightColor,
-    parseFloat(specularLightColorInputs[0].value),
-    parseFloat(specularLightColorInputs[1].value),
-    parseFloat(specularLightColorInputs[2].value)
-  );
-};
-setSpecularLightColor();
-
 /**
- * Setups light intensity and factors
+ * Setups diffuse light intensity
  */
-const uLightDiffuseIntensity = gl.getUniformLocation(program, "u_LightDiffuseIntensity");
-const uLightSpecularIntensity = gl.getUniformLocation(program, "u_LightSpecularIntensity");
-const uLightAttenuationA = gl.getUniformLocation(program, "u_LightAttenuationA");
-const uLightAttenuationB = gl.getUniformLocation(program, "u_LightAttenuationB");
-const uLightAttenuationC = gl.getUniformLocation(program, "u_LightAttenuationC");
-const lightAttenuationInputs = [
-  document.getElementById("diffuseIntensity"),
-  document.getElementById("specularIntensity"),
-  document.getElementById("attenuationA"),
-  document.getElementById("attenuationB"),
-  document.getElementById("attenuationC"),
-];
-lightAttenuationInputs.forEach((input) => {
-  input.addEventListener("input", () => {
-    setLightAttenuation();
-  });
+watchInput("diffuseIntensity", (value) => {
+  blinnPhongShading.diffuseLightIntensity[0] = parseFloat(value);
 });
-const setLightAttenuation = () => {
-  gl.uniform1f(uLightDiffuseIntensity, parseFloat(lightAttenuationInputs[0].value));
-  gl.uniform1f(uLightSpecularIntensity, parseFloat(lightAttenuationInputs[1].value));
-  gl.uniform1f(uLightAttenuationA, parseFloat(lightAttenuationInputs[2].value));
-  gl.uniform1f(uLightAttenuationB, parseFloat(lightAttenuationInputs[3].value));
-  gl.uniform1f(uLightAttenuationC, parseFloat(lightAttenuationInputs[4].value));
-};
-setLightAttenuation();
-
 /**
- * Setups light specular shininess exponent
+ * Setups specular light intensity
  */
-const uLightSpecularShininessExponent = gl.getUniformLocation(program, "u_LightSpecularShininessExponent");
-const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
-uLightSpecularShininessExponentInput.addEventListener("input", () => {
-  setLightSpecularShininessExponent();
+watchInput("specularIntensity", (value) => {
+  blinnPhongShading.specularLightIntensity[0] = parseFloat(value);
 });
-const setLightSpecularShininessExponent = () => {
-  gl.uniform1f(uLightSpecularShininessExponent, parseFloat(uLightSpecularShininessExponentInput.value));
-};
-setLightSpecularShininessExponent();
+/**
+ * Setups light attenuations
+ */
+watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
+  vec3.set(blinnPhongShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
+});
+/**
+ * Setups specular light shininess exponent
+ */
+watchInput("specularShininessExponent", (value) => {
+  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(value);
+});
 
 /**
- * Setups sphere
+ * Start rendering
  */
-const uNormal = gl.getAttribLocation(program, "a_Normal");
-const aPosition = gl.getAttribLocation(program, "a_Position");
-const { normals, vertices } = createSphereTriangulated(2, 24, 48);
-const verticesBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-gl.vertexAttribPointer(aPosition, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(aPosition);
-const normalsBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, normalsBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-gl.vertexAttribPointer(uNormal, 3, gl.FLOAT, false, 0, 0);
-gl.enableVertexAttribArray(uNormal);
-
-/**
- * Setups ambient reflections
- */
-const ambientReflection = vec3.fromValues(0.4, 0.4, 1.0);
-const uAmbientReflection = gl.getUniformLocation(program, "u_AmbientReflection");
-gl.uniform3fv(uAmbientReflection, ambientReflection);
-
-/**
- * Setups diffuse reflections
- *
- * Same as ambient reflections
- */
-const diffuseReflection = ambientReflection;
-const uDiffuseReflection = gl.getUniformLocation(program, "u_DiffuseReflection");
-gl.uniform3fv(uDiffuseReflection, diffuseReflection);
-
-/**
- * Setups specular reflections.
- *
- * Same as ambient reflections
- */
-const specularReflection = ambientReflection;
-const uSpecularReflection = gl.getUniformLocation(program, "u_SpecularReflection");
-gl.uniform3fv(uSpecularReflection, specularReflection);
-
-gl.enable(gl.DEPTH_TEST);
-gl.enable(gl.CULL_FACE);
-gl.cullFace(gl.BACK);
-const render = (time) => {
-  updateLightPosition(time);
-
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
-
-  requestAnimationFrame(render);
-  lastAnimationTime = time;
-};
-render(0);
-
-getCanvasResizeObserver(setMvpMatrix);
+scene.startRendering();
