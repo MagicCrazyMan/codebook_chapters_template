@@ -213,3 +213,38 @@ export const bindWebGLBuffer = (gl, program, attributeNames = []) => {
     return location;
   });
 };
+
+/**
+ * Watches dom input.
+ * @param {string} id Element ids
+ * @param {(values: string) => void} callback callback
+ * @param {boolean} [immediate] Invokes callback immediately, default `true`
+ */
+export const watchInput = (id, callback, immediate = true) => {
+  const element = document.getElementById(id);
+  const trigger = () => {
+    callback(element.value);
+  };
+  element.addEventListener("input", trigger);
+
+  if (immediate) trigger();
+};
+
+/**
+ * Watches multiples dom input and collects them into single callback.
+ * @param {string[]} ids Element ids
+ * @param {(values: string[]) => void} callback callback
+ * @param {boolean} [immediate] Invokes callback immediately, default `true`
+ */
+export const watchInputs = (ids, callback, immediate = true) => {
+  const elements = ids.map((id) => document.getElementById(id));
+  const trigger = () => {
+    const values = elements.map((ele) => ele.value);
+    callback(values);
+  };
+  elements.forEach((ele) => {
+    ele.addEventListener("input", trigger);
+  });
+
+  if (immediate) trigger();
+};

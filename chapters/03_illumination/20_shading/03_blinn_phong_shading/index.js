@@ -4,7 +4,7 @@ import { Scene } from "../../../libs/Scene";
 import { CullFace } from "../../../libs/WebGLRenderer";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
 import { PerspectiveCamera } from "../../../libs/camera/Perspective";
-import { getCanvas } from "../../../libs/common";
+import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
@@ -228,7 +228,7 @@ const scene = new Scene(canvas, {
 });
 scene.root.addChild(sphere); // add sphere object into scene
 
-/**  
+/**
  * Updates light rotation per frame
  */
 const rps = glMatrix.toRadian(20);
@@ -246,118 +246,45 @@ scene.event.addEventListener("prerender", (event) => {
 /**
  * Setups ambient light color
  */
-const ambientLightColorInputs = [
-  document.getElementById("ambientColorR"),
-  document.getElementById("ambientColorG"),
-  document.getElementById("ambientColorB"),
-];
-const setAmbientLightColor = () => {
-  vec3.set(
-    blinnPhongMaterial.ambientLightColor,
-    parseFloat(ambientLightColorInputs[0].value),
-    parseFloat(ambientLightColorInputs[1].value),
-    parseFloat(ambientLightColorInputs[2].value)
-  );
-};
-ambientLightColorInputs.forEach((input) => {
-  input.addEventListener("input", setAmbientLightColor);
+watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongMaterial.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-setAmbientLightColor();
-
 /**
  * Setups diffuse light color
  */
-const diffuseLightColorInputs = [
-  document.getElementById("diffuseColorR"),
-  document.getElementById("diffuseColorG"),
-  document.getElementById("diffuseColorB"),
-];
-const setDiffuseLightColor = () => {
-  vec3.set(
-    blinnPhongMaterial.diffuseLightColor,
-    parseFloat(diffuseLightColorInputs[0].value),
-    parseFloat(diffuseLightColorInputs[1].value),
-    parseFloat(diffuseLightColorInputs[2].value)
-  );
-};
-diffuseLightColorInputs.forEach((input) => {
-  input.addEventListener("input", setDiffuseLightColor);
+watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongMaterial.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-setDiffuseLightColor();
-
 /**
  * Setups specular light color
  */
-const specularLightColorInputs = [
-  document.getElementById("specularColorR"),
-  document.getElementById("specularColorG"),
-  document.getElementById("specularColorB"),
-];
-const setSpecularLightColor = () => {
-  vec3.set(
-    blinnPhongMaterial.specularLightColor,
-    parseFloat(specularLightColorInputs[0].value),
-    parseFloat(specularLightColorInputs[1].value),
-    parseFloat(specularLightColorInputs[2].value)
-  );
-};
-specularLightColorInputs.forEach((input) => {
-  input.addEventListener("input", setSpecularLightColor);
+watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
+  vec3.set(blinnPhongMaterial.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
 });
-setSpecularLightColor();
-
 /**
  * Setups diffuse light intensity
  */
-const diffuseLightIntensityInput = document.getElementById("diffuseIntensity");
-const setDiffuseLightIntensity = () => {
-  blinnPhongMaterial.diffuseLightIntensity[0] = parseFloat(diffuseLightIntensityInput.value);
-};
-diffuseLightIntensityInput.addEventListener("input", setDiffuseLightIntensity);
-setDiffuseLightIntensity();
-
+watchInput("diffuseIntensity", (value) => {
+  blinnPhongMaterial.diffuseLightIntensity[0] = parseFloat(value);
+});
 /**
  * Setups specular light intensity
  */
-const specularLightIntensityInput = document.getElementById("specularIntensity");
-const setSpecularLightIntensity = () => {
-  blinnPhongMaterial.specularLightIntensity[0] = parseFloat(specularLightIntensityInput.value);
-};
-specularLightIntensityInput.addEventListener("input", setSpecularLightIntensity);
-setSpecularLightIntensity();
-
+watchInput("specularIntensity", (value) => {
+  blinnPhongMaterial.specularLightIntensity[0] = parseFloat(value);
+});
 /**
  * Setups light attenuations
  */
-const lightAttenuationsInputs = [
-  document.getElementById("attenuationA"),
-  document.getElementById("attenuationB"),
-  document.getElementById("attenuationC"),
-];
-const setLightAttenuations = () => {
-  vec3.set(
-    blinnPhongMaterial.lightAttenuations,
-    parseFloat(lightAttenuationsInputs[0].value),
-    parseFloat(lightAttenuationsInputs[1].value),
-    parseFloat(lightAttenuationsInputs[2].value)
-  );
-};
-lightAttenuationsInputs.forEach((input) => {
-  input.addEventListener("input", setLightAttenuations);
+watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
+  vec3.set(blinnPhongMaterial.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
 });
-setLightAttenuations();
-
 /**
  * Setups specular light shininess exponent
  */
-const specularLightShininessExponentInput = document.getElementById("specularShininessExponent");
-const setSpecularShininessExponent = () => {
-  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(
-    specularLightShininessExponentInput.value
-  );
-};
-specularLightShininessExponentInput.addEventListener("input", setSpecularShininessExponent);
-setSpecularShininessExponent();
+watchInput("specularShininessExponent", (value) => {
+  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(value);
+});
 
 /**
  * Start rendering
