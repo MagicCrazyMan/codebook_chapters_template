@@ -67,8 +67,8 @@ export class ColorMaterial extends Material {
    */
   uniformBindings() {
     return [
-      new MaterialUniformBinding("u_Color", UniformType.FloatVector4),
-      new EntityUniformBinding(EntityUniformNames.MvpMatrix, UniformType.Mat4),
+      new MaterialUniformBinding("u_Color"),
+      new EntityUniformBinding(EntityUniformNames.MvpMatrix),
     ];
   }
 
@@ -98,7 +98,7 @@ export class ColorMaterial extends Material {
     super();
     this.setColor(r, g, b, a);
 
-    this.uniforms.set("u_Color", new Uniform(this.color));
+    this.uniforms.set("u_Color", new Uniform(UniformType.FloatVector4, this.color));
   }
 
   /**

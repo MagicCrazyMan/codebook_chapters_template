@@ -210,7 +210,7 @@ export class WebGLRenderer {
         return;
       }
 
-      switch (binding.type) {
+      switch (uniform.type) {
         case UniformType.FloatVector1:
           gl.uniform1fv(location, uniform.data, uniform.srcOffset, uniform.srcLength);
           break;
@@ -327,9 +327,6 @@ export class WebGLRenderer {
    * @param {RenderEntity} entity
    */
   drawEntity(gl, materialItem, entity) {
-    console.log(entity);
-    console.log(materialItem.drawMode);
-    console.log(glDrawMode(gl, materialItem.drawMode));
     gl.drawArrays(
       glDrawMode(gl, materialItem.drawMode),
       entity.verticesOffset,
@@ -384,7 +381,6 @@ class BufferPool {
       const buffer = gl.createBuffer();
       gl.bindBuffer(target, buffer);
       gl.bufferData(target, descriptor.data, glBufferUsage(gl, descriptor.usage));
-      console.log(gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE));
       bufferItem.buffer = buffer;
     } else if (descriptor.updated) {
       // if updated,

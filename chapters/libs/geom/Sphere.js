@@ -1,4 +1,5 @@
 import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
+import { UniformType } from "../Constants.js";
 import { Uniform } from "../Uniform.js";
 import { EntityAttributeNames, EntityUniformNames, RenderEntity } from "../entity/RenderEntity.js";
 
@@ -203,9 +204,18 @@ export class Sphere extends RenderEntity {
       EntityAttributeNames.Normal,
       new BufferAttribute(new BufferDescriptor(normals), 3)
     );
-    this.uniforms.set(EntityUniformNames.ModelMatrix, new Uniform(this.composedModelMatrix));
-    this.uniforms.set(EntityUniformNames.NormalMatrix, new Uniform(this.composedNormalMatrix));
-    this.uniforms.set(EntityUniformNames.MvpMatrix, new Uniform(this.composedMvpMatrix));
+    this.uniforms.set(
+      EntityUniformNames.ModelMatrix,
+      new Uniform(UniformType.Mat4, this.composedModelMatrix)
+    );
+    this.uniforms.set(
+      EntityUniformNames.NormalMatrix,
+      new Uniform(UniformType.Mat4, this.composedNormalMatrix)
+    );
+    this.uniforms.set(
+      EntityUniformNames.MvpMatrix,
+      new Uniform(UniformType.Mat4, this.composedMvpMatrix)
+    );
     this.verticesCount = vertices.length / 3;
   }
 }

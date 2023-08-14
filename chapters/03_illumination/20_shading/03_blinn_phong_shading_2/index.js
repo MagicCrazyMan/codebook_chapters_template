@@ -1,228 +1,24 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { DrawMode, UniformType } from "../../../libs/Constants";
+import { Scene } from "../../../libs/Scene";
+import { CullFace } from "../../../libs/WebGLRenderer";
+import { CameraUniformNames } from "../../../libs/camera/Camera";
 import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas } from "../../../libs/common";
-import { RenderEntity } from "../../../libs/entity/RenderEntity";
+import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
-import { AttributeBinding, Material, UniformSource, createMaterialProgram } from "../../../libs/material/Material";
-import { CullFace } from "../../../libs/WebGLRenderer";
-import { Scene } from "../../../libs/Scene";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import {
+  AttributeBinding,
+  EntityUniformBinding,
+  MainCameraUniformBinding,
+  Material,
+  MaterialUniformBinding,
+} from "../../../libs/material/Material";
+import { Uniform } from "../../../libs/Uniform";
 
 class BlinnPhongMaterial extends Material {
-  static VertexShader = `
-    attribute vec4 a_Position;
-    attribute vec4 a_Normal;
-    
-    uniform vec3 u_AmbientReflection;
-
-    uniform mat4 u_MvpMatrix;
-    uniform mat4 u_ModelMatrix;
-    uniform mat4 u_NormalMatrix;
-
-    uniform vec3 u_AmbientLightColor;
-
-    varying vec3 v_AmbientColor;
-
-    varying vec3 v_Normal;
-    varying vec3 v_Position;
-
-    /**
-     * Calculates ambient reflection color
-     */
-    vec3 ambient() {
-      return u_AmbientLightColor * u_AmbientReflection;
-    }
-
-    void main() {
-      gl_Position = u_MvpMatrix * a_Position;
-      v_Position = vec3(u_ModelMatrix * a_Position);
-      v_Normal = vec3(u_NormalMatrix * a_Normal);
-
-      v_AmbientColor = ambient();
-    }
-  `;
-
-  static FragmentShader = `
-    #ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-    #else
-      precision mediump float;
-    #endif
-
-    uniform vec3 u_LightPosition;
-    uniform vec3 u_DiffuseLightColor;
-    uniform vec3 u_SpecularLightColor;
-    uniform float u_SpecularLightShininessExponent;
-
-    uniform float u_DiffuseLightIntensity;
-    uniform float u_SpecularLightIntensity;
-    uniform vec3 u_LightAttenuations;
-
-    uniform vec3 u_CameraPosition;
-
-    uniform vec3 u_DiffuseReflection;
-    uniform vec3 u_SpecularReflection;
-    varying vec3 v_AmbientColor;
-
-    varying vec3 v_Normal;
-    varying vec3 v_Position;
-
-    /**
-     * Calculates diffuse reflection color
-     */
-    vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
-      float cosine = max(dot(normal, lightDirection), 0.0);
-      return attenuation * u_DiffuseLightIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
-    }
-
-    /**
-     * Calculates specular reflection color
-     */
-    vec3 specular(float attenuation, vec3 normal, vec3 lightDirection, vec3 cameraDirection) {
-      vec3 halfway = normalize(lightDirection + cameraDirection);
-      float cosine = max(dot(normal, halfway), 0.0);
-      float power = pow(cosine, u_SpecularLightShininessExponent);
-      return attenuation * u_SpecularLightIntensity * u_SpecularLightColor * u_SpecularReflection * power;
-    }
-
-    void main() {
-      vec3 normal = normalize(v_Normal);
-      vec3 lightDirection = normalize(u_LightPosition - v_Position);
-      vec3 cameraDirection = normalize(u_CameraPosition - v_Position);
-
-      float distanceToLight = distance(v_Position, u_LightPosition);
-      float attenuationComponent = u_LightAttenuations.x + u_LightAttenuations.y * distanceToLight + u_LightAttenuations.z * pow(distanceToLight, 2.0);
-      float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
-      
-      vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-      vec3 specularColor = specular(attenuation, normal, lightDirection, cameraDirection);
-
-      gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
-    }
-  `;
-
-  /**
-   * @private
-   * @type {WebGLProgram}
-   */
-  static _program;
-  /**
-   * @private
-   * @type {Map<string, number>}
-   */
-  static _attributeLocations;
-  /**
-   * @private
-   * @type {Map<string, import()>}
-   */
-  static _uniformLocations;
-
-  /**
-   * Uses WebGL program associated with this Material,
-   * Shaders and attribute locations and uniform locations should all initialize as well.
-   * @param {WebGL2RenderingContext} gl
-   * @returns {WebGLProgram}
-   */
-  static useProgram(gl) {
-    if (!BlinnPhongMaterial._program) {
-      const { program, attributeLocations, uniformLocations } = createMaterialProgram(
-        gl,
-        [BlinnPhongMaterial.VertexShader],
-        [BlinnPhongMaterial.FragmentShader],
-        [
-          RenderEntity.BasicAttributeVariableNames.Position,
-          RenderEntity.BasicAttributeVariableNames.Normal,
-        ],
-        [
-          {
-            name: RenderEntity.BasicUniformVariableNames.MvpMatrix,
-            source: UniformSource.Entity,
-          },
-          {
-            name: RenderEntity.BasicUniformVariableNames.ModelMatrix,
-            source: UniformSource.Entity,
-          },
-          {
-            name: RenderEntity.BasicUniformVariableNames.NormalMatrix,
-            source: UniformSource.Entity,
-          },
-          {
-            name: "u_SpecularLightShininessExponent",
-            source: UniformSource.Entity,
-          },
-          {
-            name: "u_AmbientReflection",
-            source: UniformSource.Entity,
-          },
-          {
-            name: "u_DiffuseReflection",
-            source: UniformSource.Entity,
-          },
-          {
-            name: "u_SpecularReflection",
-            source: UniformSource.Entity,
-          },
-          {
-            name: "u_LightPosition",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_AmbientLightColor",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_DiffuseLightColor",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_SpecularLightColor",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_DiffuseLightIntensity",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_SpecularLightIntensity",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_LightAttenuations",
-            source: UniformSource.Material,
-          },
-          {
-            name: "u_CameraPosition",
-            source: UniformSource.MainCamera,
-          },
-        ]
-      );
-
-      BlinnPhongMaterial._program = program;
-      BlinnPhongMaterial._attributeLocations = attributeLocations;
-      BlinnPhongMaterial._uniformLocations = uniformLocations;
-    }
-
-    gl.useProgram(BlinnPhongMaterial._program);
-  }
-
-  /**
-   * Gets WebGL attribute variable names associated the program
-   * @returns {Map<string, number>}
-   */
-  static getAttributeLocations() {
-    return this._attributeLocations;
-  }
-
-  /**
-   * Gets WebGL uniform variable names associated the program
-   * @returns {Map<string, UniformSource>}
-   */
-  static getUniformLocations() {
-    return this._uniformLocations;
-  }
-
   name() {
-    return "BlinnPhongMaterial"
+    return "BlinnPhongMaterial";
   }
 
   vertexShaderSource() {
@@ -321,54 +117,72 @@ class BlinnPhongMaterial extends Material {
     `;
   }
 
-  drawMode() {
-    return DrawMode.Triangles
-  }
-
   attributesBindings() {
     return [
-      new AttributeBinding()
-    ]
+      new AttributeBinding(EntityAttributeNames.Position),
+      new AttributeBinding(EntityAttributeNames.Normal),
+    ];
+  }
+
+  uniformBindings() {
+    return [
+      new EntityUniformBinding(EntityUniformNames.ModelMatrix),
+      new EntityUniformBinding(EntityUniformNames.NormalMatrix),
+      new EntityUniformBinding(EntityUniformNames.MvpMatrix),
+      new EntityUniformBinding("u_SpecularLightShininessExponent"),
+      new EntityUniformBinding("u_AmbientReflection"),
+      new EntityUniformBinding("u_DiffuseReflection"),
+      new EntityUniformBinding("u_SpecularReflection"),
+      new MaterialUniformBinding("u_LightPosition"),
+      new MaterialUniformBinding("u_AmbientLightColor"),
+      new MaterialUniformBinding("u_DiffuseLightColor"),
+      new MaterialUniformBinding("u_SpecularLightColor"),
+      new MaterialUniformBinding("u_DiffuseLightIntensity"),
+      new MaterialUniformBinding("u_SpecularLightIntensity"),
+      new MaterialUniformBinding("u_LightAttenuations"),
+      new MainCameraUniformBinding(CameraUniformNames.Position),
+    ];
+  }
+
+  drawMode() {
+    return DrawMode.Triangles;
   }
 
   lightPosition = vec3.create();
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
   specularLightColor = vec3.create();
-  diffuseLightIntensity = [0];
-  specularLightIntensity = [0];
+  diffuseLightIntensity = new Float32Array(1);
+  specularLightIntensity = new Float32Array(1);
   lightAttenuations = vec3.create();
 
   constructor() {
     super();
-    this.setUniform("u_LightPosition", {
-      type: UniformType.FloatVector3,
-      data: this.lightPosition,
-    });
-    this.setUniform("u_AmbientLightColor", {
-      type: UniformType.FloatVector3,
-      data: this.ambientLightColor,
-    });
-    this.setUniform("u_DiffuseLightColor", {
-      type: UniformType.FloatVector3,
-      data: this.diffuseLightColor,
-    });
-    this.setUniform("u_SpecularLightColor", {
-      type: UniformType.FloatVector3,
-      data: this.specularLightColor,
-    });
-    this.setUniform("u_DiffuseLightIntensity", {
-      type: UniformType.FloatVector1,
-      data: this.diffuseLightIntensity,
-    });
-    this.setUniform("u_SpecularLightIntensity", {
-      type: UniformType.FloatVector1,
-      data: this.specularLightIntensity,
-    });
-    this.setUniform("u_LightAttenuations", {
-      type: UniformType.FloatVector3,
-      data: this.lightAttenuations,
-    });
+    this.uniforms.set("u_LightPosition", new Uniform(UniformType.FloatVector3, this.lightPosition));
+    this.uniforms.set(
+      "u_AmbientLightColor",
+      new Uniform(UniformType.FloatVector3, this.ambientLightColor)
+    );
+    this.uniforms.set(
+      "u_DiffuseLightColor",
+      new Uniform(UniformType.FloatVector3, this.diffuseLightColor)
+    );
+    this.uniforms.set(
+      "u_SpecularLightColor",
+      new Uniform(UniformType.FloatVector3, this.specularLightColor)
+    );
+    this.uniforms.set(
+      "u_DiffuseLightIntensity",
+      new Uniform(UniformType.FloatVector1, this.diffuseLightIntensity)
+    );
+    this.uniforms.set(
+      "u_SpecularLightIntensity",
+      new Uniform(UniformType.FloatVector1, this.specularLightIntensity)
+    );
+    this.uniforms.set(
+      "u_LightAttenuations",
+      new Uniform(UniformType.FloatVector3, this.lightAttenuations)
+    );
   }
 }
 
@@ -379,22 +193,22 @@ const blinnPhongMaterial = new BlinnPhongMaterial();
  */
 const sphere = new Sphere(2, 24);
 sphere.material = blinnPhongMaterial;
-sphere.setUniform("u_SpecularLightShininessExponent", {
-  type: UniformTypes.FloatVector1,
-  data: [512],
-});
-sphere.setUniform("u_AmbientReflection", {
-  type: UniformTypes.FloatVector3,
-  data: vec3.fromValues(0.4, 0.4, 1),
-});
-sphere.setUniform("u_DiffuseReflection", {
-  type: UniformTypes.FloatVector3,
-  data: vec3.fromValues(0.4, 0.4, 1),
-});
-sphere.setUniform("u_SpecularReflection", {
-  type: UniformTypes.FloatVector3,
-  data: vec3.fromValues(0.4, 0.4, 1),
-});
+sphere.uniforms.set(
+  "u_SpecularLightShininessExponent",
+  new Uniform(UniformType.FloatVector1, new Float32Array([512]))
+);
+sphere.uniforms.set(
+  "u_AmbientReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
+sphere.uniforms.set(
+  "u_DiffuseReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
+sphere.uniforms.set(
+  "u_SpecularReflection",
+  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
+);
 
 /**
  * Create scene
@@ -538,10 +352,9 @@ setLightAttenuations();
  */
 const specularLightShininessExponentInput = document.getElementById("specularShininessExponent");
 const setSpecularShininessExponent = () => {
-  sphere.setUniform("u_SpecularLightShininessExponent", {
-    type: UniformTypes.FloatVector1,
-    data: [parseFloat(specularLightShininessExponentInput.value)],
-  });
+  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(
+    specularLightShininessExponentInput.value
+  );
 };
 specularLightIntensityInput.addEventListener("input", setSpecularShininessExponent);
 setSpecularShininessExponent();

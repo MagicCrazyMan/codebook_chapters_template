@@ -27,19 +27,13 @@ export class MaterialUniformBinding {
    * @type {string}
    */
   name;
-  /**
-   * @type {import("../Constants.js").UniformType}
-   */
-  type;
 
   /**
    *
    * @param {string} name
-   * @param {import("../Constants.js").UniformType} type
    */
-  constructor(name, type) {
+  constructor(name) {
     this.name = name;
-    this.type = type;
   }
 }
 
@@ -51,19 +45,13 @@ export class EntityUniformBinding {
    * @type {string}
    */
   name;
-  /**
-   * @type {import("../Constants.js").UniformType}
-   */
-  type;
 
   /**
    *
    * @param {string} name
-   * @param {import("../Constants.js").UniformType} type
    */
-  constructor(name, type) {
+  constructor(name) {
     this.name = name;
-    this.type = type;
   }
 }
 
@@ -75,19 +63,13 @@ export class MainCameraUniformBinding {
    * @type {string}
    */
   name;
-  /**
-   * @type {import("../Constants.js").UniformType}
-   */
-  type;
 
   /**
    *
    * @param {string} name
-   * @param {import("../Constants.js").UniformType} type
    */
-  constructor(name, type) {
+  constructor(name) {
     this.name = name;
-    this.type = type;
   }
 }
 
