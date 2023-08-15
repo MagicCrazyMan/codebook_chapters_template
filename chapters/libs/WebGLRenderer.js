@@ -2,6 +2,7 @@ import { vec4 } from "gl-matrix";
 import { ArrayAttribute, BufferAttribute } from "./Attribute.js";
 import {
   ArrayAttributeType,
+  CullFace,
   UniformType,
   glBufferAttributeDataType,
   glBufferTarget,
@@ -30,17 +31,6 @@ import {
  * @property {import("./entity/RenderEntity.js").RenderEntity} entity Object
  * @property {import("./material/Material.js").Material} material Material instance
  */
-
-/**
- * Cull face side
- * @enum {number}
- */
-export const CullFace = {
-  None: 0,
-  Back: 1,
-  Front: 2,
-  Both: 3,
-};
 
 /**
  * @typedef {Object} Options

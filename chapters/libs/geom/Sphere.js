@@ -185,7 +185,6 @@ export class Sphere extends RenderEntity {
       horizontalSegments
     );
 
-    // merge vertices and normals into one buffer
     this.attributes.set(
       EntityAttributeNames.Position,
       new BufferAttribute(new BufferDescriptor(new Float32Array(vertices)), 3)
