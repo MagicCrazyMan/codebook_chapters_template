@@ -1,7 +1,5 @@
 import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
-import { UniformType } from "../Constants.js";
-import { Uniform } from "../Uniform.js";
-import { EntityAttributeNames, EntityUniformNames, RenderEntity } from "../entity/RenderEntity.js";
+import { EntityAttributeNames, RenderEntity } from "../entity/RenderEntity.js";
 
 /**
  * Create a sphere indexed mesh
@@ -171,21 +169,12 @@ export class Sphere extends RenderEntity {
    * @param {number} radius Sphere radius
    * @param {number} [verticalSegments] vertical segments count, default `12`
    * @param {number} [horizontalSegments] horizontal segments count, default `verticalSegments * 2`
-   * @param {import("gl-matrix").ReadonlyVec3} [position] Geometry position
    * @param {import("gl-matrix").ReadonlyVec3} [translation] Geometry translation
    * @param {import("gl-matrix").ReadonlyVec3} [rotation] Geometry rotation
    * @param {import("gl-matrix").ReadonlyVec3} [scaling] Geometry scaling
    */
-  constructor(
-    radius,
-    verticalSegments,
-    horizontalSegments,
-    position,
-    translation,
-    rotation,
-    scaling
-  ) {
-    super(position, translation, rotation, scaling);
+  constructor(radius, verticalSegments, horizontalSegments, translation, rotation, scaling) {
+    super({ translation, rotation, scaling });
     this.radius = radius;
     this.verticalSegments = verticalSegments;
     this.horizontalSegments = horizontalSegments;
@@ -197,25 +186,15 @@ export class Sphere extends RenderEntity {
     );
 
     // merge vertices and normals into one buffer
-    const descriptor = new BufferDescriptor(new Float32Array([...vertices, ...normals]));
-    this.attributes.set(EntityAttributeNames.Position, new BufferAttribute(descriptor, 3));
+    this.attributes.set(
+      EntityAttributeNames.Position,
+      new BufferAttribute(new BufferDescriptor(new Float32Array(vertices)), 3)
+    );
     this.attributes.set(
       EntityAttributeNames.Normal,
-      new BufferAttribute(descriptor, 3, false, 0, vertices.byteLength)
+      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 3)
     );
 
-    this.uniforms.set(
-      EntityUniformNames.ModelMatrix,
-      new Uniform(UniformType.Mat4, this.composedModelMatrix)
-    );
-    this.uniforms.set(
-      EntityUniformNames.NormalMatrix,
-      new Uniform(UniformType.Mat4, this.composedNormalMatrix)
-    );
-    this.uniforms.set(
-      EntityUniformNames.MvpMatrix,
-      new Uniform(UniformType.Mat4, this.composedMvpMatrix)
-    );
     this.verticesCount = vertices.length / 3;
   }
 }

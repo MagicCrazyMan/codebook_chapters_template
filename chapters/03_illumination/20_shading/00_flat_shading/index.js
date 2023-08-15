@@ -1,8 +1,7 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../../libs/Attribute";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import { DrawMode } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
-import { Uniform } from "../../../libs/Uniform";
 import { CullFace } from "../../../libs/WebGLRenderer";
 import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
@@ -75,6 +74,11 @@ class FlatShading extends Material {
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
   specularLightColor = vec3.create();
+
+  ambientReflection = vec3.fromValues(0.4, 0.4, 1);
+  diffuseReflection = vec3.fromValues(0.4, 0.4, 1);
+  specularReflection = vec3.fromValues(0.4, 0.4, 1);
+  specularLightShininessExponent = 0;
 
   diffuseLightIntensity = 0;
   specularLightIntensity = 0;
@@ -205,28 +209,18 @@ class FlatShading extends Material {
 
   /**
    * Calculates ambient color
-   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
    */
-  setAmbientColor(entity) {
-    vec3.mul(
-      this.ambientColor,
-      this.ambientLightColor,
-      entity.uniforms.get("u_AmbientReflection").data
-    );
+  setAmbientColor() {
+    vec3.mul(this.ambientColor, this.ambientLightColor, this.ambientReflection);
   }
 
   /**
    * Calculates diffuse color
-   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
    */
-  setDiffuseColor(entity) {
+  setDiffuseColor() {
     const cosine = Math.max(vec3.dot(this.normal3, this.lightDirection), 0.0);
 
-    vec3.mul(
-      this.diffuseColor,
-      this.diffuseLightColor,
-      entity.uniforms.get("u_DiffuseReflection").data
-    );
+    vec3.mul(this.diffuseColor, this.diffuseLightColor, this.diffuseReflection);
     vec3.scale(
       this.diffuseColor,
       this.diffuseColor,
@@ -236,20 +230,12 @@ class FlatShading extends Material {
 
   /**
    * Calculates specular color
-   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
    */
-  setSpecularColor(entity) {
+  setSpecularColor() {
     const cosine = Math.max(vec3.dot(this.reflectionDirection, this.cameraDirection), 0.0);
-    const specularPower = Math.pow(
-      cosine,
-      entity.uniforms.get("u_SpecularLightShininessExponent").data[0]
-    );
+    const specularPower = Math.pow(cosine, this.specularLightShininessExponent);
 
-    vec3.mul(
-      this.specularColor,
-      this.specularLightColor,
-      entity.uniforms.get("u_SpecularReflection").data
-    );
+    vec3.mul(this.specularColor, this.specularLightColor, this.specularReflection);
     vec3.scale(
       this.specularColor,
       this.specularColor,
@@ -305,9 +291,9 @@ class FlatShading extends Material {
       this.setCameraDirection(frameState);
       this.setAttenuation();
 
-      this.setAmbientColor(entity);
-      this.setDiffuseColor(entity);
-      this.setSpecularColor(entity);
+      this.setAmbientColor();
+      this.setDiffuseColor();
+      this.setSpecularColor();
       this.composeColor();
 
       colorAttribute.descriptor.data.set(this.color, i + 0);
@@ -325,22 +311,6 @@ class FlatShading extends Material {
 const sphere = new Sphere(2, 24);
 const flatShading = new FlatShading(sphere.verticesCount);
 sphere.material = flatShading;
-sphere.uniforms.set(
-  "u_SpecularLightShininessExponent",
-  new Uniform(UniformType.FloatVector1, new Float32Array([512]))
-);
-sphere.uniforms.set(
-  "u_AmbientReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
-sphere.uniforms.set(
-  "u_DiffuseReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
-sphere.uniforms.set(
-  "u_SpecularReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
 
 /**
  * Create scene
@@ -406,7 +376,7 @@ watchInput("attenuationC", (c) => {
  * Setups specular light shininess exponent
  */
 watchInput("specularShininessExponent", (value) => {
-  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(value);
+  flatShading.specularLightShininessExponent = parseFloat(value);
 });
 
 /**

@@ -122,10 +122,10 @@ class GouraudShading extends Material {
       new EntityUniformBinding(EntityUniformNames.ModelMatrix),
       new EntityUniformBinding(EntityUniformNames.NormalMatrix),
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
-      new EntityUniformBinding("u_SpecularLightShininessExponent"),
-      new EntityUniformBinding("u_AmbientReflection"),
-      new EntityUniformBinding("u_DiffuseReflection"),
-      new EntityUniformBinding("u_SpecularReflection"),
+      new MaterialUniformBinding("u_SpecularLightShininessExponent"),
+      new MaterialUniformBinding("u_AmbientReflection"),
+      new MaterialUniformBinding("u_DiffuseReflection"),
+      new MaterialUniformBinding("u_SpecularReflection"),
       new MaterialUniformBinding("u_LightPosition"),
       new MaterialUniformBinding("u_AmbientLightColor"),
       new MaterialUniformBinding("u_DiffuseLightColor"),
@@ -145,8 +145,15 @@ class GouraudShading extends Material {
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
   specularLightColor = vec3.create();
+
+  ambientReflection = vec3.fromValues(0.4, 0.4, 1);
+  diffuseReflection = vec3.fromValues(0.4, 0.4, 1);
+  specularReflection = vec3.fromValues(0.4, 0.4, 1);
+  specularLightShininessExponent = new Float32Array(1);
+
   diffuseLightIntensity = new Float32Array(1);
   specularLightIntensity = new Float32Array(1);
+
   lightAttenuations = vec3.create();
 
   constructor() {
@@ -176,6 +183,22 @@ class GouraudShading extends Material {
       "u_LightAttenuations",
       new Uniform(UniformType.FloatVector3, this.lightAttenuations)
     );
+    this.uniforms.set(
+      "u_SpecularLightShininessExponent",
+      new Uniform(UniformType.FloatVector1, this.specularLightShininessExponent)
+    );
+    this.uniforms.set(
+      "u_AmbientReflection",
+      new Uniform(UniformType.FloatVector3, this.ambientReflection)
+    );
+    this.uniforms.set(
+      "u_DiffuseReflection",
+      new Uniform(UniformType.FloatVector3, this.diffuseReflection)
+    );
+    this.uniforms.set(
+      "u_SpecularReflection",
+      new Uniform(UniformType.FloatVector3, this.specularReflection)
+    );
   }
 
   rps = glMatrix.toRadian(20);
@@ -203,22 +226,6 @@ const gouraudShading = new GouraudShading();
  */
 const sphere = new Sphere(2, 24);
 sphere.material = gouraudShading;
-sphere.uniforms.set(
-  "u_SpecularLightShininessExponent",
-  new Uniform(UniformType.FloatVector1, new Float32Array([512]))
-);
-sphere.uniforms.set(
-  "u_AmbientReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
-sphere.uniforms.set(
-  "u_DiffuseReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
-sphere.uniforms.set(
-  "u_SpecularReflection",
-  new Uniform(UniformType.FloatVector3, vec3.fromValues(0.4, 0.4, 1))
-);
 
 /**
  * Create scene
@@ -278,7 +285,7 @@ watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
  * Setups specular light shininess exponent
  */
 watchInput("specularShininessExponent", (value) => {
-  sphere.uniforms.get("u_SpecularLightShininessExponent").data[0] = parseFloat(value);
+  gouraudShading.specularLightShininessExponent[0] = parseFloat(value);
 });
 
 /**
