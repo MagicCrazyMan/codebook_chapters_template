@@ -339,11 +339,23 @@ export class WebGLRenderer {
    * @param {RenderEntity} entity
    */
   drawEntity(gl, materialItem, entity) {
-    gl.drawArrays(
-      glDrawMode(gl, materialItem.drawMode),
-      entity.verticesOffset,
-      entity.verticesCount
-    );
+    if (entity.indices) {
+      this.bufferPool.setBuffer(entity.indices);
+      this.bufferPool.bindBuffer(gl, entity.indices);
+      gl.drawElements(
+        glDrawMode(gl, materialItem.drawMode),
+        entity.verticesCount,
+        glBufferAttributeDataType(gl, entity.indices.type),
+        entity.verticesOffset
+      );
+      this.bufferPool.unbindBuffer(gl, entity.indices);
+    } else {
+      gl.drawArrays(
+        glDrawMode(gl, materialItem.drawMode),
+        entity.verticesOffset,
+        entity.verticesCount
+      );
+    }
   }
 }
 

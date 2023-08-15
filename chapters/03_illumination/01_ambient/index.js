@@ -6,7 +6,7 @@ import { Uniform } from "../../libs/Uniform";
 import { PerspectiveCamera } from "../../libs/camera/Perspective";
 import { getCanvas, watchInputs } from "../../libs/common";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
-import { Cube } from "../../libs/geom/Cube";
+import { IndexedCube } from "../../libs/geom/Cube";
 import {
   EntityAttributeBinding,
   EntityUniformBinding,
@@ -77,12 +77,12 @@ class AmbientLight extends Material {
 
   // prettier-ignore
   cubeFaceReflections = new Float32Array([
-    0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  // front(blue)
-    1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  // up(red)
-    0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  // back(cyan)
-    1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  // bottom(white)
-    1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  // left(yellow)
-    0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  // right(green)
+    0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  0.4,0.4,1.0,  // front(blue)
+    1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  1.0,0.4,0.4,  // up(red)
+    0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  0.4,1.0,1.0,  // back(cyan)
+    1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  1.0,1.0,1.0,  // bottom(white)
+    1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  // left(yellow)
+    0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  // right(green)
   ]);
 
   constructor() {
@@ -112,7 +112,7 @@ const scene = new Scene(canvas, {
 
 const ambientLight = new AmbientLight();
 
-const cube = new Cube(2, 2, 2);
+const cube = new IndexedCube(2, 2, 2);
 cube.material = ambientLight;
 scene.root.addChild(cube);
 

@@ -67,7 +67,7 @@ export const BufferTarget = {
   CopyReadBuffer: 2,
   CopyWriteBuffer: 3,
   TransformFeedbackBuffer: 4,
-  UniformBUffer: 5,
+  UniformBuffer: 5,
   PixelPackBuffer: 6,
   PixelUnpackBuffer: 7,
 };
@@ -93,7 +93,7 @@ export const glBufferTarget = (gl, target) => {
       return gl.PIXEL_PACK_BUFFER;
     case BufferTarget.TransformFeedbackBuffer:
       return gl.TRANSFORM_FEEDBACK_BUFFER;
-    case BufferTarget.UniformBUffer:
+    case BufferTarget.UniformBuffer:
       return gl.UNIFORM_BUFFER;
     default:
       throw new Error(`unknown WebGL buffer target ${target}`);

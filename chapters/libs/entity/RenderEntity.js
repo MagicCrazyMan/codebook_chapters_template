@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { ArrayAttribute, BufferAttribute } from "../Attribute.js";
 import { UniformType } from "../Constants.js";
 import { Uniform } from "../Uniform.js";
 import { BaseEntity } from "./BaseEntity.js";
@@ -39,8 +37,14 @@ export const EntityUniformNames = {
  */
 export class RenderEntity extends BaseEntity {
   /**
+   * Indices buffer descriptor, if specified draw entity with `gl.drawElements`
+   * @type {import("../Attribute.js").BufferDescriptor | undefined}
+   */
+  indices;
+
+  /**
    * Attributes
-   * @type {Map<string, ArrayAttribute | BufferAttribute>}
+   * @type {Map<string, import("../Attribute.js").ArrayAttribute | import("../Attribute.js").BufferAttribute>}
    * @readonly
    */
   attributes = new Map();
