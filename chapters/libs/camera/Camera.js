@@ -93,11 +93,11 @@ export class Camera {
 
   /**
    * Sets camera position.
-   * @param {vec3} position Camera position
+   * @param {import("gl-matrix").ReadonlyVec3} position Camera position
    * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
   setPosition(position, update = false) {
-    this.position = position;
+    vec3.copy(this.position, position);
 
     if (update) {
       this.updateViewMatrix();
@@ -107,11 +107,11 @@ export class Camera {
 
   /**
    * Sets camera look at position.
-   * @param {vec3} lookAt Camera look at position
+   * @param {import("gl-matrix").ReadonlyVec3} lookAt Camera look at position
    * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
   setLookAt(lookAt, update = false) {
-    this.lookAt = lookAt;
+    vec3.copy(this.lookAt, lookAt);
 
     if (update) {
       this.updateViewMatrix();
@@ -121,11 +121,11 @@ export class Camera {
 
   /**
    * Sets camera up direction.
-   * @param {vec3} up Camera up direction
+   * @param {import("gl-matrix").ReadonlyVec3} up Camera up direction
    * @param {boolean} [update] Recalculates matrices immediately, default `false`
    */
   setUpVector(up, update = false) {
-    this.up = up;
+    vec3.copy(this.up, up);
 
     if (update) {
       this.updateViewMatrix();

@@ -36,12 +36,6 @@ export class Scene {
    * @readonly
    */
   canvas;
-  /**
-   * DOM resize observer
-   * @type {ResizeObserver}
-   * @private
-   */
-  resizeObserver;
 
   /**
    * Main camera
@@ -51,21 +45,36 @@ export class Scene {
   mainCamera;
 
   /**
+   * Controls
+   * @type {Set<import("./control/Control.js").Control>}
+   * @private
+   */
+  _controls = new Set();
+
+  /**
+   * DOM resize observer
+   * @type {ResizeObserver}
+   * @private
+   */
+  _resizeObserver;
+
+  /**
    * WebGL rendering context
    * @type {WebGL2RenderingContext}
-   * @readonly
+   * @private
    */
-  gl;
+  _webglRenderingContext;
 
   /**
    * Renderer
    * @type {WebGLRenderer}
-   * @readonly
+   * @private
    */
-  renderer;
+  _renderer;
 
   /**
    * @type {boolean}
+   * @private
    */
   _requestAnimating = false;
 
@@ -74,6 +83,7 @@ export class Scene {
    *
    * available only when request animating enabled.
    * @type {number}
+   * @private
    */
   _lastRenderTime = 0;
 
@@ -99,26 +109,34 @@ export class Scene {
   constructor(target, opts = {}) {
     this.canvas = target instanceof HTMLCanvasElement ? target : document.getElementById(target);
 
-    this.gl = this.canvas.getContext("webgl2", opts.contextAttributes);
-    this.renderer = new WebGLRenderer(this.gl, opts);
+    this._webglRenderingContext = this.canvas.getContext("webgl2", opts.contextAttributes);
+    this._renderer = new WebGLRenderer(this._webglRenderingContext, opts);
 
     this.mainCamera =
       opts.camera ??
       new PerspectiveCamera(
         glMatrix.toRadian(60),
-        this.gl.canvas.width / this.gl.canvas.height,
+        this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
         1,
         null
       );
 
-    this.resizeObserver = new ResizeObserver(() => {
+    this._resizeObserver = new ResizeObserver(() => {
       this.canvas.width = this.canvas.clientWidth;
       this.canvas.height = this.canvas.clientHeight;
-      this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
-      this.mainCamera.setAspect(this.gl.canvas.width / this.gl.canvas.height, true);
+      this._webglRenderingContext.viewport(
+        0,
+        0,
+        this._webglRenderingContext.canvas.width,
+        this._webglRenderingContext.canvas.height
+      );
+      this.mainCamera.setAspect(
+        this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
+        true
+      );
       this.renderFrame();
     });
-    this.resizeObserver.observe(this.canvas);
+    this._resizeObserver.observe(this.canvas);
   }
 
   /**
@@ -134,7 +152,7 @@ export class Scene {
     };
 
     this.event.dispatchEvent(new FrameEvent("prerender", frameState));
-    this.renderer.render(frameState);
+    this._renderer.render(frameState);
     this.event.dispatchEvent(new FrameEvent("postrender", frameState));
 
     this._lastRenderTime = time;
@@ -171,5 +189,26 @@ export class Scene {
    */
   stopRendering() {
     this._requestAnimating = false;
+  }
+
+  /**
+   * Add control
+   * @param {import("./control/Control.js").Control} control
+   */
+  addControl(control) {
+    if (this._controls.has(control)) return;
+    this._controls.add(control);
+    control.register(this);
+  }
+
+  /**
+   * Remove control
+   * @param {import("./control/Control.js").Control} control
+   */
+  removeControl(control) {
+    const exist = this._controls.delete(control);
+    if (exist) {
+      control.unregister(this);
+    }
   }
 }

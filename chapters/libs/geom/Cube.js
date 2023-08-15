@@ -113,7 +113,7 @@ export const createCubeIndexed = (width, height, length) => {
     x, y, z,  -x, y, z,  -x,-y, z,   x,-y, z,
     x, y,-z,  -x, y,-z,  -x, y, z,   x, y, z,
     x, y,-z,  -x, y,-z,  -x,-y,-z,   x,-y,-z,
-    x,-y,-z,  -x,-y,-z,  -x,-y, z,   x, y, z,
+    x,-y,-z,  -x,-y,-z,  -x,-y, z,   x,-y, z,
    -x, y, z,  -x, y,-z,  -x,-y,-z,  -x,-y, z,
     x, y,-z,   x, y, z,   x,-y, z,   x,-y,-z,
   ]);
