@@ -24,12 +24,12 @@ export const createCubeTriangulated = (width, height, length) => {
   ]);
   // prettier-ignore
   const normals = new Float32Array([
-    0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
-    0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
-    0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,
-    0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,
-   -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
-    1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+    0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,   0, 0, 1, 0,
+    0, 1, 0, 0,   0, 1, 0, 0,   0, 1, 0, 0,   0, 1, 0, 0,   0, 1, 0, 0,   0, 1, 0, 0,
+    0, 0,-1, 0,   0, 0,-1, 0,   0, 0,-1, 0,   0, 0,-1, 0,   0, 0,-1, 0,   0, 0,-1, 0,
+    0,-1, 0, 0,   0,-1, 0, 0,   0,-1, 0, 0,   0,-1, 0, 0,   0,-1, 0, 0,   0,-1, 0, 0,
+   -1, 0, 0, 0,  -1, 0, 0, 0,  -1, 0, 0, 0,  -1, 0, 0, 0,  -1, 0, 0, 0,  -1, 0, 0, 0,
+    1, 0, 0, 0,   1, 0, 0, 0,   1, 0, 0, 0,   1, 0, 0, 0,   1, 0, 0, 0,   1, 0, 0, 0,
   ]);
 
   return {
@@ -83,7 +83,7 @@ export class Cube extends RenderEntity {
     );
     this.attributes.set(
       EntityAttributeNames.Normal,
-      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 3)
+      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 4)
     );
 
     this.verticesCount = vertices.length / 3;
@@ -119,12 +119,12 @@ export const createCubeIndexed = (width, height, length) => {
   ]);
   // prettier-ignore
   const normals = new Float32Array([
-    0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
-    0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
-    0, 0,-1,  0, 0,-1,  0, 0,-1,  0, 0,-1,
-    0,-1, 0,  0,-1, 0,  0,-1, 0,  0,-1, 0,
-   -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
-    1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+    0, 0, 1, 0,  0, 0, 1, 0,  0, 0, 1, 0,  0, 0, 1, 0,
+    0, 1, 0, 0,  0, 1, 0, 0,  0, 1, 0, 0,  0, 1, 0, 0,
+    0, 0,-1, 0,  0, 0,-1, 0,  0, 0,-1, 0,  0, 0,-1, 0,
+    0,-1, 0, 0,  0,-1, 0, 0,  0,-1, 0, 0,  0,-1, 0, 0,
+   -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 0,
+    1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,
   ]);
   // prettier-ignore
   const indices = new Uint8Array([
@@ -188,7 +188,7 @@ export class IndexedCube extends RenderEntity {
     );
     this.attributes.set(
       EntityAttributeNames.Normal,
-      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 3)
+      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 4)
     );
 
     this.indices = new BufferDescriptor(indices, BufferAttributeDataType.UnsignedByte, BufferTarget.ElementArrayBuffer);

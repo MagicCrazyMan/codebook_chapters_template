@@ -100,7 +100,7 @@ export const createSphereTriangulated = (
   }
 
   const triangleVertices = new Float32Array(verticalSegments * horizontalSegments * 2 * 3 * 3);
-  const triangleNormals = new Float32Array(verticalSegments * horizontalSegments * 2 * 3 * 3);
+  const triangleNormals = new Float32Array(verticalSegments * horizontalSegments * 2 * 3 * 4);
   for (let i = 0; i < verticalSegments; i++) {
     for (let j = 0; j < horizontalSegments; j++) {
       const index0 = i * (horizontalSegments + 1) + j;
@@ -114,13 +114,13 @@ export const createSphereTriangulated = (
       const vertex3 = vertices.slice(index3 * 3 + 0, index3 * 3 + 3);
 
       const d0 = Math.hypot(vertex0[0], vertex0[1], vertex0[2]);
-      const normal0 = [vertex0[0] / d0, vertex0[1] / d0, vertex0[2] / d0];
+      const normal0 = [vertex0[0] / d0, vertex0[1] / d0, vertex0[2] / d0, 1];
       const d1 = Math.hypot(vertex1[0], vertex1[1], vertex1[2]);
-      const normal1 = [vertex1[0] / d1, vertex1[1] / d1, vertex1[2] / d1];
+      const normal1 = [vertex1[0] / d1, vertex1[1] / d1, vertex1[2] / d1, 1];
       const d2 = Math.hypot(vertex2[0], vertex2[1], vertex2[2]);
-      const normal2 = [vertex2[0] / d2, vertex2[1] / d2, vertex2[2] / d2];
+      const normal2 = [vertex2[0] / d2, vertex2[1] / d2, vertex2[2] / d2, 1];
       const d3 = Math.hypot(vertex3[0], vertex3[1], vertex3[2]);
-      const normal3 = [vertex3[0] / d3, vertex3[1] / d3, vertex3[2] / d3];
+      const normal3 = [vertex3[0] / d3, vertex3[1] / d3, vertex3[2] / d3, 1];
 
       triangleVertices.set(vertex0, (i * horizontalSegments + j) * 18 + 0);
       triangleVertices.set(vertex2, (i * horizontalSegments + j) * 18 + 3);
@@ -129,12 +129,12 @@ export const createSphereTriangulated = (
       triangleVertices.set(vertex3, (i * horizontalSegments + j) * 18 + 12);
       triangleVertices.set(vertex2, (i * horizontalSegments + j) * 18 + 15);
 
-      triangleNormals.set(normal0, (i * horizontalSegments + j) * 18 + 0);
-      triangleNormals.set(normal2, (i * horizontalSegments + j) * 18 + 3);
-      triangleNormals.set(normal1, (i * horizontalSegments + j) * 18 + 6);
-      triangleNormals.set(normal0, (i * horizontalSegments + j) * 18 + 9);
-      triangleNormals.set(normal3, (i * horizontalSegments + j) * 18 + 12);
-      triangleNormals.set(normal2, (i * horizontalSegments + j) * 18 + 15);
+      triangleNormals.set(normal0, (i * horizontalSegments + j) * 24 + 0);
+      triangleNormals.set(normal2, (i * horizontalSegments + j) * 24 + 4);
+      triangleNormals.set(normal1, (i * horizontalSegments + j) * 24 + 8);
+      triangleNormals.set(normal0, (i * horizontalSegments + j) * 24 + 12);
+      triangleNormals.set(normal3, (i * horizontalSegments + j) * 24 + 16);
+      triangleNormals.set(normal2, (i * horizontalSegments + j) * 24 + 20);
     }
   }
 
@@ -191,7 +191,7 @@ export class Sphere extends RenderEntity {
     );
     this.attributes.set(
       EntityAttributeNames.Normal,
-      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 3)
+      new BufferAttribute(new BufferDescriptor(new Float32Array(normals)), 4)
     );
 
     this.verticesCount = vertices.length / 3;

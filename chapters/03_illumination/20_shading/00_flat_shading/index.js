@@ -1,8 +1,7 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../../libs/Attribute";
-import { DrawMode } from "../../../libs/Constants";
+import { CullFace, DrawMode } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
-import { CullFace } from "../../../libs/WebGLRenderer";
 import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";

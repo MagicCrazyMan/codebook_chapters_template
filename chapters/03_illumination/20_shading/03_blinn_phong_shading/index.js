@@ -1,7 +1,7 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import { CullFace, DrawMode, UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
-import { CullFace } from "../../../libs/WebGLRenderer";
+import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
 import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
@@ -14,7 +14,6 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
-import { Uniform } from "../../../libs/Uniform";
 
 class BlinnPhongShading extends Material {
   name() {
