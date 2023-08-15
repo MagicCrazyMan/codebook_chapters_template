@@ -1,4 +1,4 @@
-import { glMatrix, quat, vec3 } from "gl-matrix";
+import { glMatrix, vec3 } from "gl-matrix";
 import { CullFace, DrawMode, UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
@@ -83,6 +83,17 @@ class AmbientLight extends Material {
   }
 }
 
+const ambientLight = new AmbientLight();
+
+/**
+ * Create sphere object
+ */
+const sphere = new Sphere(2, 24);
+sphere.material = ambientLight;
+
+/**
+ * Create scene
+ */
 const canvas = getCanvas();
 const scene = new Scene(canvas, {
   cullFace: CullFace.Back,
@@ -94,22 +105,9 @@ const scene = new Scene(canvas, {
     vec3.fromValues(3, 3, 7)
   ),
 });
+scene.root.addChild(sphere);
 
-const ambientLight = new AmbientLight();
-
-const cube = new Sphere(2, 24);
-cube.material = ambientLight;
-scene.root.addChild(cube);
-
-const dps = 20; // Degrees Per Second
-const rotation = quat.create();
-scene.event.addEventListener("prerender", (event) => {
-  /**@type {import("../../libs/WebGLRenderer").FrameState} */
-  const frameState = event.frameState;
-  let r = (frameState.previousTime / 1000) * dps;
-  r %= 360;
-  cube.setRotationQuaternion(quat.fromEuler(rotation, 0, r, 0), true);
-});
+scene.renderFrame();
 
 /**
  * Setups ambient light color

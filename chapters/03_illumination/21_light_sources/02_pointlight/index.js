@@ -183,7 +183,7 @@ class PointLight extends Material {
 const pointLight = new PointLight();
 
 /**
- * Create sphere object and set uniforms
+ * Create sphere object
  */
 const sphere = new Sphere(2, 24);
 sphere.material = pointLight;
@@ -204,7 +204,9 @@ const scene = new Scene(canvas, {
     vec3.fromValues(0, 1, 0)
   ),
 });
-scene.root.addChild(sphere); // add sphere object into scene
+scene.root.addChild(sphere);
+
+scene.renderFrame();
 
 /**
  * Setups diffuse light color

@@ -179,7 +179,9 @@ const scene = new Scene(canvas, {
     vec3.fromValues(0, 1, 0)
   ),
 });
-scene.root.addChild(sphere); // add sphere object into scene
+scene.root.addChild(sphere);
+
+scene.renderFrame();
 
 /**
  * Setups diffuse light color
