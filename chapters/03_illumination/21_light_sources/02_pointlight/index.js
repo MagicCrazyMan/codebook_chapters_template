@@ -17,7 +17,7 @@ import {
 
 class PointLight extends Material {
   name() {
-    return "PhongShading";
+    return "PointLight";
   }
 
   vertexShaderSource() {
