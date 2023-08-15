@@ -29,7 +29,7 @@ const fragmentShader = `
   uniform vec3 u_LightDirection;
   uniform vec3 u_DiffuseLightColor;
   uniform vec3 u_SpecularLightColor;
-  uniform float u_LightSpecularShininessExponent;
+  uniform float u_SpecularLightShininessExponent;
 
   uniform float u_LightAttenuationA;
   uniform float u_LightAttenuationB;
@@ -56,7 +56,7 @@ const fragmentShader = `
    */
   vec3 specular(vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
     float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
-    float power = pow(cosine, u_LightSpecularShininessExponent);
+    float power = pow(cosine, u_SpecularLightShininessExponent);
     return u_SpecularLightColor * u_SpecularReflection * power;
   }
 
@@ -180,7 +180,7 @@ setSpecularLightColor();
  */
 const uLightSpecularShininessExponent = gl.getUniformLocation(
   program,
-  "u_LightSpecularShininessExponent"
+  "u_SpecularLightShininessExponent"
 );
 const uLightSpecularShininessExponentInput = document.getElementById("specularShininessExponent");
 uLightSpecularShininessExponentInput.addEventListener("input", () => {
