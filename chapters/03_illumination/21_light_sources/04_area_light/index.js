@@ -312,10 +312,6 @@ class AreaLight extends Material {
     vec3.transformMat4(lightPlanePosition, lightPlanePosition, lightModelMatrix);
     vec3.transformMat4(lightPlaneNormal, lightPlaneNormal, lightNormalMatrix);
     vec3.normalize(lightPlaneNormal, lightPlaneNormal);
-    console.log(lightPosition);
-    console.log(lightPlanePosition);
-    console.log(lightPlaneNormal);
-    console.log(lightInvertModelMatrix);
     // set value
     vec3.copy(this.areaLightPosition, lightPosition);
     vec3.copy(this.areaLightViewingPlanePosition, lightPlanePosition);
@@ -351,7 +347,6 @@ const scene = new Scene(canvas, {
 scene.root.addChild(sphere);
 
 scene.renderFrame();
-console.log(sphere);
 
 /**
  * Setups diffuse light color
