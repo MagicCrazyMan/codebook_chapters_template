@@ -19,7 +19,7 @@ import {
 
 class Reflection extends Material {
   name() {
-    return "DiffuseLight";
+    return "Reflection";
   }
 
   vertexShaderSource() {

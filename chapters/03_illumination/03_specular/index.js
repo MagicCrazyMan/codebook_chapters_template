@@ -19,7 +19,7 @@ import {
 
 class SpecularLight extends Material {
   name() {
-    return "DiffuseLight";
+    return "SpecularLight";
   }
 
   vertexShaderSource() {

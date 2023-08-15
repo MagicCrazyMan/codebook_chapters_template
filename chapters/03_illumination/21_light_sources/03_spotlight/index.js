@@ -1,6 +1,6 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { bindWebGLProgram, getCanvasResizeObserver, getWebGLContext } from "../../../libs/common";
-import { createSphereTriangulated } from "../../../libs/geom/sphere";
+import { createSphereTriangulated } from "../../../libs/geom/Sphere";
 
 const vertexShader = `
   attribute vec4 a_Position;

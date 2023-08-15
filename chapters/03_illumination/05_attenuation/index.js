@@ -19,7 +19,7 @@ import {
 
 class Attenuation extends Material {
   name() {
-    return "DiffuseLight";
+    return "Attenuation";
   }
 
   vertexShaderSource() {
