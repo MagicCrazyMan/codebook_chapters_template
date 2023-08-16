@@ -81,7 +81,9 @@ class GouraudShading extends Material {
         vec3 reflectionDirection = reflect(-lightDirection, normal);
     
         float distanceToLight = distance(position, u_LightPosition);
-        float attenuationComponent = u_LightAttenuations.x + u_LightAttenuations.y * distanceToLight + u_LightAttenuations.z * pow(distanceToLight, 2.0);
+        float distanceToCamera = distance(position, u_CameraPosition);
+        float attenuationDistance = distanceToLight + distanceToCamera;
+        float attenuationComponent = u_LightAttenuations.x + u_LightAttenuations.y * attenuationDistance + u_LightAttenuations.z * pow(attenuationDistance, 2.0);
         float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
         
         vec3 ambientColor = ambient();

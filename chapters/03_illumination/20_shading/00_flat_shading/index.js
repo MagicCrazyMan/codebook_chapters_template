@@ -196,9 +196,12 @@ class FlatShading extends Material {
 
   /**
    * Calculates light attenuation
+   * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
    */
-  setAttenuation() {
-    const distance = vec3.distance(this.lightPosition, this.centroid3);
+  setAttenuation(frameState) {
+    const distanceToLight = vec3.distance(this.lightPosition, this.centroid3);
+    const distanceToCamera = vec3.distance(frameState.scene.mainCamera.position, this.centroid3);
+    const distance = distanceToLight + distanceToCamera;
     this.attenuation =
       1 /
       (this.attenuationFactorA +
@@ -288,7 +291,7 @@ class FlatShading extends Material {
       this.setLightDirection();
       this.setReflectionDirection();
       this.setCameraDirection(frameState);
-      this.setAttenuation();
+      this.setAttenuation(frameState);
 
       this.setAmbientColor();
       this.setDiffuseColor();
