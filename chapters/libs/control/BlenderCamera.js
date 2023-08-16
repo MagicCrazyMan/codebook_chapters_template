@@ -154,7 +154,7 @@ export class BlenderCamera extends Control {
       vec3.cross(this._up, this._right, this._forward);
       vec3.normalize(this._up, this._up);
     } else {
-      const position = opts.position ?? vec3.set(this._tmpVec3_0, 0, 0, this._radius);
+      const position = opts.position ?? vec3.fromValues(0, 0, 1);
       const lookAt = opts.lookAt ?? vec3.zero(this._tmpVec3_1);
 
       this._radius = Math.max(vec3.dist(position, lookAt), this._forwardLimitZoneRadius);
