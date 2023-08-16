@@ -17,4 +17,4 @@ $$
 
 > 在本例渲染中，没有融合漫反射和环境光反射，以便我们更清楚地看到镜面反射的渲染结果。
 
-> 本例使用[点光源](./21_light_sources/01_pointlight)作为光源。且为了更好地展示镜面反射效果，使用 [Phong Shading](./20_shading/02_phongshading) 渲染光照。
+> 本例使用[点光源](./21_light_sources/02_pointlight)作为光源。且为了更好地展示镜面反射效果，使用 [Phong Shading](./20_shading/02_phong_shading) 渲染光照。
