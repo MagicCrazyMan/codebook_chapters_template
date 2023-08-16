@@ -1,10 +1,10 @@
-import { glMatrix, vec3 } from "gl-matrix";
-import { CullFace, DrawMode, UniformType } from "../../../libs/Constants";
+import { vec3 } from "gl-matrix";
+import { DrawMode, UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
-import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
@@ -191,19 +191,13 @@ sphere.material = pointLight;
 /**
  * Create scene
  */
-const canvas = getCanvas();
-const scene = new Scene(canvas, {
-  cullFace: CullFace.Back,
-  camera: new PerspectiveCamera(
-    glMatrix.toRadian(50),
-    canvas.width / canvas.height,
-    1,
-    1000,
-    vec3.fromValues(0, 0, 6),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 1, 0)
-  ),
-});
+const scene = new Scene(getCanvas());
+scene.addControl(
+  new BlenderCamera({
+    direction: vec3.fromValues(0, 0, -1),
+  })
+);
+
 scene.root.addChild(sphere);
 
 scene.renderFrame();

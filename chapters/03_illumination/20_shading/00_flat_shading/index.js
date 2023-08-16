@@ -1,9 +1,9 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../../libs/Attribute";
-import { CullFace, DrawMode } from "../../../libs/Constants";
+import { DrawMode } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
-import { PerspectiveCamera } from "../../../libs/camera/Perspective";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
@@ -314,19 +314,13 @@ sphere.material = flatShading;
 /**
  * Create scene
  */
-const canvas = getCanvas();
-const scene = new Scene(canvas, {
-  cullFace: CullFace.Back,
-  camera: new PerspectiveCamera(
-    glMatrix.toRadian(50),
-    canvas.width / canvas.height,
-    1,
-    1000,
-    vec3.fromValues(0, 0, 6),
-    vec3.fromValues(0, 0, 0),
-    vec3.fromValues(0, 1, 0)
-  ),
-});
+const scene = new Scene(getCanvas());
+scene.addControl(
+  new BlenderCamera({
+    direction: vec3.fromValues(0, 0, -1),
+  })
+);
+
 scene.root.addChild(sphere); // add sphere object into scene
 
 /**

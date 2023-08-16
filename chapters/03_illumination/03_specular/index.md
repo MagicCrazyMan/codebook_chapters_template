@@ -13,8 +13,8 @@ $$
 
 > WebGL GLSL 中内置了 `reflect(incidentVector, normalVector)` 函数计算出射光方向向量 $\vec{r}$，本文往后的章节都将使用此函数计算。
 
-在本例渲染的正方体中，可以发现只有镜面反射生效的部分有颜色，除此之外的区域均为黑色，这是因为我们在本例中仅演示镜面反射的渲染结果，没有融合漫反射和环境光反射。
-
 部分实现相关内容详细可看[此文章](http://learnwebgl.brown37.net/09_lights/lights_specular.html)
+
+> 在本例渲染中，没有融合漫反射和环境光反射，以便我们更清楚地看到镜面反射的渲染结果。
 
 > 本例使用[点光源](./21_light_sources/01_pointlight)作为光源。且为了更好地展示镜面反射效果，使用 [Phong Shading](./20_shading/02_phongshading) 渲染光照。

@@ -1,10 +1,10 @@
-import { glMatrix, quat, vec3 } from "gl-matrix";
+import { quat, vec3 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../libs/Attribute";
-import { CullFace, DrawMode, UniformType } from "../../libs/Constants";
+import { DrawMode, UniformType } from "../../libs/Constants";
 import { Scene } from "../../libs/Scene";
 import { Uniform } from "../../libs/Uniform";
-import { PerspectiveCamera } from "../../libs/camera/Perspective";
 import { getCanvas, watchInputs } from "../../libs/common";
+import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
 import { IndexedCube } from "../../libs/geom/Cube";
 import {
@@ -110,21 +110,16 @@ class DiffuseLight extends Material {
   }
 }
 
-const canvas = getCanvas();
-const scene = new Scene(canvas, {
-  cullFace: CullFace.Back,
-  camera: new PerspectiveCamera(
-    glMatrix.toRadian(30),
-    canvas.width / canvas.height,
-    1,
-    1000,
-    vec3.fromValues(3, 3, 7)
-  ),
-});
+const scene = new Scene(getCanvas());
+scene.addControl(
+  new BlenderCamera({
+    direction: vec3.fromValues(-1, -1, -1),
+  })
+);
 
 const diffuseLight = new DiffuseLight();
 
-const cube = new IndexedCube(2, 2, 2);
+const cube = new IndexedCube(2);
 cube.material = diffuseLight;
 scene.root.addChild(cube);
 

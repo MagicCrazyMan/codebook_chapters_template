@@ -112,14 +112,7 @@ export class Scene {
     this._webglRenderingContext = this.canvas.getContext("webgl2", opts.contextAttributes);
     this._renderer = new WebGLRenderer(this._webglRenderingContext, opts);
 
-    this.mainCamera =
-      opts.camera ??
-      new PerspectiveCamera(
-        glMatrix.toRadian(60),
-        this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
-        1,
-        null
-      );
+    this.mainCamera = opts.camera ?? this.getDefaultCamera();
 
     this._resizeObserver = new ResizeObserver(() => {
       this.canvas.width = this.canvas.clientWidth;
@@ -137,6 +130,18 @@ export class Scene {
       this.renderFrame();
     });
     this._resizeObserver.observe(this.canvas);
+  }
+
+  /**
+   * @private
+   */
+  getDefaultCamera() {
+    return new PerspectiveCamera(
+      glMatrix.toRadian(60),
+      this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
+      0.1,
+      null
+    );
   }
 
   /**
