@@ -1,5 +1,5 @@
 import { glMatrix, vec3 } from "gl-matrix";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
@@ -14,6 +14,7 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
+import { Axes } from "../../../libs/geom/Axes";
 
 class SpotLight extends Material {
   name() {
@@ -173,10 +174,6 @@ class SpotLight extends Material {
     ];
   }
 
-  drawMode() {
-    return DrawMode.Triangles;
-  }
-
   lightPosition = vec3.fromValues(3, 1, 5);
   diffuseLightColor = vec3.create();
   specularLightColor = vec3.create();
@@ -261,7 +258,10 @@ scene.addControl(
   })
 );
 
-scene.root.addChild(sphere);
+const axes = new Axes(4);
+axes.addChild(sphere);
+
+scene.root.addChild(axes);
 
 scene.renderFrame();
 

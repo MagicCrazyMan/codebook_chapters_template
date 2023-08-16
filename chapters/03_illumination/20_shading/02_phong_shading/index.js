@@ -1,5 +1,5 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
@@ -14,6 +14,7 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
+import { Axes } from "../../../libs/geom/Axes";
 
 class PhongShading extends Material {
   name() {
@@ -145,10 +146,6 @@ class PhongShading extends Material {
     ];
   }
 
-  drawMode() {
-    return DrawMode.Triangles;
-  }
-
   lightPosition = vec3.create();
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
@@ -245,7 +242,10 @@ scene.addControl(
   })
 );
 
-scene.root.addChild(sphere); // add sphere object into scene
+const axes = new Axes(4);
+axes.addChild(sphere);
+
+scene.root.addChild(axes);
 
 /**
  * Setups ambient light color

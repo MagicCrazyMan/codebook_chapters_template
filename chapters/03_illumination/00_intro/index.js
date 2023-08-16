@@ -4,11 +4,12 @@ import { getCanvas } from "../../libs/common";
 import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { IndexedCube } from "../../libs/geom/Cube";
 import { PerVertexColorMaterial } from "../../libs/material/PerVertexColorMaterial";
+import { Axes } from "../../libs/geom/Axes";
 
 const scene = new Scene(getCanvas());
 scene.addControl(
   new BlenderCamera({
-    position: vec3.fromValues(0, 0, 5),
+    position: vec3.fromValues(3, 3, 3),
   })
 );
 
@@ -22,6 +23,10 @@ cube.material = new PerVertexColorMaterial(new Float32Array([
   1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  1.0,1.0,0.4,  // left(yellow)
   0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  // right(green)
 ]));
-scene.root.addChild(cube);
+
+const axes = new Axes(2);
+axes.addChild(cube);
+
+scene.root.addChild(axes);
 
 scene.renderFrame();

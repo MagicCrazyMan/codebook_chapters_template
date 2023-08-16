@@ -136,11 +136,13 @@ export class Material {
   }
 
   /**
-   * Returns draw mode of this material
-   * @returns {import("../Constants.js").DrawMode}
+   * Returns draw mode of this material.
+   *
+   * If not specified, use draw mode defined in render entity
+   * @returns {import("../Constants.js").DrawMode | undefined}
    */
   drawMode() {
-    abstractMethod();
+    return void 0;
   }
 
   /**
@@ -159,10 +161,10 @@ export class Material {
 
   /**
    * Updates material before rendering.
-   * 
+   *
    * If material never change, left this method empty.
-   * @param {import("../entity/RenderEntity.js").RenderEntity} entity 
-   * @param {import("../WebGLRenderer.js").FrameState} frameState 
+   * @param {import("../entity/RenderEntity.js").RenderEntity} entity
+   * @param {import("../WebGLRenderer.js").FrameState} frameState
    */
   prerender(entity, frameState) {
     //

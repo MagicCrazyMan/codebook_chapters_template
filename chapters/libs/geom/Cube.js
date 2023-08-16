@@ -1,5 +1,5 @@
 import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
-import { BufferAttributeDataType, BufferTarget } from "../Constants.js";
+import { BufferAttributeDataType, BufferTarget, DrawMode } from "../Constants.js";
 import { EntityAttributeNames, RenderEntity } from "../entity/RenderEntity.js";
 
 /**
@@ -59,6 +59,11 @@ export class Cube extends RenderEntity {
    * @readonly
    */
   length;
+
+  /**
+   * Draw mode
+   */
+  drawMode = DrawMode.Triangles;
 
   /**
    * Constructs a cube geometry
@@ -164,6 +169,11 @@ export class IndexedCube extends RenderEntity {
    * @readonly
    */
   length;
+
+  /**
+   * Draw mode
+   */
+  drawMode = DrawMode.Triangles;
 
   /**
    * Constructs a cube geometry

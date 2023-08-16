@@ -1,5 +1,5 @@
 import { vec3 } from "gl-matrix";
-import { DrawMode, UniformType } from "../../../libs/Constants";
+import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { getCanvas, watchInputs } from "../../../libs/common";
@@ -12,6 +12,7 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
+import { Axes } from "../../../libs/geom/Axes";
 
 class AmbientLight extends Material {
   name() {
@@ -63,10 +64,6 @@ class AmbientLight extends Material {
     ];
   }
 
-  drawMode() {
-    return DrawMode.Triangles;
-  }
-
   ambientLightColor = vec3.create();
   ambientReflection = vec3.fromValues(0.4, 0.4, 1);
 
@@ -101,7 +98,10 @@ scene.addControl(
   })
 );
 
-scene.root.addChild(sphere);
+const axes = new Axes(4);
+axes.addChild(sphere);
+
+scene.root.addChild(axes);
 
 scene.renderFrame();
 

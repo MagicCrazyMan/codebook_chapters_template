@@ -339,22 +339,20 @@ export class WebGLRenderer {
    * @param {RenderEntity} entity
    */
   drawEntity(gl, materialItem, entity) {
+    const drawMode = glDrawMode(gl, materialItem.drawMode ?? entity.drawMode);
+
     if (entity.indices) {
       this.bufferPool.setBuffer(entity.indices);
       this.bufferPool.bindBuffer(gl, entity.indices);
       gl.drawElements(
-        glDrawMode(gl, materialItem.drawMode),
+        drawMode,
         entity.verticesCount,
         glBufferAttributeDataType(gl, entity.indices.type),
         entity.verticesOffset
       );
       this.bufferPool.unbindBuffer(gl, entity.indices);
     } else {
-      gl.drawArrays(
-        glDrawMode(gl, materialItem.drawMode),
-        entity.verticesOffset,
-        entity.verticesCount
-      );
+      gl.drawArrays(drawMode, entity.verticesOffset, entity.verticesCount);
     }
   }
 }
@@ -521,7 +519,7 @@ class MaterialItem {
    */
   uniformBindings;
   /**
-   * @type {import("./Constants.js").DrawMode}
+   * @type {import("./Constants.js").DrawMode | undefined}
    */
   drawMode;
 

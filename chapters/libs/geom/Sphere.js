@@ -1,4 +1,5 @@
 import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
+import { DrawMode } from "../Constants.js";
 import { EntityAttributeNames, RenderEntity } from "../entity/RenderEntity.js";
 
 /**
@@ -163,6 +164,11 @@ export class Sphere extends RenderEntity {
    * @readonly
    */
   horizontalSegments;
+
+  /**
+   * Draw mode
+   */
+  drawMode = DrawMode.Triangles;
 
   /**
    * Constructs a sphere geometry

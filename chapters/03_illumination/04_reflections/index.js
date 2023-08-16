@@ -1,6 +1,6 @@
-import { quat, vec3 } from "gl-matrix";
+import { glMatrix, mat4, vec3 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../libs/Attribute";
-import { DrawMode, UniformType } from "../../libs/Constants";
+import { UniformType } from "../../libs/Constants";
 import { Scene } from "../../libs/Scene";
 import { Uniform } from "../../libs/Uniform";
 import { CameraUniformNames } from "../../libs/camera/Camera";
@@ -16,6 +16,7 @@ import {
   MaterialAttributeBinding,
   MaterialUniformBinding,
 } from "../../libs/material/Material";
+import { Axes } from "../../libs/geom/Axes";
 
 class Reflection extends Material {
   name() {
@@ -140,10 +141,6 @@ class Reflection extends Material {
     ];
   }
 
-  drawMode() {
-    return DrawMode.Triangles;
-  }
-
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
   specularLightColor = vec3.create();
@@ -199,16 +196,19 @@ const reflection = new Reflection();
 
 const cube = new IndexedCube(2);
 cube.material = reflection;
-scene.root.addChild(cube);
 
-const dps = 20; // Degrees Per Second
-const rotation = quat.create();
+const axes = new Axes(2);
+axes.addChild(cube);
+
+scene.root.addChild(axes);
+
+const dps = glMatrix.toRadian(20); // Radians Per Second
 scene.event.addEventListener("prerender", (event) => {
   /**@type {import("../../libs/WebGLRenderer").FrameState} */
   const frameState = event.frameState;
   let r = (frameState.previousTime / 1000) * dps;
   r %= 360;
-  cube.setRotationQuaternion(quat.fromEuler(rotation, 0, r, 0), true);
+  cube.setModelMatrix(mat4.fromYRotation(cube.modelMatrix, r));
 });
 
 scene.startRendering();

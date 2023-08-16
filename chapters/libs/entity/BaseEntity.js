@@ -51,27 +51,6 @@ export class BaseEntity {
   name;
 
   /**
-   * Translation of the entity.
-   * @type {vec3}
-   * @readonly
-   */
-  translation = vec3.create();
-
-  /**
-   * Rotation in quaternion of the entity.
-   * @type {quat}
-   * @readonly
-   */
-  rotationQuaternion = quat.create();
-
-  /**
-   * Scaling of the entity.
-   * @type {vec3}
-   * @readonly
-   */
-  scaling = vec3.fromValues(1, 1, 1);
-
-  /**
    * Model matrix of the entity.
    * @type {mat4}
    * @readonly
@@ -132,11 +111,19 @@ export class BaseEntity {
    */
   constructor(opts = {}) {
     this.setName(opts.name || v4());
-    if (opts.translation) this.setTranslation(opts.translation);
-    if (opts.rotation) this.setRotation(opts.rotation);
-    if (opts.scaling) this.setScaling(opts.scaling);
 
-    this.updateModelMatrix();
+    mat4.fromRotationTranslationScale(
+      this.modelMatrix,
+      quat.fromEuler(
+        quat.create(),
+        fromRadians(opts.rotation?.[0] ?? 0),
+        fromRadians(opts.rotation?.[1] ?? 0),
+        fromRadians(opts.rotation?.[2] ?? 0)
+      ),
+      opts.translation ?? vec3.fromValues(0, 0, 0),
+      opts.scaling ?? vec3.fromValues(1, 1, 1)
+    );
+    this.shouldUpdateFrameState = true;
   }
 
   /**
@@ -150,82 +137,12 @@ export class BaseEntity {
   }
 
   /**
-   * Sets object translation.
-   * @public
-   * @param {import("gl-matrix").ReadonlyVec3} translation Object translation
-   * @param {boolean} [update] Recalculates matrices immediately, default `false`
-   */
-  setTranslation(translation, update = false) {
-    vec3.copy(this.translation, translation);
-
-    if (update) this.updateModelMatrix();
-  }
-
-  /**
-   * Sets object rotation.
-   * @public
-   * @param {import("gl-matrix").ReadonlyVec3} rotation Object rotation
-   * @param {boolean} [update] Recalculates matrices immediately, default `false`
-   */
-  setRotation(rotation, update = false) {
-    quat.fromEuler(
-      this.rotationQuaternion,
-      fromRadians(rotation[0]),
-      fromRadians(rotation[1]),
-      fromRadians(rotation[2])
-    );
-
-    if (update) this.updateModelMatrix();
-  }
-
-  /**
-   * Sets object rotation.
-   * @public
-   * @param {import("gl-matrix").ReadonlyQuat} rotation Object rotation in quaternion
-   * @param {boolean} [update] Recalculates matrices immediately, default `false`
-   */
-  setRotationQuaternion(rotation, update = false) {
-    quat.copy(this.rotationQuaternion, rotation);
-
-    if (update) this.updateModelMatrix();
-  }
-
-  /**
-   * Sets object scale.
-   * @public
-   * @param {import("gl-matrix").ReadonlyVec3} scaling Object scale
-   * @param {boolean} [update] Recalculates matrices immediately, default `false`
-   */
-  setScaling(scaling, update = false) {
-    vec3.copy(this.scaling, scaling);
-
-    if (update) this.updateModelMatrix();
-  }
-
-  /**
-   * Sets custom model matrix
-   * @public
-   * @param {import("gl-matrix").ReadonlyMat4} modelMatrix Custom object matrix.
-   */
-  setModelMatrix(modelMatrix) {
-    mat4.copy(this.modelMatrix, modelMatrix);
-    mat4.getTranslation(this.translation, modelMatrix);
-    mat4.getRotation(this.rotationQuaternion, modelMatrix);
-    mat4.getScaling(this.scaling, modelMatrix);
-    this.shouldUpdateFrameState = true;
-  }
-
-  /**
    * Updates model matrix.
    * @public
+   * @param {import("gl-matrix").ReadonlyMat4} modelMatrix
    */
-  updateModelMatrix() {
-    mat4.fromRotationTranslationScale(
-      this.modelMatrix,
-      this.rotationQuaternion,
-      this.translation,
-      this.scaling
-    );
+  setModelMatrix(modelMatrix) {
+    mat4.copy(this.modelMatrix, modelMatrix)
     this.shouldUpdateFrameState = true;
   }
 

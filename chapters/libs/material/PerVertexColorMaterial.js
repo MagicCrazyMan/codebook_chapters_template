@@ -1,5 +1,4 @@
 import { BufferAttribute, BufferDescriptor } from "../Attribute.js";
-import { DrawMode } from "../Constants.js";
 import { EntityAttributeNames, EntityUniformNames } from "../entity/RenderEntity.js";
 import {
   EntityAttributeBinding,
@@ -76,14 +75,6 @@ export class PerVertexColorMaterial extends Material {
   }
 
   /**
-   * Returns draw mode of this material
-   * @returns {DrawMode}
-   */
-  drawMode() {
-    return DrawMode.Triangles;
-  }
-
-  /**
    * Color
    * @type {Float32Array}
    * @readonly
@@ -91,20 +82,30 @@ export class PerVertexColorMaterial extends Material {
   colors;
 
   /**
-   * Constructs a static per vertex color material
-   * @param {Float32Array} colors colors per vertex
+   * Color component size
+   * @type {number}
+   * @readonly
    */
-  constructor(colors) {
+  size;
+
+  /**
+   * Constructs a static per vertex color material
+   * @param {Float32Array} colors Colors per vertex
+   * @param {number} [size] Color component size
+   */
+  constructor(colors, size = 3) {
     super();
-    this.setColor(colors);
+    this.setColor(colors, size);
   }
 
   /**
    * Sets colors
    * @param {Float32Array} colors colors per vertex
+   * @param {number} [size] Color component size
    */
-  setColor(colors) {
+  setColor(colors, size = 3) {
     this.colors = colors;
-    this.attributes.set("a_Color", new BufferAttribute(new BufferDescriptor(this.colors), 3));
+    this.size = size;
+    this.attributes.set("a_Color", new BufferAttribute(new BufferDescriptor(this.colors), this.size));
   }
 }

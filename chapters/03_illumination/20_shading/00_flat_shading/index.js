@@ -1,10 +1,10 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../../libs/Attribute";
-import { DrawMode } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
+import { Axes } from "../../../libs/geom/Axes";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
   EntityAttributeBinding,
@@ -59,10 +59,6 @@ class FlatShading extends Material {
 
   uniformBindings() {
     return [new EntityUniformBinding(EntityUniformNames.MvpMatrix)];
-  }
-
-  drawMode() {
-    return DrawMode.Triangles;
   }
 
   rps = glMatrix.toRadian(20);
@@ -324,7 +320,10 @@ scene.addControl(
   })
 );
 
-scene.root.addChild(sphere); // add sphere object into scene
+const axes = new Axes(4);
+axes.addChild(sphere);
+
+scene.root.addChild(axes);
 
 /**
  * Setups ambient light color

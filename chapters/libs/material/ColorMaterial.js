@@ -1,5 +1,5 @@
 import { vec4 } from "gl-matrix";
-import { DrawMode, UniformType } from "../Constants.js";
+import { UniformType } from "../Constants.js";
 import { Uniform } from "../Uniform.js";
 import { EntityAttributeNames, EntityUniformNames } from "../entity/RenderEntity.js";
 import {
@@ -70,14 +70,6 @@ export class ColorMaterial extends Material {
       new MaterialUniformBinding("u_Color"),
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
     ];
-  }
-
-  /**
-   * Returns draw mode of this material
-   * @returns {DrawMode}
-   */
-  drawMode() {
-    return DrawMode.Triangles;
   }
 
   /**

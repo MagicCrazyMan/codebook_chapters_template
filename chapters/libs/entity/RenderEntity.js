@@ -69,6 +69,15 @@ export class RenderEntity extends BaseEntity {
   verticesOffset;
 
   /**
+   * Draw mode.
+   * 
+   * If material specifies a draw mode, ignore this.
+   * @type {import("../Constants.js").DrawMode}
+   * @abstract
+   */
+  drawMode;
+
+  /**
    * Material
    * @type {import("../material/Material.js").Material | undefined}
    */
