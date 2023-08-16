@@ -213,16 +213,40 @@ export class BlenderCamera extends Control {
    * @param {number} rotate Rotate angle, in radians
    */
   horizontalRotate(rotate) {
+    // transform position and look at position back to origin based (translate look at position to (0,0,0) and do the same translate to position)
+    // and then project position into XZ plane (translate position with -position.y)
+    // and then rotate around Y axis
+    // and then translate position with position.y
+    // and then translate position and look at position back
     mat4.identity(this._tmpMat4);
     mat4.translate(this._tmpMat4, this._tmpMat4, this._lookAt);
-    mat4.rotate(this._tmpMat4, this._tmpMat4, rotate, this._up);
+    mat4.translate(
+      this._tmpMat4,
+      this._tmpMat4,
+      vec3.set(this._tmpVec3_0, 0, this._position[1], 0)
+    );
+    mat4.rotateY(this._tmpMat4, this._tmpMat4, rotate);
+    mat4.translate(
+      this._tmpMat4,
+      this._tmpMat4,
+      vec3.set(this._tmpVec3_0, 0, -this._position[1], 0)
+    );
     mat4.translate(this._tmpMat4, this._tmpMat4, vec3.scale(this._tmpVec3_0, this._lookAt, -1));
 
     vec3.transformMat4(this._position, this._position, this._tmpMat4);
 
-    // when horizontal rotate, up direction not changed, update forward and right directions
+    // after horizontal rotating, directions are all changed.
+    // calculate forward using position and look at position
+    // calculate up using normal matrix from transformation above 
+    // calculate right using forward and up
+    mat4.invert(this._tmpMat4, this._tmpMat4);
+    mat4.transpose(this._tmpMat4, this._tmpMat4);
+    vec3.transformMat4(this._up, this._up, this._tmpMat4)
+    vec3.normalize(this._up, this._up);
+
     vec3.sub(this._forward, this._lookAt, this._position);
     vec3.normalize(this._forward, this._forward);
+
     vec3.cross(this._right, this._forward, this._up);
     vec3.normalize(this._right, this._right);
 
@@ -261,7 +285,7 @@ export class BlenderCamera extends Control {
    * @param {"horizontal" | "vertical"} along Movement along direction
    * @param {number} movement Movement
    */
-  moveHorVer(along, movement) {
+  pan(along, movement) {
     vec3.scale(this._tmpVec3_0, along === "vertical" ? this._up : this._right, movement);
     // move camera position
     vec3.add(this._position, this._position, this._tmpVec3_0);
@@ -328,7 +352,7 @@ export class BlenderCamera extends Control {
    * @param {number} movement Movement
    */
   left(movement) {
-    this.moveHorVer("horizontal", -movement);
+    this.pan("horizontal", -movement);
   }
 
   /**
@@ -336,7 +360,7 @@ export class BlenderCamera extends Control {
    * @param {number} movement Movement
    */
   right(movement) {
-    this.moveHorVer("horizontal", movement);
+    this.pan("horizontal", movement);
   }
 
   /**
@@ -344,7 +368,7 @@ export class BlenderCamera extends Control {
    * @param {number} movement Movement
    */
   up(movement) {
-    this.moveHorVer("vertical", movement);
+    this.pan("vertical", movement);
   }
 
   /**
@@ -352,7 +376,7 @@ export class BlenderCamera extends Control {
    * @param {number} movement Movement
    */
   down(movement) {
-    this.moveHorVer("vertical", -movement);
+    this.pan("vertical", -movement);
   }
 
   /**

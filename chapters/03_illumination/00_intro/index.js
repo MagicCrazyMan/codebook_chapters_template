@@ -8,7 +8,7 @@ import { PerVertexColorMaterial } from "../../libs/material/PerVertexColorMateri
 const scene = new Scene(getCanvas());
 scene.addControl(
   new BlenderCamera({
-    position: vec3.fromValues(2, 2, 2),
+    position: vec3.fromValues(0, 0, 5),
   })
 );
 
