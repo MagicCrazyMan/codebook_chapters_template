@@ -24,9 +24,7 @@ cube.material = new PerVertexColorMaterial(new Float32Array([
   0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  0.4,1.0,0.4,  // right(green)
 ]));
 
-const axes = new Axes(2);
-axes.addChild(cube);
-
-scene.root.addChild(axes);
+scene.root.addChild(cube);
+scene.root.addChild(new Axes(2));
 
 scene.renderFrame();

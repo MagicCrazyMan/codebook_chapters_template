@@ -119,10 +119,8 @@ const diffuseLight = new DiffuseLight();
 const cube = new IndexedCube(2);
 cube.material = diffuseLight;
 
-const axes = new Axes(2);
-axes.addChild(cube);
-
-scene.root.addChild(axes);
+scene.root.addChild(cube);
+scene.root.addChild(new Axes(2));
 
 const dps = glMatrix.toRadian(20); // Radians Per Second
 scene.event.addEventListener("prerender", (event) => {

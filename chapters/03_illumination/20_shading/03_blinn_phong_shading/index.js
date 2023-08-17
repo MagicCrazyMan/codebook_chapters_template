@@ -242,10 +242,8 @@ scene.addControl(
   })
 );
 
-const axes = new Axes(4);
-axes.addChild(sphere);
-
-scene.root.addChild(axes);
+scene.root.addChild(sphere);
+scene.root.addChild(new Axes(4));
 
 /**
  * Setups ambient light color
