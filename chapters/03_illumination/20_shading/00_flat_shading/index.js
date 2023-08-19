@@ -252,10 +252,13 @@ class FlatShading extends Material {
   }
 
   /**
-   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
-   * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
+   *
+   * @param {import("../../libs/entity/RenderEntity").RenderEntity} entity
+   * @param {Map<string, import("../../libs/WebGLRenderer").MaterialAttribute>} attributes
+   * @param {Map<string, import("../../libs/WebGLRenderer").MaterialUniform>} uniforms
+   * @param {import("../../libs/WebGLRenderer").FrameState} frameState
    */
-  prerender(entity, frameState) {
+  prerender(entity, attributes, uniforms, frameState) {
     const colorAttribute = this.setColorAttribute(entity);
 
     this.rotateLight(frameState);

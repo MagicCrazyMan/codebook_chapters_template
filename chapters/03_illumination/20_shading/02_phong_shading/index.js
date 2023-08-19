@@ -211,10 +211,13 @@ class PhongShading extends Material {
   lightPositionModelMatrix = mat4.create();
 
   /**
-   * @param {import("../../../libs/entity/RenderEntity").RenderEntity} entity
-   * @param {import("../../../libs/WebGLRenderer").FrameState} frameState
+   *
+   * @param {import("../../libs/entity/RenderEntity").RenderEntity} entity
+   * @param {Map<string, import("../../libs/WebGLRenderer").MaterialAttribute>} attributes
+   * @param {Map<string, import("../../libs/WebGLRenderer").MaterialUniform>} uniforms
+   * @param {import("../../libs/WebGLRenderer").FrameState} frameState
    */
-  prerender(entity, frameState) {
+  prerender(entity, attributes, uniforms, frameState) {
     /**
      * Rotates light position per frame
      */

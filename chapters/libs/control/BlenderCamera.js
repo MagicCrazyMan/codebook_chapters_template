@@ -3,14 +3,16 @@ import { Control } from "./Control.js";
 
 /**
  * @typedef {Object} Options Keyboard camera options
- * @property {number} [rotation] Rotation offset. in radians. default 3 degrees
- * @property {number} [movement] Movement offset each keyboard event. default 0.2 units
- * @property {number} [wheelMovement] Movement offset each mouse wheel event. default equals `5 * movement`.
- * @property {number} [mouseMovement] Movement offset in pixel. default equals 0.02 units per pixel.
- * @property {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position
- * @property {import("gl-matrix").ReadonlyVec3} [position] Camera position
- * @property {import("gl-matrix").ReadonlyVec3} [up] Camera up vector
- * @property {import("gl-matrix").ReadonlyVec3} [direction] Initialize camera direction. if set, `lookAt` and `position` properties ignored.
+ * @property {number} [rotation] Rotation offset. in radians. Default 3 degrees
+ * @property {number} [movement] Movement offset each keyboard event. Default 0.2 units
+ * @property {number} [wheelMovement] Movement offset each mouse wheel event. Default is `5 * movement`.
+ * @property {number} [mouseMovement] Movement offset in pixel. Default equals 0.02 units per pixel.
+ * @property {number} [radius] Initial camera radius. Available only when `direction` is true. Default 5 units.
+ * @property {number} [forwardLimitZoneRadius] Limit sphere zone limitation radius. Default 0.25 units.
+ * @property {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position. Default `(0, 0, 0)`.
+ * @property {import("gl-matrix").ReadonlyVec3} [position] Camera position. Default `(0, 0, 5)`.
+ * @property {import("gl-matrix").ReadonlyVec3} [up] Camera up vector. Default `(0, 1, 0)`.
+ * @property {import("gl-matrix").ReadonlyVec3} [direction] Initial camera direction. Ignore `lookAt` and `position` properties if set.
  */
 
 /**
@@ -23,6 +25,13 @@ export class BlenderCamera extends Control {
    * @readonly
    */
   rotation;
+
+  /**
+   * Limit sphere zone limitation radius
+   * @type {number}
+   * @readonly
+   */
+  forwardLimitZoneRadius;
 
   /**
    * Sphere radius when rotate.
@@ -138,10 +147,11 @@ export class BlenderCamera extends Control {
     this.keyboardMovement = opts.movement ?? 0.2;
     this.wheelMovement = opts.wheelMovement ?? this.keyboardMovement * 5;
     this.mouseMovement = opts.mouseMovement ?? 0.02;
+    this.forwardLimitZoneRadius = opts.forwardLimitZoneRadius ?? 0.25;
 
     const upVector = opts.up ?? vec3.set(this._tmpVec3_2, 0, 1, 0);
     if (opts.direction) {
-      this._radius = 5;
+      this._radius = Math.max(opts.radius ?? 5, this.forwardLimitZoneRadius);
       vec3.zero(this._lookAt);
 
       // calculates directions
@@ -154,10 +164,10 @@ export class BlenderCamera extends Control {
       vec3.cross(this._up, this._right, this._forward);
       vec3.normalize(this._up, this._up);
     } else {
-      const position = opts.position ?? vec3.fromValues(0, 0, 1);
+      const position = opts.position ?? vec3.fromValues(0, 0, opts.radius ?? 5);
       const lookAt = opts.lookAt ?? vec3.zero(this._tmpVec3_1);
 
-      this._radius = Math.max(vec3.dist(position, lookAt), this._forwardLimitZoneRadius);
+      this._radius = Math.max(vec3.dist(position, lookAt), this.forwardLimitZoneRadius);
       vec3.copy(this._lookAt, lookAt);
 
       // calculates directions
@@ -270,12 +280,6 @@ export class BlenderCamera extends Control {
   }
 
   /**
-   * @private
-   * @type {number}
-   */
-  _forwardLimitZoneRadius = 0.5;
-
-  /**
    * Moves camera forward.
    *
    * There is a spherical limit zone for forward moving, when forwarding,
@@ -287,10 +291,10 @@ export class BlenderCamera extends Control {
    */
   moveForward(movement) {
     const distance = vec3.dist(this._position, this._lookAt);
-    if (distance <= this._forwardLimitZoneRadius) return;
+    if (distance <= this.forwardLimitZoneRadius) return;
 
-    const distanceIntoLimitZone = distance - this._forwardLimitZoneRadius;
-    if (movement > distance - this._forwardLimitZoneRadius) {
+    const distanceIntoLimitZone = distance - this.forwardLimitZoneRadius;
+    if (movement > distance - this.forwardLimitZoneRadius) {
       movement = distanceIntoLimitZone;
     }
 
