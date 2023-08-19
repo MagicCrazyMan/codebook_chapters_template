@@ -10,6 +10,13 @@ export class Axes extends RenderEntity {
    */
   drawMode = DrawMode.Lines;
 
+  /**
+   * Axes length
+   * @type {number}
+   * @readonly
+   */
+  length;
+
   verticesCount = 6;
 
   // set a default material
@@ -18,7 +25,7 @@ export class Axes extends RenderEntity {
   );
 
   /**
-   * Constructs a sphere geometry
+   * Constructs a axes geometry
    * @param {number} [length] Axes length
    * @param {import("gl-matrix").ReadonlyVec3} [xAxis] X Axis
    * @param {import("gl-matrix").ReadonlyVec3} [yAxis] Y Axis
@@ -29,12 +36,13 @@ export class Axes extends RenderEntity {
    */
   constructor(length, xAxis, yAxis, zAxis, translation, rotation, scaling) {
     super({ translation, rotation, scaling });
+    this.length = length ?? 1;
     xAxis = xAxis ? vec3.normalize(vec3.create(), xAxis) : vec3.fromValues(1, 0, 0);
     yAxis = yAxis ? vec3.normalize(vec3.create(), yAxis) : vec3.fromValues(0, 1, 0);
     zAxis = zAxis ? vec3.normalize(vec3.create(), zAxis) : vec3.fromValues(0, 0, 1);
-    xAxis = vec3.scale(xAxis, xAxis, length);
-    yAxis = vec3.scale(yAxis, yAxis, length);
-    zAxis = vec3.scale(zAxis, zAxis, length);
+    xAxis = vec3.scale(xAxis, xAxis, this.length);
+    yAxis = vec3.scale(yAxis, yAxis, this.length);
+    zAxis = vec3.scale(zAxis, zAxis, this.length);
 
     // prettier-ignore
     const vertices = new Float32Array([

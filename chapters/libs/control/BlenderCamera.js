@@ -4,11 +4,11 @@ import { Control } from "./Control.js";
 /**
  * @typedef {Object} Options Keyboard camera options
  * @property {number} [rotation] Rotation offset. in radians. Default 3 degrees
- * @property {number} [movement] Movement offset each keyboard event. Default 0.2 units
+ * @property {number} [movement] Movement offset each keyboard event. Default 0.2
  * @property {number} [wheelMovement] Movement offset each mouse wheel event. Default is `5 * movement`.
- * @property {number} [mouseMovement] Movement offset in pixel. Default equals 0.02 units per pixel.
- * @property {number} [radius] Initial camera radius. Available only when `direction` is true. Default 5 units.
- * @property {number} [forwardLimitZoneRadius] Limit sphere zone limitation radius. Default 0.25 units.
+ * @property {number} [mouseMovement] Movement offset in pixel. Default equals 0.02 per pixel.
+ * @property {number} [radius] Initial camera radius. Available only when `direction` is true. Default 5.
+ * @property {number} [forwardLimitZoneRadius] Limit sphere zone limitation radius. Default 0.25.
  * @property {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position. Default `(0, 0, 0)`.
  * @property {import("gl-matrix").ReadonlyVec3} [position] Camera position. Default `(0, 0, 5)`.
  * @property {import("gl-matrix").ReadonlyVec3} [up] Camera up vector. Default `(0, 1, 0)`.
