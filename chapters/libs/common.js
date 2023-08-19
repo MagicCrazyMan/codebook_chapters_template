@@ -217,7 +217,7 @@ export const bindWebGLBuffer = (gl, program, attributeNames = []) => {
 /**
  * Watches dom input.
  * @param {string} id Element ids
- * @param {(values: string) => void} callback callback
+ * @param {(value: string) => void} callback callback
  * @param {boolean} [immediate] Invokes callback immediately, default `true`
  */
 export const watchInput = (id, callback, immediate = true) => {
