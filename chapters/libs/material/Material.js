@@ -2,94 +2,55 @@
 import { abstractMethod } from "../Utils.js";
 
 /**
- * Material attribute binding requiring data from entity.
+ * Material binding.
  */
-export class EntityAttributeBinding {
+export class MaterialBinding {
   /**
    * @type {string}
    */
   name;
 
   /**
-   *
-   * @param {string} name
+   * Logs warning message if no data bind
+   * @type {boolean}
    */
-  constructor(name) {
+  warning;
+
+  /**
+   * Constructs entity attribute binding.
+   * @param {string} name
+   * @param {boolean} [warning]
+   */
+  constructor(name, warning = true) {
     this.name = name;
+    this.warning = warning;
   }
 }
+
+/**
+ * Material attribute binding requiring data from entity.
+ */
+export class EntityAttributeBinding extends MaterialBinding {}
 
 /**
  * Material attribute binding requiring data from material.
  */
-export class MaterialAttributeBinding {
-  /**
-   * @type {string}
-   */
-  name;
-
-  /**
-   *
-   * @param {string} name
-   */
-  constructor(name) {
-    this.name = name;
-  }
-}
-
-/**
- * Material uniform binding requiring data from material.
- */
-export class MaterialUniformBinding {
-  /**
-   * @type {string}
-   */
-  name;
-
-  /**
-   *
-   * @param {string} name
-   */
-  constructor(name) {
-    this.name = name;
-  }
-}
+export class MaterialAttributeBinding extends MaterialBinding {}
 
 /**
  * Material uniform binding requiring data from entity.
  */
-export class EntityUniformBinding {
-  /**
-   * @type {string}
-   */
-  name;
-
-  /**
-   *
-   * @param {string} name
-   */
-  constructor(name) {
-    this.name = name;
-  }
-}
+export class EntityUniformBinding extends MaterialBinding {}
 
 /**
  * Material uniform binding requiring data from main camera.
  */
-export class MainCameraUniformBinding {
-  /**
-   * @type {string}
-   */
-  name;
+export class MainCameraUniformBinding extends MaterialBinding {}
 
-  /**
-   *
-   * @param {string} name
-   */
-  constructor(name) {
-    this.name = name;
-  }
-}
+/**
+ * Material uniform binding requiring data from material.
+ */
+export class MaterialUniformBinding extends MaterialBinding {}
 
 /**
  * Abstract material
@@ -164,9 +125,24 @@ export class Material {
    *
    * If material never change, left this method empty.
    * @param {import("../entity/RenderEntity.js").RenderEntity} entity
+   * @param {Map<string, import("../WebGLRenderer.js").MaterialAttribute>} attributes
+   * @param {Map<string, import("../WebGLRenderer.js").MaterialUniform>} uniforms
    * @param {import("../WebGLRenderer.js").FrameState} frameState
    */
-  prerender(entity, frameState) {
+  prerender(entity, attributes, uniforms, frameState) {
+    //
+  }
+
+  /**
+   * Updates material after rendering.
+   *
+   * If material never change, left this method empty.
+   * @param {import("../entity/RenderEntity.js").RenderEntity} entity
+   * @param {Map<string, import("../WebGLRenderer.js").MaterialAttribute>} attributes
+   * @param {Map<string, import("../WebGLRenderer.js").MaterialUniform>} uniforms
+   * @param {import("../WebGLRenderer.js").FrameState} frameState
+   */
+  postrender(entity, attributes, uniforms, frameState) {
     //
   }
 }

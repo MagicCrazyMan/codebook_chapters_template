@@ -23,6 +23,7 @@ import {
  * @typedef {Object} FrameState
  * @property {number} time Frame time
  * @property {number} previousTime previous frame time
+ * @property {WebGL2RenderingContext} gl WebGL 2 rendering context
  * @property {import("./Scene.js").Scene} scene Scene
  */
 
@@ -141,11 +142,13 @@ export class WebGLRenderer {
 
       entities.forEach((entity) => {
         const material = entity.material ?? WebGLRenderer.DefaultMaterial;
-        material.prerender(entity, frameState);
+        material.prerender(entity, materialItem.attributes, materialItem.uniforms, frameState);
 
         this.setMaterialUniforms(gl, materialItem, entity, frameState);
         this.setMaterialAttributes(gl, materialItem, entity);
         this.drawEntity(gl, materialItem, entity);
+
+        material.postrender(entity, materialItem.attributes, materialItem.uniforms, frameState);
       });
     });
   }
@@ -212,7 +215,7 @@ export class WebGLRenderer {
       }
 
       if (!uniform) {
-        console.warn(`unspecified uniform data: ${name}`);
+        if (binding.warning) console.warn(`unspecified uniform data: ${name}`);
         return;
       }
 
@@ -288,7 +291,7 @@ export class WebGLRenderer {
         attribute = material.attributes.get(name);
       }
       if (!attribute) {
-        console.warn(`unspecified attribute data: ${name}`);
+        if (binding.warning) console.warn(`unspecified attribute data: ${name}`);
         return;
       }
 
@@ -357,7 +360,7 @@ export class WebGLRenderer {
   }
 }
 
-class BufferItem {
+export class BufferItem {
   /**
    * @type {WebGLBuffer | undefined}
    * @readonly
@@ -371,7 +374,7 @@ class BufferItem {
   buffered;
 }
 
-class BufferPool {
+export class BufferPool {
   /**
    * @type {WeakMap<import("./Attribute.js").BufferDescriptor, BufferItem>}
    */
@@ -459,7 +462,7 @@ const compileShader = (gl, type, source) => {
   return shader;
 };
 
-class MaterialAttribute {
+export class MaterialAttribute {
   /**
    * @type {number}
    */
@@ -480,7 +483,7 @@ class MaterialAttribute {
   }
 }
 
-class MaterialUniform {
+export class MaterialUniform {
   /**
    * @type {WebGLUniformLocation}
    */
@@ -501,7 +504,7 @@ class MaterialUniform {
   }
 }
 
-class MaterialItem {
+export class MaterialItem {
   /**
    * @type {string}
    */
@@ -593,7 +596,7 @@ class MaterialItem {
   }
 }
 
-class MaterialPool {
+export class MaterialPool {
   /**
    * @type {Map<string, MaterialItem>}
    */

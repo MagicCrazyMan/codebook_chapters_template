@@ -31,7 +31,7 @@ export class Uniform {
 
   /**
    *
-   * @param {import("../Constants.js").UniformType} type
+   * @param {import("./Constants.js").UniformType} type
    * @param {BufferSource} data
    * @param {boolean} [transpose]
    * @param {number} [srcOffset]

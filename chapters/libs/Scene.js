@@ -153,7 +153,7 @@ export class Scene {
       time,
       previousTime: this._lastRenderTime,
       scene: this,
-      frameCount: this._frameCount,
+      gl: this._webglRenderingContext,
     };
 
     this.event.dispatchEvent(new FrameEvent("prerender", frameState));
@@ -161,7 +161,6 @@ export class Scene {
     this.event.dispatchEvent(new FrameEvent("postrender", frameState));
 
     this._lastRenderTime = time;
-    this._frameCount++;
 
     if (this._requestAnimating) {
       requestAnimationFrame(this.render.bind(this));
