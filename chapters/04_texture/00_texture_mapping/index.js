@@ -173,7 +173,7 @@ class TextureMapping extends Material {
       } else if (value === "5") {
         return gl.LINEAR_MIPMAP_LINEAR;
       } else {
-        throw new Error(`unknown texture filter type ${value}`);
+        return gl.NEAREST;
       }
     };
 
@@ -185,7 +185,7 @@ class TextureMapping extends Material {
       } else if (value === "2") {
         return gl.CLAMP_TO_EDGE;
       } else {
-        throw new Error(`unknown texture wrap type ${value}`);
+        return gl.REPEAT;
       }
     };
 
@@ -332,8 +332,6 @@ watchInputs(["planeGridSize", "planeGridCols"], ([size, cols]) => {
   planeTextureMapping = new TextureMapping(image, width, height);
   planeTextureMapping.magnificationFilter = document.getElementById("planeMagnification").value;
   planeTextureMapping.minificationFilter = document.getElementById("planeMinification").value;
-  planeTextureMapping.wrapS = document.getElementById("planeWrapS").value;
-  planeTextureMapping.wrapT = document.getElementById("planeWrapT").value;
   plane.material = planeTextureMapping;
 
   scene.renderFrame();
@@ -350,19 +348,5 @@ watchInput("planeMagnification", (value) => {
  */
 watchInput("planeMinification", (value) => {
   planeTextureMapping.minificationFilter = value;
-  scene.renderFrame();
-});
-/**
- * Setups wrap S of plane
- */
-watchInput("planeWrapS", (value) => {
-  planeTextureMapping.wrapS = value;
-  scene.renderFrame();
-});
-/**
- * Setups wrap T of plane
- */
-watchInput("planeWrapT", (value) => {
-  planeTextureMapping.wrapT = value;
   scene.renderFrame();
 });

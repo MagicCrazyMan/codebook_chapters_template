@@ -4,17 +4,17 @@
   <div class="controller">
     <div class="components">
       <div class="component">
-        <div class="component__title">Grid Resolution</div>
+        <div class="component__title">Resolution</div>
         <sl-range size="small" min="16" max="128" step="8" value="32" tooltip="bottom" id="cubeGridSize"></sl-range>
       </div>
 
       <div class="component">
-        <div class="component__title">Grid Rows</div>
+        <div class="component__title">Rows</div>
         <sl-range size="small" min="0" max="12" step="1" value="4" tooltip="bottom" id="cubeGridRows"></sl-range>
       </div>
 
       <div class="component">
-        <div class="component__title">Grid Cols</div>
+        <div class="component__title">Cols</div>
         <sl-range size="small" min="0" max="12" step="1" value="4" tooltip="bottom" id="cubeGridCols"></sl-range>
       </div>
     </div>
@@ -69,12 +69,12 @@
   <div class="controller">
     <div class="components">
       <div class="component">
-        <div class="component__title">Plane Resolution</div>
+        <div class="component__title">Resolution</div>
         <sl-range size="small" min="16" max="128" step="8" value="32" tooltip="bottom" id="planeGridSize"></sl-range>
       </div>
 
       <div class="component">
-        <div class="component__title">Plane Cols</div>
+        <div class="component__title">Cols</div>
         <sl-range size="small" min="0" max="32" step="1" value="24" tooltip="bottom" id="planeGridCols"></sl-range>
       </div>
     </div>
@@ -101,24 +101,6 @@
           <sl-option value="3">NEAREST MIPMAP LINEAR</sl-option>
           <sl-option value="4">LINEAR MIPMAP NEAREST</sl-option>
           <sl-option value="5">LINEAR MIPMAP LINEAR</sl-option>
-        </sl-select>
-      </div>
-
-      <div class="component">
-        <div class="component__title">Wrap S</div>
-        <sl-select value="0" size="small" id="planeWrapS">
-          <sl-option value="0">REPEAT</sl-option>
-          <sl-option value="1">MIRRORED REPEAT</sl-option>
-          <sl-option value="2">CLAMP TO EDGE</sl-option>
-        </sl-select>
-      </div>
-
-      <div class="component">
-        <div class="component__title">Wrap T</div>
-        <sl-select value="0" size="small" id="planeWrapT">
-          <sl-option value="0">REPEAT</sl-option>
-          <sl-option value="1">MIRRORED REPEAT</sl-option>
-          <sl-option value="2">CLAMP TO EDGE</sl-option>
         </sl-select>
       </div>
     </div>
