@@ -3,9 +3,10 @@ import { BufferAttribute, BufferDescriptor } from "../../libs/Attribute";
 import { UniformType } from "../../libs/Constants";
 import { Scene } from "../../libs/Scene";
 import { Uniform } from "../../libs/Uniform";
-import { getCanvas, watchInputs } from "../../libs/common";
+import { colorToFloat, getCanvas, watchInput } from "../../libs/common";
 import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
+import { Axes } from "../../libs/geom/Axes";
 import { IndexedCube } from "../../libs/geom/Cube";
 import {
   EntityAttributeBinding,
@@ -14,7 +15,6 @@ import {
   MaterialAttributeBinding,
   MaterialUniformBinding,
 } from "../../libs/material/Material";
-import { Axes } from "../../libs/geom/Axes";
 
 class DiffuseLight extends Material {
   name() {
@@ -122,20 +122,32 @@ cube.material = diffuseLight;
 scene.root.addChild(cube);
 scene.root.addChild(new Axes(2));
 
-const dps = glMatrix.toRadian(20); // Radians Per Second
+let enableRotation = true;
+let rotationSpeed = 0;
 scene.event.addEventListener("prerender", (event) => {
+  if (!enableRotation) return;
+
   /**@type {import("../../libs/WebGLRenderer").FrameState} */
   const frameState = event.frameState;
-  let r = (frameState.previousTime / 1000) * dps;
-  r %= 360;
-  cube.setModelMatrix(mat4.fromYRotation(cube.modelMatrix, r));
+  const r = ((frameState.time - frameState.previousTime) / 1000) * rotationSpeed;
+  cube.setModelMatrix(mat4.rotateY(cube.modelMatrix, cube.modelMatrix, r));
 });
 
 scene.startRendering();
 
 /**
+ * Setups rotation
+ */
+watchInput("enableRotation", (checked) => {
+  enableRotation = checked;
+});
+watchInput("rotationSpeed", (speed) => {
+  rotationSpeed = glMatrix.toRadian(parseFloat(speed));
+});
+/**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(diffuseLight.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(diffuseLight.diffuseLightColor, r, g, b);
 });

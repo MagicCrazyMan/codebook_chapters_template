@@ -1,7 +1,7 @@
 import { glMatrix, mat4, vec3, vec4 } from "gl-matrix";
 import { BufferAttribute, BufferDescriptor } from "../../../libs/Attribute";
 import { Scene } from "../../../libs/Scene";
-import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { colorToFloat, getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Axes } from "../../../libs/geom/Axes";
@@ -78,9 +78,7 @@ class FlatShading extends Material {
   diffuseLightIntensity = 0;
   specularLightIntensity = 0;
 
-  attenuationFactorA = 0;
-  attenuationFactorB = 0;
-  attenuationFactorC = 0;
+  lightAttenuations = [0, 0, 0];
 
   normalMatrix = mat4.create();
   normal4 = vec4.create();
@@ -200,9 +198,9 @@ class FlatShading extends Material {
     const distance = distanceToLight + distanceToCamera;
     this.attenuation =
       1 /
-      (this.attenuationFactorA +
-        this.attenuationFactorB * distance +
-        this.attenuationFactorC * Math.pow(distance, 2));
+      (this.lightAttenuations[0] +
+        this.lightAttenuations[1] * distance +
+        this.lightAttenuations[2] * Math.pow(distance, 2));
   }
 
   /**
@@ -326,56 +324,50 @@ scene.addControl(
 scene.root.addChild(sphere);
 scene.root.addChild(new Axes(4));
 
+scene.startRendering();
+
 /**
  * Setups ambient light color
  */
-watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(flatShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("ambientLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(flatShading.ambientLightColor, r, g, b);
 });
 /**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(flatShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(flatShading.diffuseLightColor, r, g, b);
 });
 /**
  * Setups specular light color
  */
-watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(flatShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("specularLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(flatShading.specularLightColor, r, g, b);
 });
 /**
  * Setups diffuse light intensity
  */
-watchInput("diffuseIntensity", (value) => {
+watchInput("diffuseLightIntensity", (value) => {
   flatShading.diffuseLightIntensity = parseFloat(value);
 });
 /**
  * Setups specular light intensity
  */
-watchInput("specularIntensity", (value) => {
+watchInput("specularLightIntensity", (value) => {
   flatShading.specularLightIntensity = parseFloat(value);
+});
+/**
+ * Setups light specular shininess exponent
+ */
+watchInput("specularLightShininessExponent", (value) => {
+  flatShading.specularLightShininessExponent = parseFloat(value);
 });
 /**
  * Setups light attenuations
  */
-watchInput("attenuationA", (a) => {
-  flatShading.attenuationFactorA = parseFloat(a);
+watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
+  vec3.set(flatShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
 });
-watchInput("attenuationB", (b) => {
-  flatShading.attenuationFactorB = parseFloat(b);
-});
-watchInput("attenuationC", (c) => {
-  flatShading.attenuationFactorC = parseFloat(c);
-});
-/**
- * Setups specular light shininess exponent
- */
-watchInput("specularShininessExponent", (value) => {
-  flatShading.specularLightShininessExponent = parseFloat(value);
-});
-
-/**
- * Start rendering
- */
-scene.startRendering();

@@ -1,12 +1,13 @@
-<div class="control-item">
-  <label>Ambient Light Color Red</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="ambientColorR" />
-</div>
-<div class="control-item">
-  <label>Ambient Light Color Green</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="ambientColorG" />
-</div>
-<div class="control-item">
-  <label>Ambient Light Color Blue</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="ambientColorB" />
+<div class="controllers">
+  <!-- Ambient Light -->
+  <div class="controller__title">Ambient Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="ambientLightColor">
+        </sl-color-picker>
+      </div>
+    </div>
+  </div>
 </div>

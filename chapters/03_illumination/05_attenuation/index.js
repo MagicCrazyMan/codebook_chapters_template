@@ -4,9 +4,10 @@ import { UniformType } from "../../libs/Constants";
 import { Scene } from "../../libs/Scene";
 import { Uniform } from "../../libs/Uniform";
 import { CameraUniformNames } from "../../libs/camera/Camera";
-import { getCanvas, watchInput, watchInputs } from "../../libs/common";
+import { colorToFloat, getCanvas, watchInput, watchInputs } from "../../libs/common";
 import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
+import { Axes } from "../../libs/geom/Axes";
 import { IndexedCube } from "../../libs/geom/Cube";
 import {
   EntityAttributeBinding,
@@ -16,7 +17,6 @@ import {
   MaterialAttributeBinding,
   MaterialUniformBinding,
 } from "../../libs/material/Material";
-import { Axes } from "../../libs/geom/Axes";
 
 class Attenuation extends Material {
   name() {
@@ -229,39 +229,65 @@ cube.material = attenuation;
 scene.root.addChild(cube);
 scene.root.addChild(new Axes(2));
 
-const dps = glMatrix.toRadian(20); // Radians Per Second
+let enableRotation = true;
+let rotationSpeed = 0;
 scene.event.addEventListener("prerender", (event) => {
+  if (!enableRotation) return;
+
   /**@type {import("../../libs/WebGLRenderer").FrameState} */
   const frameState = event.frameState;
-  let r = (frameState.previousTime / 1000) * dps;
-  r %= 360;
-  cube.setModelMatrix(mat4.fromYRotation(cube.modelMatrix, r));
+  const r = ((frameState.time - frameState.previousTime) / 1000) * rotationSpeed;
+  cube.setModelMatrix(mat4.rotateY(cube.modelMatrix, cube.modelMatrix, r));
 });
 
 scene.startRendering();
 
 /**
+ * Setups rotation
+ */
+watchInput("enableRotation", (checked) => {
+  enableRotation = checked;
+});
+watchInput("rotationSpeed", (speed) => {
+  rotationSpeed = glMatrix.toRadian(parseFloat(speed));
+});
+/**
  * Setups ambient light color
  */
-watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(attenuation.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("ambientLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(attenuation.ambientLightColor, r, g, b);
 });
 /**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(attenuation.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(attenuation.diffuseLightColor, r, g, b);
 });
 /**
  * Setups specular light color
  */
-watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(attenuation.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("specularLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(attenuation.specularLightColor, r, g, b);
+});
+/**
+ * Setups diffuse light intensity
+ */
+watchInput("diffuseLightIntensity", (value) => {
+  attenuation.diffuseLightIntensity[0] = parseFloat(value);
+});
+/**
+ * Setups specular light intensity
+ */
+watchInput("specularLightIntensity", (value) => {
+  attenuation.specularLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups light specular shininess exponent
  */
-watchInput("specularShininessExponent", (value) => {
+watchInput("specularLightShininessExponent", (value) => {
   attenuation.specularLightShininessExponent[0] = parseFloat(value);
 });
 /**
@@ -269,16 +295,4 @@ watchInput("specularShininessExponent", (value) => {
  */
 watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
   vec3.set(attenuation.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
-});
-/**
- * Setups diffuse light intensity
- */
-watchInput("diffuseIntensity", (value) => {
-  attenuation.diffuseLightIntensity[0] = parseFloat(value);
-});
-/**
- * Setups specular light intensity
- */
-watchInput("specularIntensity", (value) => {
-  attenuation.specularLightIntensity[0] = parseFloat(value);
 });

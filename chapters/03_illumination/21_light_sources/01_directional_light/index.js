@@ -3,9 +3,10 @@ import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
-import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { colorToFloat, getCanvas, watchInput } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
+import { Axes } from "../../../libs/geom/Axes";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
   EntityAttributeBinding,
@@ -14,7 +15,6 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
-import { Axes } from "../../../libs/geom/Axes";
 
 class DirectionalLight extends Material {
   name() {
@@ -178,21 +178,23 @@ scene.renderFrame();
 /**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(directionalLight.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(directionalLight.diffuseLightColor, r, g, b);
   scene.renderFrame();
 });
 /**
  * Setups specular light color
  */
-watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(directionalLight.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("specularLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(directionalLight.specularLightColor, r, g, b);
   scene.renderFrame();
 });
 /**
- * Setups specular light shininess exponent
+ * Setups light specular shininess exponent
  */
-watchInput("specularShininessExponent", (value) => {
+watchInput("specularLightShininessExponent", (value) => {
   directionalLight.specularLightShininessExponent[0] = parseFloat(value);
   scene.renderFrame();
 });

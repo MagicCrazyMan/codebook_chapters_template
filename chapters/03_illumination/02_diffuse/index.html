@@ -1,12 +1,32 @@
-<div class="control-item">
-  <label>Light Color Red</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorR" />
-</div>
-<div class="control-item">
-  <label>Light Color Green</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorG" />
-</div>
-<div class="control-item">
-  <label>Light Color Blue</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorB" />
+<div class="controllers">
+  <!-- Rotation -->
+  <div class="controller__title">Rotation</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <sl-switch size="small" checked id="enableRotation"></sl-switch>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Speed</div>
+        <sl-range min="0" max="720" step="6" value="20" tooltip="bottom" id="rotationSpeed"></sl-range>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diffuse Light -->
+  <div class="controller__title">Diffuse Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="diffuseLightColor">
+        </sl-color-picker>
+      </div>
+      <div class="component">
+        <div class="component__title">Intensity</div>
+        <sl-range min="0" max="100" step="5" value="30" tooltip="bottom" id="diffuseLightIntensity"></sl-range>
+      </div>
+    </div>
+  </div>
 </div>

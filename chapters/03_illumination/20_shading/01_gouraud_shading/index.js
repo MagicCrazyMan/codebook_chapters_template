@@ -3,7 +3,7 @@ import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
-import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { colorToFloat, getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
@@ -241,35 +241,46 @@ scene.addControl(
 scene.root.addChild(sphere);
 scene.root.addChild(new Axes(4));
 
+scene.startRendering();
+
 /**
  * Setups ambient light color
  */
-watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(gouraudShading.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("ambientLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(gouraudShading.ambientLightColor, r, g, b);
 });
 /**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(gouraudShading.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(gouraudShading.diffuseLightColor, r, g, b);
 });
 /**
  * Setups specular light color
  */
-watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(gouraudShading.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("specularLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(gouraudShading.specularLightColor, r, g, b);
 });
 /**
  * Setups diffuse light intensity
  */
-watchInput("diffuseIntensity", (value) => {
+watchInput("diffuseLightIntensity", (value) => {
   gouraudShading.diffuseLightIntensity[0] = parseFloat(value);
 });
 /**
  * Setups specular light intensity
  */
-watchInput("specularIntensity", (value) => {
+watchInput("specularLightIntensity", (value) => {
   gouraudShading.specularLightIntensity[0] = parseFloat(value);
+});
+/**
+ * Setups light specular shininess exponent
+ */
+watchInput("specularLightShininessExponent", (value) => {
+  gouraudShading.specularLightShininessExponent[0] = parseFloat(value);
 });
 /**
  * Setups light attenuations
@@ -277,14 +288,3 @@ watchInput("specularIntensity", (value) => {
 watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
   vec3.set(gouraudShading.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
 });
-/**
- * Setups specular light shininess exponent
- */
-watchInput("specularShininessExponent", (value) => {
-  gouraudShading.specularLightShininessExponent[0] = parseFloat(value);
-});
-
-/**
- * Start rendering
- */
-scene.startRendering();

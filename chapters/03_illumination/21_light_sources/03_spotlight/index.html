@@ -1,60 +1,73 @@
-<div class="control-item">
-  <label>Diffuse Light Color Red</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorR" />
-</div>
-<div class="control-item">
-  <label>Diffuse Light Color Green</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorG" />
-</div>
-<div class="control-item">
-  <label>Diffuse Light Color Blue</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="diffuseColorB" />
-</div>
+<div class="controllers">
+  <!-- Diffuse Light -->
+  <div class="controller__title">Diffuse Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="diffuseLightColor">
+        </sl-color-picker>
+      </div>
+      <div class="component">
+        <div class="component__title">Intensity</div>
+        <sl-range min="0" max="100" step="5" value="80" tooltip="bottom" id="diffuseLightIntensity"></sl-range>
+      </div>
+    </div>
+  </div>
 
-<div class="control-item">
-  <label>Specular Light Color Red</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="specularColorR" />
-</div>
-<div class="control-item">
-  <label>Specular Light Color Green</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="specularColorG" />
-</div>
-<div class="control-item">
-  <label>Specular Light Color Blue</label>
-  <input type="range" min="0" max="1" step="0.001" value="1" id="specularColorB" />
-</div>
+  <!-- Specular Light -->
+  <div class="controller__title">Specular Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="specularLightColor">
+        </sl-color-picker>
+      </div>
+      <div class="component">
+        <div class="component__title">Intensity</div>
+        <sl-range min="0" max="100" step="5" value="60" tooltip="bottom" id="specularLightIntensity"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">Shininess Exponent</div>
+        <sl-range min="5" max="1000" step="16" value="128" tooltip="bottom" id="specularLightShininessExponent">
+        </sl-range>
+      </div>
+    </div>
+  </div>
 
-<div class="control-item">
-  <label>Diffuse Intensity</label>
-  <input type="range" min="0" max="100" step="5" value="80" id="diffuseIntensity" />
-</div>
-<div class="control-item">
-  <label>Specular Intensity</label>
-  <input type="range" min="0" max="100" step="5" value="60" id="specularIntensity" />
-</div>
-<div class="control-item">
-  <label>Attenuation Factor A</label>
-  <input type="range" min="0" max="10" step="0.1" value="0.5" id="attenuationA" />
-</div>
-<div class="control-item">
-  <label>Attenuation Factor B</label>
-  <input type="range" min="0" max="10" step="0.1" value="0" id="attenuationB" />
-</div>
-<div class="control-item">
-  <label>Attenuation Factor C</label>
-  <input type="range" min="0" max="10" step="0.1" value="1" id="attenuationC" />
-</div>
+  <!-- Spotlight -->
+  <div class="controller__title">Spotlight</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Outer Limit</div>
+        <sl-range min="12" max="20" step="0.1" value="18" tooltip="bottom" id="spotlightOuterLimit"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">Inner Limit</div>
+        <sl-range min="0" max="10" step="0.1" value="3" tooltip="bottom" id="spotlightInnerLimit">
+        </sl-range>
+      </div>
+    </div>
+  </div>
 
-<div class="control-item">
-  <label>Specular Shininess Exponent</label>
-  <input type="range" min="5" max="1000" step="1" value="128" id="specularShininessExponent" />
-</div>
-
-<div class="control-item">
-  <label>Spotlight Outer Limit</label>
-  <input type="range" min="12" max="20" step="0.1" value="18" id="spotlightOuterLimit" />
-</div>
-<div class="control-item">
-  <label>Spotlight Inner Limit</label>
-  <input type="range" min="0" max="10" step="0.1" value="3" id="spotlightInnerLimit" />
+  <!-- Attenuation Factors -->
+  <div class="controller__title">Attenuations</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">A</div>
+        <sl-range min="0" max="10" step="0.1" value="0.5" tooltip="bottom" id="attenuationA"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">B</div>
+        <sl-range min="0" max="10" step="0.1" value="0" tooltip="bottom" id="attenuationB"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">C</div>
+        <sl-range min="0" max="10" step="0.1" value="1" tooltip="bottom" id="attenuationC"></sl-range>
+      </div>
+    </div>
+  </div>
 </div>

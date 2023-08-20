@@ -217,15 +217,23 @@ export const bindWebGLBuffer = (gl, program, attributeNames = []) => {
 /**
  * Watches dom input.
  * @param {string} id Element ids
- * @param {(value: string) => void} callback callback
+ * @param {(value: string | boolean) => void} callback callback
  * @param {boolean} [immediate] Invokes callback immediately, default `true`
  */
 export const watchInput = (id, callback, immediate = true) => {
   const element = document.getElementById(id);
   const trigger = () => {
-    callback(element.value);
+    if (element.tagName === "SL-SWITCH") {
+      callback(element.checked);
+    } else {
+      callback(element.value);
+    }
   };
-  element.addEventListener("input", trigger);
+  if (element.tagName.startsWith("SL-")) {
+    element.addEventListener("sl-input", trigger);
+  } else {
+    element.addEventListener("input", trigger);
+  }
 
   if (immediate) trigger();
 };
@@ -239,12 +247,34 @@ export const watchInput = (id, callback, immediate = true) => {
 export const watchInputs = (ids, callback, immediate = true) => {
   const elements = ids.map((id) => document.getElementById(id));
   const trigger = () => {
-    const values = elements.map((ele) => ele.value);
+    const values = elements.map((ele) => {
+      if (ele.tagName === "SL-SWITCH") {
+        return ele.checked;
+      } else {
+        return ele.value;
+      }
+    });
+
     callback(values);
   };
   elements.forEach((ele) => {
-    ele.addEventListener("input", trigger);
+    if (ele.tagName.startsWith("SL-")) {
+      ele.addEventListener("sl-input", trigger);
+    } else {
+      ele.addEventListener("input", trigger);
+    }
   });
 
   if (immediate) trigger();
+};
+
+/**
+ * Converts css-styled rgba color to webgl floats
+ * @param {string} rgba css-styled rgba color
+ * @returns {number[]} rgba color in webgl floats
+ */
+export const colorToFloat = (rgba) => {
+  const value = /^rgba?\((.*)\)$/.exec(rgba)[1];
+  const [r, g, b, a] = value.split(",");
+  return [parseInt(r) / 255, parseInt(g) / 255, parseInt(b) / 255, a ? parseFloat(a) : 1];
 };

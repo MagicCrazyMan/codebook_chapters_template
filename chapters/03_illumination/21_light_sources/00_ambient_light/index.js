@@ -2,9 +2,10 @@ import { vec3 } from "gl-matrix";
 import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
-import { getCanvas, watchInputs } from "../../../libs/common";
+import { colorToFloat, getCanvas, watchInput } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
+import { Axes } from "../../../libs/geom/Axes";
 import { Sphere } from "../../../libs/geom/Sphere";
 import {
   EntityAttributeBinding,
@@ -12,7 +13,6 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../../libs/material/Material";
-import { Axes } from "../../../libs/geom/Axes";
 
 class AmbientLight extends Material {
   name() {
@@ -106,7 +106,8 @@ scene.renderFrame();
 /**
  * Setups ambient light color
  */
-watchInputs(["ambientColorR", "ambientColorG", "ambientColorB"], ([r, g, b]) => {
-  vec3.set(ambientLight.ambientLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("ambientLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(ambientLight.ambientLightColor, r, g, b);
   scene.renderFrame();
 });

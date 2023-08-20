@@ -3,7 +3,7 @@ import { UniformType } from "../../../libs/Constants";
 import { Scene } from "../../../libs/Scene";
 import { Uniform } from "../../../libs/Uniform";
 import { CameraUniformNames } from "../../../libs/camera/Camera";
-import { getCanvas, watchInput, watchInputs } from "../../../libs/common";
+import { colorToFloat, getCanvas, watchInput, watchInputs } from "../../../libs/common";
 import { BlenderCamera } from "../../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../../libs/entity/RenderEntity";
 import { Sphere } from "../../../libs/geom/Sphere";
@@ -205,29 +205,38 @@ scene.renderFrame();
 /**
  * Setups diffuse light color
  */
-watchInputs(["diffuseColorR", "diffuseColorG", "diffuseColorB"], ([r, g, b]) => {
-  vec3.set(pointLight.diffuseLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("diffuseLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(pointLight.diffuseLightColor, r, g, b);
   scene.renderFrame();
 });
 /**
  * Setups specular light color
  */
-watchInputs(["specularColorR", "specularColorG", "specularColorB"], ([r, g, b]) => {
-  vec3.set(pointLight.specularLightColor, parseFloat(r), parseFloat(g), parseFloat(b));
+watchInput("specularLightColor", (color) => {
+  const [r, g, b] = colorToFloat(color);
+  vec3.set(pointLight.specularLightColor, r, g, b);
   scene.renderFrame();
 });
 /**
  * Setups diffuse light intensity
  */
-watchInput("diffuseIntensity", (value) => {
+watchInput("diffuseLightIntensity", (value) => {
   pointLight.diffuseLightIntensity[0] = parseFloat(value);
   scene.renderFrame();
 });
 /**
  * Setups specular light intensity
  */
-watchInput("specularIntensity", (value) => {
+watchInput("specularLightIntensity", (value) => {
   pointLight.specularLightIntensity[0] = parseFloat(value);
+  scene.renderFrame();
+});
+/**
+ * Setups light specular shininess exponent
+ */
+watchInput("specularLightShininessExponent", (value) => {
+  pointLight.specularLightShininessExponent[0] = parseFloat(value);
   scene.renderFrame();
 });
 /**
@@ -235,12 +244,5 @@ watchInput("specularIntensity", (value) => {
  */
 watchInputs(["attenuationA", "attenuationB", "attenuationC"], ([a, b, c]) => {
   vec3.set(pointLight.lightAttenuations, parseFloat(a), parseFloat(b), parseFloat(c));
-  scene.renderFrame();
-});
-/**
- * Setups specular light shininess exponent
- */
-watchInput("specularShininessExponent", (value) => {
-  pointLight.specularLightShininessExponent[0] = parseFloat(value);
   scene.renderFrame();
 });
