@@ -1,91 +1,126 @@
-<div class="control-item">
-  <label>Cube Grid Block Size</label>
-  <input type="number" min="16" max="128" step="8" value="32" id="cubeGridSize">
-</div>
-<div class="control-item">
-  <label>Cube Grid Rows</label>
-  <input type="number" min="0" max="12" step="1" value="4" id="cubeGridRows">
-</div>
-<div class="control-item">
-  <label>Cube Grid Cols</label>
-  <input type="number" min="0" max="12" step="1" value="4" id="cubeGridCols">
-</div>
+<div class="controllers">
+  <!-- Cube Grid -->
+  <div class="controller__title">Cube Grid</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Grid Resolution</div>
+        <sl-range size="small" min="16" max="128" step="8" value="32" tooltip="bottom" id="cubeGridSize"></sl-range>
+      </div>
 
-<div class="control-item">
-  <label>Cube Magnification Filter</label>
-  <select id="cubeMagnification">
-    <option value="0">NEAREST</option>
-    <option value="1">LINEAR</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Cube Minification Filter</label>
-  <select id="cubeMinification">
-    <option value="0">NEAREST</option>
-    <option value="1">LINEAR</option>
-    <option value="2">NEAREST MIPMAP NEAREST</option>
-    <option selected="selected" value="3">NEAREST MIPMAP LINEAR</option>
-    <option value="4">LINEAR MIPMAP NEAREST</option>
-    <option value="5">LINEAR MIPMAP LINEAR</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Cube WRAP S</label>
-  <select id="cubeWrapS">
-    <option value="0">REPEAT</option>
-    <option value="1">MIRRORED REPEAT</option>
-    <option value="2">CLAMP TO EDGE</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Cube WRAP T</label>
-  <select id="cubeWrapT">
-    <option value="0">REPEAT</option>
-    <option value="1">MIRRORED REPEAT</option>
-    <option value="2">CLAMP TO EDGE</option>
-  </select>
-</div>
+      <div class="component">
+        <div class="component__title">Grid Rows</div>
+        <sl-range size="small" min="0" max="12" step="1" value="4" tooltip="bottom" id="cubeGridRows"></sl-range>
+      </div>
 
-<div class="control-item">
-  <label>Plane Grid Block Size</label>
-  <input type="number" min="16" max="128" step="8" value="32" id="planeGridSize">
-</div>
-<div class="control-item">
-  <label>Plane Grid Cols</label>
-  <input type="number" min="0" max="32" step="1" value="24" id="planeGridCols">
-</div>
+      <div class="component">
+        <div class="component__title">Grid Cols</div>
+        <sl-range size="small" min="0" max="12" step="1" value="4" tooltip="bottom" id="cubeGridCols"></sl-range>
+      </div>
+    </div>
+  </div>
 
-<div class="control-item">
-  <label>Plane Magnification Filter</label>
-  <select id="planeMagnification">
-    <option value="0">NEAREST</option>
-    <option value="1">LINEAR</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Plane Minification Filter</label>
-  <select id="planeMinification">
-    <option value="0">NEAREST</option>
-    <option value="1">LINEAR</option>
-    <option value="2">NEAREST MIPMAP NEAREST</option>
-    <option selected="selected" value="3">NEAREST MIPMAP LINEAR</option>
-    <option value="4">LINEAR MIPMAP NEAREST</option>
-    <option value="5">LINEAR MIPMAP LINEAR</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Plane WRAP S</label>
-  <select id="planeWrapS">
-    <option value="0">REPEAT</option>
-    <option value="1">MIRRORED REPEAT</option>
-    <option value="2">CLAMP TO EDGE</option>
-  </select>
-</div>
-<div class="control-item">
-  <label>Plane WRAP T</label>
-  <select id="planeWrapT">
-    <option value="0">REPEAT</option>
-    <option value="1">MIRRORED REPEAT</option>
-    <option value="2">CLAMP TO EDGE</option>
-  </select>
+  <!-- Cube Texture -->
+  <div class="controller__title">Cube Texture</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Magnification Filter</div>
+        <sl-select value="0" size="small" id="cubeMagnification">
+          <sl-option value="0">NEAREST</sl-option>
+          <sl-option value="1">LINEAR</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Minification Filter</div>
+        <sl-select value="3" size="small" id="cubeMinification">
+          <sl-option value="0">NEAREST</sl-option>
+          <sl-option value="1">LINEAR</sl-option>
+          <sl-option value="2">NEAREST MIPMAP NEAREST</sl-option>
+          <sl-option value="3">NEAREST MIPMAP LINEAR</sl-option>
+          <sl-option value="4">LINEAR MIPMAP NEAREST</sl-option>
+          <sl-option value="5">LINEAR MIPMAP LINEAR</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Wrap S</div>
+        <sl-select value="0" size="small" id="cubeWrapS">
+          <sl-option value="0">REPEAT</sl-option>
+          <sl-option value="1">MIRRORED REPEAT</sl-option>
+          <sl-option value="2">CLAMP TO EDGE</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Wrap T</div>
+        <sl-select value="0" size="small" id="cubeWrapT">
+          <sl-option value="0">REPEAT</sl-option>
+          <sl-option value="1">MIRRORED REPEAT</sl-option>
+          <sl-option value="2">CLAMP TO EDGE</sl-option>
+        </sl-select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plane Grid -->
+  <div class="controller__title">Plane Grid</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Plane Resolution</div>
+        <sl-range size="small" min="16" max="128" step="8" value="32" tooltip="bottom" id="planeGridSize"></sl-range>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Plane Cols</div>
+        <sl-range size="small" min="0" max="32" step="1" value="24" tooltip="bottom" id="planeGridCols"></sl-range>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plane Texture -->
+  <div class="controller__title">Plane Texture</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Magnification Filter</div>
+        <sl-select value="0" size="small" id="planeMagnification">
+          <sl-option value="0">NEAREST</sl-option>
+          <sl-option value="1">LINEAR</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Minification Filter</div>
+        <sl-select value="3" size="small" id="planeMinification">
+          <sl-option value="0">NEAREST</sl-option>
+          <sl-option value="1">LINEAR</sl-option>
+          <sl-option value="2">NEAREST MIPMAP NEAREST</sl-option>
+          <sl-option value="3">NEAREST MIPMAP LINEAR</sl-option>
+          <sl-option value="4">LINEAR MIPMAP NEAREST</sl-option>
+          <sl-option value="5">LINEAR MIPMAP LINEAR</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Wrap S</div>
+        <sl-select value="0" size="small" id="planeWrapS">
+          <sl-option value="0">REPEAT</sl-option>
+          <sl-option value="1">MIRRORED REPEAT</sl-option>
+          <sl-option value="2">CLAMP TO EDGE</sl-option>
+        </sl-select>
+      </div>
+
+      <div class="component">
+        <div class="component__title">Wrap T</div>
+        <sl-select value="0" size="small" id="planeWrapT">
+          <sl-option value="0">REPEAT</sl-option>
+          <sl-option value="1">MIRRORED REPEAT</sl-option>
+          <sl-option value="2">CLAMP TO EDGE</sl-option>
+        </sl-select>
+      </div>
+    </div>
+  </div>
 </div>
