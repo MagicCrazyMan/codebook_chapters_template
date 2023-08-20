@@ -516,23 +516,27 @@ export class BlenderCamera extends Control {
       this.onMouseMove(e);
     };
     window.addEventListener("keydown", this._keyboardHandler);
-    window.addEventListener("wheel", this._wheelHandler, { passive: false });
-    window.addEventListener("mousedown", this._mouseDownHandler);
-    window.addEventListener("mouseup", this._mouseUpHandler);
-    window.addEventListener("mousemove", this._mouseMoveHandler);
+    scene.canvas.addEventListener("wheel", this._wheelHandler, { passive: false });
+    scene.canvas.addEventListener("mousedown", this._mouseDownHandler);
+    scene.canvas.addEventListener("mouseup", this._mouseUpHandler);
+    scene.canvas.addEventListener("mousemove", this._mouseMoveHandler);
   }
 
   /**
    * Unregister control from scene
    */
   unregister() {
-    this.scene = undefined;
-
-    if (this._keyboardHandler) window.removeEventListener("keydown", this._keyboardHandler);
+    if (this._keyboardHandler)
+    window.removeEventListener("keydown", this._keyboardHandler);
     if (this._wheelHandler)
-      window.removeEventListener("wheel", this._wheelHandler, { passive: false });
-    if (this._mouseDownHandler) window.removeEventListener("mousedown", this._mouseDownHandler);
-    if (this._mouseUpHandler) window.removeEventListener("mouseup", this._mouseUpHandler);
-    if (this._mouseMoveHandler) window.removeEventListener("mousemove", this._mouseMoveHandler);
+      this.scene?.canvas.removeEventListener("wheel", this._wheelHandler, { passive: false });
+    if (this._mouseDownHandler)
+      this.scene?.canvas.removeEventListener("mousedown", this._mouseDownHandler);
+    if (this._mouseUpHandler)
+      this.scene?.canvas.removeEventListener("mouseup", this._mouseUpHandler);
+    if (this._mouseMoveHandler)
+      this.scene?.canvas.removeEventListener("mousemove", this._mouseMoveHandler);
+
+    this.scene = undefined;
   }
 }
