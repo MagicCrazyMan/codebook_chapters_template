@@ -109,7 +109,10 @@ export class Scene {
   constructor(target, opts = {}) {
     this.canvas = target instanceof HTMLCanvasElement ? target : document.getElementById(target);
 
-    this._webglRenderingContext = this.canvas.getContext("webgl2", opts.contextAttributes);
+    this._webglRenderingContext = this.canvas.getContext("webgl2", {
+      preserveDrawingBuffer: true,
+      ...opts.contextAttributes,
+    });
     this._renderer = new WebGLRenderer(this._webglRenderingContext, opts);
 
     this.mainCamera = opts.camera ?? this.getDefaultCamera();
