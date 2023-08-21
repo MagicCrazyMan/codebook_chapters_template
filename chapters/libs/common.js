@@ -269,12 +269,134 @@ export const watchInputs = (ids, callback, immediate = true) => {
 };
 
 /**
- * Converts css-styled rgba color to webgl floats
- * @param {string} rgba css-styled rgba color
+ * Converts css-styled rgb or rgba color to webgl floats
+ * @param {string} color css-styled rgb or rgba color
  * @returns {number[]} rgba color in webgl floats
  */
-export const colorToFloat = (rgba) => {
-  const value = /^rgba?\((.*)\)$/.exec(rgba)[1];
+export const rgbToFloat = (color) => {
+  const value = /^rgba?\((.*)\)$/.exec(color)[1];
   const [r, g, b, a] = value.split(",");
   return [parseInt(r) / 255, parseInt(g) / 255, parseInt(b) / 255, a ? parseFloat(a) : 1];
+};
+
+/**
+ * Converts hsv to webgl floats
+ *
+ * https://stackoverflow.com/questions/17242144/javascript-convert-hsb-hsv-color-to-rgb-accurately
+ * @param {string} color css-styled hsv or hsva color
+ * @returns {number[]} webgl floats
+ */
+export const hsvToFloat = (color) => {
+  const value = /^hsva?\((.*)\)$/.exec(color)[1];
+  const splitted = value.split(",");
+  const h = parseFloat(splitted[0]);
+  const s = parseFloat(splitted[1].slice(0, -1)) / 100;
+  const v = parseFloat(splitted[2].slice(0, -1)) / 100;
+  const a = parseFloat(splitted[3]) ?? 1;
+
+  let r, g, b, i, f, p, q, t;
+  i = Math.floor(h * 6);
+  f = h * 6 - i;
+  p = v * (1 - s);
+  q = v * (1 - f * s);
+  t = v * (1 - (1 - f) * s);
+  switch (i % 6) {
+    case 0:
+      (r = v), (g = t), (b = p);
+      break;
+    case 1:
+      (r = q), (g = v), (b = p);
+      break;
+    case 2:
+      (r = p), (g = v), (b = t);
+      break;
+    case 3:
+      (r = p), (g = q), (b = v);
+      break;
+    case 4:
+      (r = t), (g = p), (b = v);
+      break;
+    case 5:
+      (r = v), (g = p), (b = q);
+      break;
+  }
+
+  return [r, g, b, a];
+};
+
+/**
+ * Converts hsl to webgl floats
+ *
+ * https://www.30secondsofcode.org/js/s/hsl-to-rgb/
+ * @param {string} color css-styled hsv or hsva color
+ * @returns {number[]} webgl floats
+ */
+export const hslToFloat = (color) => {
+  const value = /^hsla?\((.*)\)$/.exec(color)[1];
+  const splitted = value.split(",");
+  const h = parseFloat(splitted[0]);
+  const s = parseFloat(splitted[1].slice(0, -1)) / 100;
+  const l = parseFloat(splitted[2].slice(0, -1)) / 100;
+  const a = parseFloat(splitted[3]) ?? 1;
+
+  const k = (n) => (n + h / 30) % 12;
+  const b = s * Math.min(l, 1 - l);
+  const f = (n) => l - b * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
+  return [f(0), f(8), f(4), a];
+};
+
+/**
+ * Converts hex to webgl floats
+ * @param {string} color css-styled hsv or hsva color
+ * @returns {number[]} webgl floats
+ */
+export const hexToFloat = (color) => {
+  const value = color.slice(1).trim();
+  let r, g, b, a;
+  if (value.length === 3) {
+    r = parseInt(value[0], 16) / 255;
+    g = parseInt(value[1], 16) / 255;
+    b = parseInt(value[2], 16) / 255;
+    a = 1;
+  } else if (value.length === 4) {
+    r = parseInt(value[0], 16) / 255;
+    g = parseInt(value[1], 16) / 255;
+    b = parseInt(value[2], 16) / 255;
+    a = parseInt(value[3], 16) / 255;
+  } else if (value.length === 6) {
+    r = parseInt(value.slice(0, 2), 16) / 255;
+    g = parseInt(value.slice(2, 4), 16) / 255;
+    b = parseInt(value.slice(4), 16) / 255;
+    a = 1;
+  } else if (value.length === 8) {
+    r = parseInt(value.slice(0, 2), 16) / 255;
+    g = parseInt(value.slice(2, 4), 16) / 255;
+    b = parseInt(value.slice(4, 6), 16) / 255;
+    a = parseInt(value.slice(6), 16) / 255;
+  } else {
+    throw new Error(`unknown hex color value ${color}`);
+  }
+
+  return [r, g, b, a];
+};
+
+/**
+ * Converts css-styled color to webgl floats
+ * @param {string} color css-styled color
+ * @returns {number[]} webgl floats
+ */
+export const colorToFloat = (color) => {
+  color = color.trim();
+  if (color.startsWith("rgb")) {
+    return rgbToFloat(color);
+  } else if (color.startsWith("hsv")) {
+    return hsvToFloat(color);
+  } else if (color.startsWith("hsl")) {
+    return hslToFloat(color);
+  } else if (color.startsWith("#")) {
+    return hexToFloat(color);
+  } else {
+    throw new Error(`unknown color value ${color}`);
+  }
 };
