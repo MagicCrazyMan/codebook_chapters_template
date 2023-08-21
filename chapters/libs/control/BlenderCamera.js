@@ -3,17 +3,23 @@ import { Control } from "./Control.js";
 
 /**
  * @typedef {Object} Options Keyboard camera options
- * @property {number} [rotation] Rotation offset. in radians. Default 3 degrees
- * @property {number} [keyboardMovement] Movement offset each keyboard event. Default 0.2
- * @property {number} [wheelMovement] Movement offset each mouse wheel event. Default is `5 * movement`.
- * @property {number} [mouseMovement] Movement offset per pixel when mouse move. Default 0.02 per pixel.
- * @property {number} [touchMovement] Movement offset per pixel when touch move. Default 0.02 per pixel.
- * @property {number} [radius] Initial camera radius. Available only when `direction` is true. Default 5.
- * @property {number} [forwardLimitZoneRadius] Limit sphere zone limitation radius. Default 0.25.
+ * @property {number} [keyboardForwarding] Forwarding each keyboard event. Default 0.2
+ * @property {number} [keyboardPanning] Panning each keyboard event. Default 0.2
+ * @property {number} [keyboardRotating] Rotating each keyboard event, in radians. Default 3 degrees
+ * @property {number} [mouseForwarding] Forwarding each mouse wheel event. Default is 1.
+ * @property {number} [mousePanning] Panning per pixel when mouse move. Default 0.02 per pixel.
+ * @property {number} [mouseRotating] Rotating per pixel when mouse move.
+ * Default rotate 360 degrees in horizontal when move from leftmost to rightmost and rotate 360 degrees from topmost to bottommost of canvas.
+ * @property {number} [touchForwarding] Forwarding per pixel when touch move. Default 1.
+ * @property {number} [touchPanning] Panning per pixel when touch move. Default 0.02 per pixel.
+ * @property {number} [touchRotating] Rotating per pixel when touch move.
+ * Default rotate 360 degrees in horizontal when move from leftmost to rightmost and rotate 360 degrees from topmost to bottommost of canvas.
+ * @property {number} [forwardLimitRadius] Limit sphere zone limitation radius. Default 0.25.
  * @property {import("gl-matrix").ReadonlyVec3} [lookAt] Camera look at position. Default `(0, 0, 0)`.
  * @property {import("gl-matrix").ReadonlyVec3} [position] Camera position. Default `(0, 0, 5)`.
  * @property {import("gl-matrix").ReadonlyVec3} [up] Camera up vector. Default `(0, 1, 0)`.
  * @property {import("gl-matrix").ReadonlyVec3} [direction] Initial camera direction. Ignore `lookAt` and `position` properties if set.
+ * @property {number} [radius] Initial camera radius. Available only when `direction` is true. Default 5.
  */
 
 /**
@@ -21,12 +27,59 @@ import { Control } from "./Control.js";
  */
 export class BlenderCamera extends Control {
   /**
-   * Rotation each keyboard event, in radians
+   * Forwarding each keyboard event
    * @type {number}
    * @readonly
    */
-  rotation;
-
+  keyboardForwarding;
+  /**
+   * Panning each keyboard event
+   * @type {number}
+   * @readonly
+   */
+  keyboardPanning;
+  /**
+   * Rotating each keyboard event, in radians
+   * @type {number}
+   * @readonly
+   */
+  keyboardRotating;
+  /**
+   * Forwarding each mouse wheel event
+   * @type {number}
+   * @readonly
+   */
+  mouseForwarding;
+  /**
+   * Panning per pixel when mouse move
+   * @type {number}
+   * @readonly
+   */
+  mousePanning;
+  /**
+   * Rotating per pixel when mouse move
+   * @type {number | undefined}
+   * @readonly
+   */
+  mouseRotating;
+  /**
+   * Forwarding per pixel when touch move
+   * @type {number}
+   * @readonly
+   */
+  touchForwarding;
+  /**
+   * Panning per pixel when touch move
+   * @type {number}
+   * @readonly
+   */
+  touchPanning;
+  /**
+   * Rotating per pixel when touch move
+   * @type {number | undefined}
+   * @readonly
+   */
+  touchRotating;
   /**
    * Limit sphere zone limitation radius
    * @type {number}
@@ -40,34 +93,6 @@ export class BlenderCamera extends Control {
    * @readonly
    */
   _radius;
-
-  /**
-   * Movement each keyboard event
-   * @type {number}
-   * @readonly
-   */
-  keyboardMovement;
-
-  /**
-   * Movement each mouse wheel event
-   * @type {number}
-   * @readonly
-   */
-  wheelMovement;
-
-  /**
-   * Movement offset in pixel when mouse move.
-   * @type {number}
-   * @readonly
-   */
-  mouseMovement;
-
-  /**
-   * Movement offset in pixel when touch move.
-   * @type {number}
-   * @readonly
-   */
-  touchMovement;
 
   /**
    * @type {import("../Scene.js").Scene | undefined}
@@ -166,12 +191,16 @@ export class BlenderCamera extends Control {
    */
   constructor(opts = {}) {
     super();
-    this.rotation = opts.rotation ?? glMatrix.toRadian(3);
-    this.keyboardMovement = opts.keyboardMovement ?? 0.2;
-    this.wheelMovement = opts.wheelMovement ?? this.keyboardMovement * 5;
-    this.mouseMovement = opts.mouseMovement ?? 0.02;
-    this.touchMovement = opts.touchMovement ?? 0.02;
-    this.forwardLimitZoneRadius = opts.forwardLimitZoneRadius ?? 0.25;
+    this.keyboardForwarding = opts.keyboardForwarding ?? 0.2;
+    this.keyboardPanning = opts.keyboardPanning ?? 0.2;
+    this.keyboardRotating = opts.keyboardRotating ?? glMatrix.toRadian(3);
+    this.mouseForwarding = opts.mouseForwarding ?? 0.02;
+    this.mousePanning = opts.mousePanning ?? 0.02;
+    this.mouseRotating = opts.mouseRotating;
+    this.touchForwarding = opts.touchForwarding ?? 0.02;
+    this.touchPanning = opts.touchPanning ?? 0.02;
+    this.touchRotating = opts.touchRotating;
+    this.forwardLimitZoneRadius = opts.forwardLimitRadius ?? 0.25;
 
     const upVector = opts.up ?? vec3.set(this._tmpVec3_2, 0, 1, 0);
     if (opts.direction) {
@@ -230,9 +259,11 @@ export class BlenderCamera extends Control {
    * @param {number} rotate Rotate angle, in radians
    */
   horizontalRotate(rotate) {
-    // transform position and look at position back to origin based (translate look at position to (0,0,0) and do the same translate to position)
-    // and then rotate around Y axis
-    // and then translate position and look at position back
+    /**
+     * transform position and look at position back to origin based (translate look at position to (0,0,0) and do the same translate to position)
+     * and then rotate around Y axis
+     * and then translate position and look at position back
+     */
     mat4.identity(this._tmpMat4);
     mat4.translate(this._tmpMat4, this._tmpMat4, this._lookAt);
     mat4.rotateY(this._tmpMat4, this._tmpMat4, rotate);
@@ -240,10 +271,12 @@ export class BlenderCamera extends Control {
 
     vec3.transformMat4(this._position, this._position, this._tmpMat4);
 
-    // after horizontal rotating, directions are all changed.
-    // calculate forward using position and look at position
-    // calculate up using normal matrix from transformation above
-    // calculate right using forward and up
+    /**
+     * after horizontal rotating, directions are all changed.
+     * calculate forward using position and look at position
+     * calculate up using normal matrix from transformation above
+     * calculate right using forward and up
+     */
     mat4.invert(this._tmpMat4, this._tmpMat4);
     mat4.transpose(this._tmpMat4, this._tmpMat4);
     vec3.transformMat4(this._up, this._up, this._tmpMat4);
@@ -304,49 +337,6 @@ export class BlenderCamera extends Control {
   }
 
   /**
-   * Moves camera forward.
-   *
-   * There is a spherical limit zone for forward moving, when forwarding,
-   * camera is not able to go inside or go across the limit zone.
-   *
-   * Operations change only camera position and rotation radius, keeping direction and look at position.
-   * @private
-   * @param {number} movement Movement
-   */
-  moveForward(movement) {
-    const distance = vec3.dist(this._position, this._lookAt);
-    if (distance <= this.forwardLimitZoneRadius) return;
-
-    const distanceIntoLimitZone = distance - this.forwardLimitZoneRadius;
-    if (movement > distance - this.forwardLimitZoneRadius) {
-      movement = distanceIntoLimitZone;
-    }
-
-    vec3.scale(this._tmpVec3_0, this._forward, movement);
-    // move camera position
-    vec3.add(this._position, this._position, this._tmpVec3_0);
-    // change radius
-    this._radius = vec3.dist(this._position, this._lookAt);
-    this.updateCamera();
-  }
-
-  /**
-   * Moves camera backward.
-   *
-   * Operations change only camera position and rotation radius, keeping direction and look at position.
-   * @private
-   * @param {number} movement Movement
-   */
-  moveBackward(movement) {
-    vec3.scale(this._tmpVec3_0, this._forward, -movement);
-    // move camera position
-    vec3.add(this._position, this._position, this._tmpVec3_0);
-    // change radius
-    this._radius = vec3.dist(this._position, this._lookAt);
-    this.updateCamera();
-  }
-
-  /**
    * Moves left.
    * @param {number} movement Movement
    */
@@ -379,19 +369,47 @@ export class BlenderCamera extends Control {
   }
 
   /**
-   * Moves forward.
+   * Moves camera forward.
+   *
+   * There is a spherical limit zone for forward moving, when forwarding,
+   * camera is not able to go inside or go across the limit zone.
+   *
+   * Operations change only camera position and rotation radius, keeping direction and look at position.
    * @param {number} movement Movement
    */
   forward(movement) {
-    this.moveForward(movement);
+    const distance = vec3.dist(this._position, this._lookAt);
+    if (distance <= this.forwardLimitZoneRadius) return;
+
+    movement = Math.log(movement * distance + 1);
+    const distanceIntoLimitZone = distance - this.forwardLimitZoneRadius;
+    if (movement > distance - this.forwardLimitZoneRadius) {
+      movement = distanceIntoLimitZone;
+    }
+
+    vec3.scale(this._tmpVec3_0, this._forward, movement);
+    // move camera position
+    vec3.add(this._position, this._position, this._tmpVec3_0);
+    // change radius
+    this._radius = vec3.dist(this._position, this._lookAt);
+    this.updateCamera();
   }
 
   /**
-   * Moves backward.
+   * Moves camera backward.
+   *
+   * Operations change only camera position and rotation radius, keeping direction and look at position.
    * @param {number} movement Movement
    */
   backward(movement) {
-    this.moveBackward(movement);
+    const distance = vec3.dist(this._position, this._lookAt);
+
+    vec3.scale(this._tmpVec3_0, this._forward, -Math.log(movement * distance + 1));
+    // move camera position
+    vec3.add(this._position, this._position, this._tmpVec3_0);
+    // change radius
+    this._radius = vec3.dist(this._position, this._lookAt);
+    this.updateCamera();
   }
 
   /**
@@ -403,28 +421,28 @@ export class BlenderCamera extends Control {
 
     switch (e.key) {
       case "ArrowLeft":
-        this.horizontalRotate(this.rotation);
+        this.horizontalRotate(this.keyboardRotating);
         break;
       case "ArrowRight":
-        this.horizontalRotate(-this.rotation);
+        this.horizontalRotate(-this.keyboardRotating);
         break;
       case "ArrowUp":
-        this.up(this.keyboardMovement);
+        this.up(this.keyboardForwarding);
         break;
       case "ArrowDown":
-        this.down(this.keyboardMovement);
+        this.down(this.keyboardForwarding);
         break;
       case "w":
-        this.forward(this.keyboardMovement);
+        this.forward(this.keyboardPanning);
         break;
       case "a":
-        this.left(this.keyboardMovement);
+        this.left(this.keyboardPanning);
         break;
       case "s":
-        this.backward(this.keyboardMovement);
+        this.backward(this.keyboardPanning);
         break;
       case "d":
-        this.right(this.keyboardMovement);
+        this.right(this.keyboardPanning);
         break;
       default:
         return;
@@ -441,9 +459,9 @@ export class BlenderCamera extends Control {
     e.preventDefault();
 
     if (e.deltaY < 0) {
-      this.forward(this.wheelMovement);
+      this.forward(-e.deltaY * this.mouseForwarding);
     } else {
-      this.backward(this.wheelMovement);
+      this.backward(e.deltaY * this.mouseForwarding);
     }
   }
 
@@ -499,16 +517,21 @@ export class BlenderCamera extends Control {
     const offsetY = e.y - this._previousMousePosition[1];
 
     if (e.shiftKey) {
-      this.left(offsetX * this.mouseMovement);
-      this.up(offsetY * this.mouseMovement);
+      this.left(offsetX * this.mousePanning);
+      this.up(offsetY * this.mousePanning);
     } else {
-      const ratioX = offsetX / e.target.clientWidth;
-      const horizontalAngle = ratioX * 2 * Math.PI;
-      this.horizontalRotate(-horizontalAngle);
+      if (this.mouseRotating === undefined) {
+        const ratioX = offsetX / e.target.clientWidth;
+        const horizontalAngle = ratioX * 2 * Math.PI;
+        this.horizontalRotate(-horizontalAngle);
 
-      const ratioY = offsetY / e.target.clientHeight;
-      const verticalAngle = ratioY * 2 * Math.PI;
-      this.verticalRotate(-verticalAngle);
+        const ratioY = offsetY / e.target.clientHeight;
+        const verticalAngle = ratioY * 2 * Math.PI;
+        this.verticalRotate(-verticalAngle);
+      } else {
+        this.horizontalRotate(-offsetX * this.mouseRotating);
+        this.verticalRotate(-offsetY * this.mouseRotating);
+      }
     }
 
     this._previousMousePosition[0] = e.x;
@@ -559,9 +582,9 @@ export class BlenderCamera extends Control {
 
   /**
    * Start touch holding detecting procedure.
-   * 
+   *
    * If procedure finished, two touches falls into ROTATING mode.
-   * Otherwise, two touches falls into ZOOMING mode.
+   * Otherwise, two touches falls into FORWARDING mode.
    * @private
    * @param {number} identifier
    */
@@ -636,7 +659,7 @@ export class BlenderCamera extends Control {
       /**
        * If holding detecting procedure running,
        * check whether movement radius exceed the holding limit radius.
-       * If true, stop holding detecting procedure and set two touches mode to ZOOMING mode,
+       * If true, stop holding detecting procedure and set two touches mode to FORWARDING mode,
        * and do panning.
        * If false, stop panning and continue holding detecting procedure.
        */
@@ -650,8 +673,8 @@ export class BlenderCamera extends Control {
       }
 
       // PANNING
-      this.left(offsetX * this.touchMovement);
-      this.up(offsetY * this.touchMovement);
+      this.left(offsetX * this.touchPanning);
+      this.up(offsetY * this.touchPanning);
 
       this._previousTouchPosition[0] = touch.identifier;
       this._previousTouchPosition[1] = touch.clientX;
@@ -659,16 +682,16 @@ export class BlenderCamera extends Control {
     } else if (e.touches.length === 2) {
       //  touches
       if (this._touchHoldingIdentifier === undefined) {
-        // ZOOMING mode
+        // FORWARDING mode
         const dx = e.touches[1].clientX - e.touches[0].clientX;
         const dy = e.touches[1].clientY - e.touches[0].clientY;
 
         const calibre = Math.hypot(dx, dy);
         const calibreOffset = calibre - this._previousTowTouchesCalibre;
         if (calibreOffset > 0) {
-          this.forward(4 * this.touchMovement);
+          this.forward(calibreOffset * this.touchForwarding);
         } else {
-          this.backward(4 * this.touchMovement);
+          this.backward(-calibreOffset * this.touchForwarding);
         }
         this._previousTowTouchesCalibre = calibre;
       } else {
@@ -683,13 +706,18 @@ export class BlenderCamera extends Control {
         const offsetX = currentChangedTouch.clientX - previousChangedTouch[1];
         const offsetY = currentChangedTouch.clientY - previousChangedTouch[2];
 
-        const ratioX = offsetX / e.target.clientWidth;
-        const horizontalAngle = ratioX * 2 * Math.PI;
-        this.horizontalRotate(-horizontalAngle);
+        if (this.touchRotating === undefined) {
+          const ratioX = offsetX / e.target.clientWidth;
+          const horizontalAngle = ratioX * 2 * Math.PI;
+          this.horizontalRotate(-horizontalAngle);
 
-        const ratioY = offsetY / e.target.clientHeight;
-        const verticalAngle = ratioY * 2 * Math.PI;
-        this.verticalRotate(-verticalAngle);
+          const ratioY = offsetY / e.target.clientHeight;
+          const verticalAngle = ratioY * 2 * Math.PI;
+          this.verticalRotate(-verticalAngle);
+        } else {
+          this.horizontalRotate(-offsetX * this.touchRotating);
+          this.verticalRotate(-offsetY * this.touchRotating);
+        }
 
         this._previousTowTouchesPositions[0][0] = e.touches[0].identifier;
         this._previousTowTouchesPositions[0][1] = e.touches[0].clientX;
