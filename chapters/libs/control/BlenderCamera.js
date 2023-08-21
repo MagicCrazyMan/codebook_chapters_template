@@ -566,7 +566,7 @@ export class BlenderCamera extends Control {
    * @type {number}
    * @private
    */
-  _touchHoldingTimeout = 200;
+  _touchHoldingTimeout = 250;
 
   /**
    * @type {number}
@@ -642,6 +642,75 @@ export class BlenderCamera extends Control {
     }
 
     e.preventDefault();
+  }
+
+  /**
+   * SHOULD REFACTOR THIS DOUBLE CLICK USING STATE MACHINE
+   */
+  /**
+   * @type {number}
+   * @private
+   */
+  _doubleTouchTimeout = 250;
+  /**
+   * @type {number | undefined}
+   * @private
+   */
+  _doubleTouchStartTime = undefined;
+  /**
+   * @type {number}
+   * @private
+   */
+  _doubleTouchStartCount = 0;
+  /**
+   * @type {number}
+   * @private
+   */
+  _doubleTouchEndCount = 0;
+
+  /**
+   * @private
+   */
+  clearDoubleTouch() {
+    this._doubleTouchStartTime = undefined;
+    this._doubleTouchStartCount = 0;
+    this._doubleTouchEndCount = 0;
+  }
+
+  /**
+   * @private
+   * @param {TouchEvent} e
+   */
+  onTouchStart(e) {
+    if (e.changedTouches.length === 1 && e.touches.length === 1) {
+      if (this._doubleTouchStartCount === 0) this._doubleTouchStartTime = new Date().getTime();
+      this._doubleTouchStartCount++;
+    } else {
+      this.clearDoubleTouch();
+    }
+
+    this.onTouch(e);
+  }
+
+  /**
+   * @private
+   * @param {TouchEvent} e
+   */
+  onTouchEnd(e) {
+    if (e.changedTouches.length === 1 && e.touches.length === 0) {
+      this._doubleTouchEndCount++;
+      if (this._doubleTouchEndCount >= 2 && this._doubleTouchStartCount >= 2) {
+        if (new Date().getTime() - this._doubleTouchStartTime <= this._doubleTouchTimeout) {
+          this.forward(30 * this.touchForwarding);
+        }
+
+        this.clearDoubleTouch();
+      }
+    } else {
+      this.clearDoubleTouch();
+    }
+
+    this.onTouch(e);
   }
 
   /**
@@ -758,10 +827,10 @@ export class BlenderCamera extends Control {
       this.onMouseMove(e);
     };
     this._touchStartHandler = (e) => {
-      this.onTouch(e);
+      this.onTouchStart(e);
     };
     this._touchEndHandler = (e) => {
-      this.onTouch(e);
+      this.onTouchEnd(e);
     };
     this._touchMoveHandler = (e) => {
       this.onTouchMove(e);
