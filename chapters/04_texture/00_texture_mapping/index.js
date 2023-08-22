@@ -129,7 +129,7 @@ class TextureMapping extends Material {
    * Sample texture using Model-View transformed position
    * @type {boolean}
    */
-  useMvpTexCoord = new Uint8Array(1)
+  useMvpTexCoord = new Uint8Array(1);
 
   /**
    * Constructs a texture mapping material.
@@ -144,7 +144,7 @@ class TextureMapping extends Material {
     this.imageWidth = imageWidth;
     this.imageHeight = imageHeight;
 
-    this.uniforms.set("u_UseMvpTexCoord", new Uniform(UniformType.IntVector1, this.useMvpTexCoord))
+    this.uniforms.set("u_UseMvpTexCoord", new Uniform(UniformType.IntVector1, this.useMvpTexCoord));
   }
 
   _texture;
@@ -315,7 +315,9 @@ watchInputs(["cubeGridSize", "cubeGridRows", "cubeGridCols"], ([size, rows, cols
   cubeTextureMapping.minificationFilter = document.getElementById("cubeMinification").value;
   cubeTextureMapping.wrapS = document.getElementById("cubeWrapS").value;
   cubeTextureMapping.wrapT = document.getElementById("cubeWrapT").value;
-  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("cubeUseMvpTextureCoords").checked ? 1 : 0;
+  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("cubeUseMvpTextureCoords").checked
+    ? 1
+    : 0;
   cube.material = cubeTextureMapping;
 
   scene.renderFrame();
@@ -323,31 +325,44 @@ watchInputs(["cubeGridSize", "cubeGridRows", "cubeGridCols"], ([size, rows, cols
 /**
  * Setups magnification filter method of cube
  */
-watchInput("cubeMagnification", (value) => {
-  cubeTextureMapping.magnificationFilter = value;
-  scene.renderFrame();
-});
+watchInput(
+  "cubeMagnification",
+  (value) => {
+    cubeTextureMapping.magnificationFilter = value;
+    scene.renderFrame();
+  },
+  false
+);
 /**
  * Setups minification filter method of cube
  */
 watchInput("cubeMinification", (value) => {
   cubeTextureMapping.minificationFilter = value;
   scene.renderFrame();
-});
+}),
+  false;
 /**
  * Setups wrap S of cube
  */
-watchInput("cubeWrapS", (value) => {
-  cubeTextureMapping.wrapS = value;
-  scene.renderFrame();
-});
+watchInput(
+  "cubeWrapS",
+  (value) => {
+    cubeTextureMapping.wrapS = value;
+    scene.renderFrame();
+  },
+  false
+);
 /**
  * Setups wrap T of cube
  */
-watchInput("cubeWrapT", (value) => {
-  cubeTextureMapping.wrapT = value;
-  scene.renderFrame();
-});
+watchInput(
+  "cubeWrapT",
+  (value) => {
+    cubeTextureMapping.wrapT = value;
+    scene.renderFrame();
+  },
+  false
+);
 
 /**
  * Setups image texture of plane
@@ -357,7 +372,9 @@ watchInputs(["planeGridSize", "planeGridCols"], ([size, cols]) => {
   planeTextureMapping = new TextureMapping(image, width, height);
   planeTextureMapping.magnificationFilter = document.getElementById("planeMagnification").value;
   planeTextureMapping.minificationFilter = document.getElementById("planeMinification").value;
-  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("planeUseMvpTextureCoords").checked ? 1 : 0;
+  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("planeUseMvpTextureCoords").checked
+    ? 1
+    : 0;
   plane.material = planeTextureMapping;
 
   scene.renderFrame();
@@ -365,28 +382,44 @@ watchInputs(["planeGridSize", "planeGridCols"], ([size, cols]) => {
 /**
  * Setups magnification filter method of plane
  */
-watchInput("planeMagnification", (value) => {
-  planeTextureMapping.magnificationFilter = value;
-  scene.renderFrame();
-});
+watchInput(
+  "planeMagnification",
+  (value) => {
+    planeTextureMapping.magnificationFilter = value;
+    scene.renderFrame();
+  },
+  false
+);
 /**
  * Setups minification filter method of plane
  */
-watchInput("planeMinification", (value) => {
-  planeTextureMapping.minificationFilter = value;
-  scene.renderFrame();
-});
+watchInput(
+  "planeMinification",
+  (value) => {
+    planeTextureMapping.minificationFilter = value;
+    scene.renderFrame();
+  },
+  false
+);
 /**
  * Setups MVP texture coord of cube
  */
-watchInput("cubeUseMvpTextureCoords", (checked) => {
-  cubeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0
-  scene.renderFrame();
-});
+watchInput(
+  "cubeUseMvpTextureCoords",
+  (checked) => {
+    cubeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0;
+    scene.renderFrame();
+  },
+  false
+);
 /**
  * Setups MVP texture coord of plane
  */
-watchInput("planeUseMvpTextureCoords", (checked) => {
-  planeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0
-  scene.renderFrame();
-});
+watchInput(
+  "planeUseMvpTextureCoords",
+  (checked) => {
+    planeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0;
+    scene.renderFrame();
+  },
+  false
+);

@@ -223,49 +223,71 @@ scene.renderFrame();
 /**
  * Loads cube images
  */
-await Promise.all([
-  fetch("/resources/skybox/skybox_px.jpg").then((r) => r.blob()),
-  fetch("/resources/skybox/skybox_py.jpg").then((r) => r.blob()),
-  fetch("/resources/skybox/skybox_pz.jpg").then((r) => r.blob()),
-  fetch("/resources/skybox/skybox_nx.jpg").then((r) => r.blob()),
-  fetch("/resources/skybox/skybox_ny.jpg").then((r) => r.blob()),
-  fetch("/resources/skybox/skybox_nz.jpg").then((r) => r.blob()),
-])
-  .then((blobs) => {
-    const promises = blobs.map((blob) => {
-      const image = new Image();
-      image.src = URL.createObjectURL(blob);
-      return new Promise((resolve) => {
-        image.onload = () => {
-          resolve(image);
-        };
+const cache = new Map();
+const loadImages = async (source) => {
+  let images = cache.get(source);
+  if (!images) {
+    images = await Promise.all([
+      fetch(`/resources/${source}/skybox_px.jpg`).then((r) => r.blob()),
+      fetch(`/resources/${source}/skybox_py.jpg`).then((r) => r.blob()),
+      fetch(`/resources/${source}/skybox_pz.jpg`).then((r) => r.blob()),
+      fetch(`/resources/${source}/skybox_nx.jpg`).then((r) => r.blob()),
+      fetch(`/resources/${source}/skybox_ny.jpg`).then((r) => r.blob()),
+      fetch(`/resources/${source}/skybox_nz.jpg`).then((r) => r.blob()),
+    ])
+      .then((blobs) => {
+        const promises = blobs.map((blob) => {
+          const image = new Image();
+          image.src = URL.createObjectURL(blob);
+          return new Promise((resolve) => {
+            image.onload = () => {
+              resolve(image);
+            };
+          });
+        });
+
+        return Promise.all(promises);
+      })
+      .then((images) => {
+        cache.set(source, images);
+        return images;
       });
-    });
+  }
 
-    return Promise.all(promises);
-  })
-  .then((images) => {
-    environmentMapping = new EnvironmentMapping(images);
-    environmentMapping.magnificationFilter = document.getElementById(
-      "environmentMagnification"
-    ).value;
-    environmentMapping.minificationFilter =
-      document.getElementById("environmentMinification").value;
-    sphere.material = environmentMapping;
-    scene.renderFrame();
-  });
+  environmentMapping = new EnvironmentMapping(images);
+  environmentMapping.magnificationFilter = document.getElementById(
+    "environmentMagnification"
+  ).value;
+  environmentMapping.minificationFilter = document.getElementById("environmentMinification").value;
+  sphere.material = environmentMapping;
+};
 
-/**
- * Setups magnification filter method of cube
- */
-watchInput("environmentMagnification", (value) => {
-  environmentMapping.magnificationFilter = value;
-  scene.renderFrame();
-});
 /**
  * Setups minification filter method of cube
  */
-watchInput("environmentMinification", (value) => {
-  environmentMapping.minificationFilter = value;
+watchInput("environmentImageSource", async (value) => {
+  await loadImages(value);
   scene.renderFrame();
 });
+/**
+ * Setups magnification filter method of cube
+ */
+watchInput(
+  "environmentMagnification",
+  (value) => {
+    environmentMapping.magnificationFilter = value;
+    scene.renderFrame();
+  },
+  false
+);
+/**
+ * Setups minification filter method of cube
+ */
+watchInput(
+  "environmentMinification",
+  (value) => {
+    environmentMapping.minificationFilter = value;
+    scene.renderFrame();
+  },
+  false
+);
