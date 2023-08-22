@@ -67,14 +67,14 @@ export class Cube extends RenderEntity {
 
   /**
    * Constructs a cube geometry
-   * @param {number} width Cube width
+   * @param {number} [width] Cube width
    * @param {number} [height] Cube height
    * @param {number} [length] Cube length
    * @param {import("gl-matrix").ReadonlyVec3} [translation] Geometry translation
    * @param {import("gl-matrix").ReadonlyVec3} [rotation] Geometry rotation
    * @param {import("gl-matrix").ReadonlyVec3} [scaling] Geometry scaling
    */
-  constructor(width, height = width, length = width, translation, rotation, scaling) {
+  constructor(width = 1, height = width, length = width, translation, rotation, scaling) {
     super({ translation, rotation, scaling });
     this.width = width;
     this.height = height;

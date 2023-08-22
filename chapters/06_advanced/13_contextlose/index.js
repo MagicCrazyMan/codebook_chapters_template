@@ -47,10 +47,10 @@ const start = () => {
       vec3 normal = normalize(v_Normal);
       // calculates light direction and normalizes it
       vec3 lightDirection = normalize(u_LightPosition - v_Position);
-      // calculates incidence
-      float incidence = max(dot(normal, lightDirection), 0.0);
+      // calculates incident
+      float incident = max(dot(normal, lightDirection), 0.0);
       // calculates diffuse light color
-      vec3 diffuse = u_LightColor * v_Color.rgb * incidence;
+      vec3 diffuse = u_LightColor * v_Color.rgb * incident;
       // calculates ambient light color
       vec3 ambient = u_AmbientLight * v_Color.rgb;
       gl_FragColor = vec4(diffuse + ambient, v_Color.a);

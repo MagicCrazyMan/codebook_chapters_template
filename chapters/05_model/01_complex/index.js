@@ -49,8 +49,8 @@ class ModelRender {
       void main() {
         vec3 lightDirection = normalize(lightPosition - v_Position);
         vec3 normal = normalize(v_Normal);
-        float incidence = max(dot(lightDirection, normal), 0.0);
-        vec3 diffuse = v_Color * lightColor * incidence;
+        float incident = max(dot(lightDirection, normal), 0.0);
+        vec3 diffuse = v_Color * lightColor * incident;
         vec3 ambient = v_Color * ambientColor;
         gl_FragColor = vec4(diffuse + ambient, 1.0);
       }

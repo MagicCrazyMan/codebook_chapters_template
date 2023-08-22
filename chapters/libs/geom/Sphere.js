@@ -172,14 +172,14 @@ export class Sphere extends RenderEntity {
 
   /**
    * Constructs a sphere geometry
-   * @param {number} radius Sphere radius
+   * @param {number} [radius] Sphere radius
    * @param {number} [verticalSegments] vertical segments count, default `12`
    * @param {number} [horizontalSegments] horizontal segments count, default `verticalSegments * 2`
    * @param {import("gl-matrix").ReadonlyVec3} [translation] Geometry translation
    * @param {import("gl-matrix").ReadonlyVec3} [rotation] Geometry rotation
    * @param {import("gl-matrix").ReadonlyVec3} [scaling] Geometry scaling
    */
-  constructor(radius, verticalSegments, horizontalSegments, translation, rotation, scaling) {
+  constructor(radius = 1, verticalSegments, horizontalSegments, translation, rotation, scaling) {
     super({ translation, rotation, scaling });
     this.radius = radius;
     this.verticalSegments = verticalSegments;
