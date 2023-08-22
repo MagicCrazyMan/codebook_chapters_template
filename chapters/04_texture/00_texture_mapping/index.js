@@ -315,6 +315,7 @@ watchInputs(["cubeGridSize", "cubeGridRows", "cubeGridCols"], ([size, rows, cols
   cubeTextureMapping.minificationFilter = document.getElementById("cubeMinification").value;
   cubeTextureMapping.wrapS = document.getElementById("cubeWrapS").value;
   cubeTextureMapping.wrapT = document.getElementById("cubeWrapT").value;
+  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("cubeUseMvpTextureCoords").checked ? 1 : 0;
   cube.material = cubeTextureMapping;
 
   scene.renderFrame();
@@ -356,6 +357,7 @@ watchInputs(["planeGridSize", "planeGridCols"], ([size, cols]) => {
   planeTextureMapping = new TextureMapping(image, width, height);
   planeTextureMapping.magnificationFilter = document.getElementById("planeMagnification").value;
   planeTextureMapping.minificationFilter = document.getElementById("planeMinification").value;
+  cubeTextureMapping.useMvpTexCoord[0] = document.getElementById("planeUseMvpTextureCoords").checked ? 1 : 0;
   plane.material = planeTextureMapping;
 
   scene.renderFrame();
