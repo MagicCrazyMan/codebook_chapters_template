@@ -44,7 +44,7 @@ import {
  * Simple WebGL Renderer.
  */
 export class WebGLRenderer {
-  static DefaultMaterial = new ColorMaterial(0.4, 0.4, 1.0, 1.0);
+  static DEFAULT_MATERIAL = new ColorMaterial(0.4, 0.4, 1.0, 1.0);
 
   /**
    * WebGL rendering context
@@ -141,7 +141,7 @@ export class WebGLRenderer {
       }
 
       entities.forEach((entity) => {
-        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        const material = entity.material ?? WebGLRenderer.DEFAULT_MATERIAL;
         material.prerender(entity, materialItem.attributes, materialItem.uniforms, frameState);
 
         this.setMaterialUniforms(gl, materialItem, entity, frameState);
@@ -176,7 +176,7 @@ export class WebGLRenderer {
 
       // collect only render entity and the render entity should has some vertices
       if (entity instanceof RenderEntity && entity.verticesCount !== 0) {
-        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        const material = entity.material ?? WebGLRenderer.DEFAULT_MATERIAL;
         this.materialPool.setMaterial(material);
 
         let entities = grouped.get(material.name());
@@ -206,7 +206,7 @@ export class WebGLRenderer {
       /**@type {import("./Uniform.js").Uniform | undefined} */
       let uniform;
       if (binding instanceof MaterialUniformBinding) {
-        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        const material = entity.material ?? WebGLRenderer.DEFAULT_MATERIAL;
         uniform = material.uniforms.get(name);
       } else if (binding instanceof EntityUniformBinding) {
         uniform = entity.uniforms.get(name);
@@ -287,7 +287,7 @@ export class WebGLRenderer {
       if (binding instanceof EntityAttributeBinding) {
         attribute = entity.attributes.get(name);
       } else if (binding instanceof MaterialAttributeBinding) {
-        const material = entity.material ?? WebGLRenderer.DefaultMaterial;
+        const material = entity.material ?? WebGLRenderer.DEFAULT_MATERIAL;
         attribute = material.attributes.get(name);
       }
       if (!attribute) {

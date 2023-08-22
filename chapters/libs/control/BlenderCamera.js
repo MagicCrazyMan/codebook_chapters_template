@@ -1,5 +1,318 @@
 import { glMatrix, mat4, vec3 } from "gl-matrix";
+import { abstractMethod } from "../Utils.js";
 import { Control } from "./Control.js";
+/**
+ * @enum {number}
+ */
+const TouchEventSource = {
+  Start: 0,
+  End: 1,
+  Move: 2,
+};
+
+class TouchState {
+  /**
+   * @type {BlenderCamera}
+   * @private
+   */
+  _control;
+
+  constructor(control) {
+    this._control = control;
+  }
+
+  /**
+   * Executes action. if state changed, return new state.
+   * @override
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  execute(event, source) {
+    abstractMethod();
+  }
+}
+
+class Idle extends TouchState {
+  constructor(control) {
+    super(control);
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.Start) {
+      return new Panning(this._control, event);
+    }
+  }
+}
+
+class Panning extends TouchState {
+  /**
+   * @type {TouchEvent}
+   * @private
+   */
+  _previousEvent;
+  /**
+   * @type {TouchEvent}
+   * @private
+   */
+  _startEvent;
+
+  constructor(control, event) {
+    super(control);
+    this._previousEvent = event;
+    this._startEvent = event;
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.Move) {
+      const period = event.timeStamp - this._startEvent.timeStamp;
+      if (period <= TouchStateMachine.DOUBLE_CLICK_PERIOD) {
+        const offsetX = event.changedTouches[0].clientX - this._startEvent.touches[0].clientX;
+        const offsetY = event.changedTouches[0].clientY - this._startEvent.touches[0].clientY;
+        const radius = Math.hypot(offsetX, offsetY);
+        if (radius <= TouchStateMachine.PANNING_MIN_RADIUS) {
+          return;
+        }
+      }
+
+      const offsetX = event.touches[0].clientX - this._previousEvent.touches[0].clientX;
+      const offsetY = event.touches[0].clientY - this._previousEvent.touches[0].clientY;
+      this._control.left(offsetX * this._control.touchPanning);
+      this._control.up(offsetY * this._control.touchPanning);
+
+      this._previousEvent = event;
+    } else if (source === TouchEventSource.End) {
+      const period = event.timeStamp - this._startEvent.timeStamp;
+      if (period <= TouchStateMachine.DOUBLE_CLICK_PERIOD) {
+        const offsetX = event.changedTouches[0].clientX - this._startEvent.touches[0].clientX;
+        const offsetY = event.changedTouches[0].clientY - this._startEvent.touches[0].clientY;
+        const radius = Math.hypot(offsetX, offsetY);
+        if (radius <= TouchStateMachine.PANNING_MIN_RADIUS) {
+          return new FirstOneEnded(this._control, this._startEvent.timeStamp);
+        }
+      }
+
+      return new Idle(this._control);
+    } else {
+      const period = event.timeStamp - this._previousEvent.timeStamp;
+      if (period <= TouchStateMachine.HOLDING_PERIOD) {
+        return new Forwarding(this._control, event);
+      } else {
+        return new Rotating(this._control, event);
+      }
+    }
+  }
+}
+
+class FirstOneEnded extends TouchState {
+  /**
+   * @type {number}
+   * @private
+   */
+  _firstStartTimestamp;
+
+  constructor(control, firstStartTimestamp) {
+    super(control);
+    this._firstStartTimestamp = firstStartTimestamp;
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.Start) {
+      const period = event.timeStamp - this._firstStartTimestamp;
+      if (period <= TouchStateMachine.DOUBLE_CLICK_PERIOD) {
+        return new SecondOneStarted(this._control, this._firstStartTimestamp, event);
+      } else {
+        return new Panning(this._control, event);
+      }
+    }
+  }
+}
+
+class SecondOneStarted extends TouchState {
+  /**
+   * @type {TouchEvent}
+   * @private
+   */
+  _previousEvent;
+
+  /**
+   * @type {number}
+   * @private
+   */
+  _firstStartTimestamp;
+
+  constructor(control, firstStartTimestamp, event) {
+    super(control);
+    this._firstStartTimestamp = firstStartTimestamp;
+    this._previousEvent = event;
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.End) {
+      const period = event.timeStamp - this._firstStartTimestamp;
+      if (period <= TouchStateMachine.DOUBLE_CLICK_PERIOD) {
+        this._control.forward(30 * this._control.touchForwarding);
+      }
+
+      return new Idle(this._control);
+    } else if (source === TouchEventSource.Move) {
+      const offsetX = event.touches[0].clientX - this._previousEvent.touches[0].clientX;
+      const offsetY = event.touches[0].clientY - this._previousEvent.touches[0].clientY;
+      const radius = Math.hypot(offsetX, offsetY);
+      if (radius > TouchStateMachine.PANNING_MIN_RADIUS) {
+        this._control.left(offsetX * this._control.touchPanning);
+        this._control.up(offsetY * this._control.touchPanning);
+        return new Panning(this._control, event);
+      }
+
+      this._previousEvent = event;
+    } else {
+      const period = event.timeStamp - this._previousEvent.timeStamp;
+      if (period <= TouchStateMachine.HOLDING_PERIOD) {
+        return new Forwarding(this._control, event);
+      } else {
+        return new Rotating(this._control, event);
+      }
+    }
+  }
+}
+
+class Forwarding extends TouchState {
+  /**
+   * @type {number}
+   * @private
+   */
+  _previousCalibre;
+
+  constructor(control, event) {
+    super(control);
+
+    const dx = event.touches[1].clientX - event.touches[0].clientX;
+    const dy = event.touches[1].clientY - event.touches[0].clientY;
+    this._previousCalibre = Math.hypot(dx, dy);
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.Move) {
+      const dx = event.touches[1].clientX - event.touches[0].clientX;
+      const dy = event.touches[1].clientY - event.touches[0].clientY;
+      const calibre = Math.hypot(dx, dy);
+      const calibreOffset = calibre - this._previousCalibre;
+      if (calibreOffset > 0) {
+        this._control.forward(calibreOffset * this._control.touchForwarding);
+      } else {
+        this._control.backward(-calibreOffset * this._control.touchForwarding);
+      }
+      this._previousCalibre = calibre;
+    } else if (source === TouchEventSource.End) {
+      return new Panning(this._control, event);
+    }
+  }
+}
+
+class Rotating extends TouchState {
+  /**
+   * @type {TouchEvent}
+   * @private
+   */
+  _previousEvent;
+
+  constructor(control, event) {
+    super(control);
+    this._previousEvent = event;
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   * @return {TouchState | undefined}
+   */
+  execute(event, source) {
+    if (source === TouchEventSource.Move) {
+      const pdx = this._previousEvent.touches[1].clientX - this._previousEvent.touches[0].clientX;
+      const pdy = this._previousEvent.touches[1].clientY - this._previousEvent.touches[0].clientY;
+      const cdx = event.touches[1].clientX - event.touches[0].clientX;
+      const cdy = event.touches[1].clientY - event.touches[0].clientY;
+
+      const offsetX = cdx - pdx;
+      const offsetY = cdy - pdy;
+
+      if (this._control.touchRotating === undefined) {
+        const ratioX = offsetX / event.target.clientWidth;
+        const horizontalAngle = ratioX * 2 * Math.PI;
+        this._control.horizontalRotate(-horizontalAngle);
+
+        const ratioY = offsetY / event.target.clientHeight;
+        const verticalAngle = ratioY * 2 * Math.PI;
+        this._control.verticalRotate(-verticalAngle);
+      } else {
+        this._control.horizontalRotate(-offsetX * this.touchRotating);
+        this._control.verticalRotate(-offsetY * this.touchRotating);
+      }
+
+      this._previousEvent = event;
+    } else if (source === TouchEventSource.End) {
+      return new Panning(this._control, event);
+    }
+  }
+}
+
+/**
+ * A Finite-State Machine controls the camera position and orientation while screen touching.
+ *
+ * See `BlenderCameraTouch.drawio` file in the same directory for more details.
+ */
+class TouchStateMachine {
+  static DOUBLE_CLICK_PERIOD = 250;
+  static HOLDING_PERIOD = 150;
+  static PANNING_MIN_RADIUS = 5;
+
+  /**
+   * @type {TouchState}
+   * @readonly
+   */
+  state;
+
+  constructor(control) {
+    this.state = new Idle(control);
+  }
+
+  /**
+   * @param {TouchEvent} event
+   * @param {TouchEventSource} source
+   */
+  updateState(event, source) {
+    event.preventDefault();
+    const nextState = this.state.execute(event, source);
+    if (nextState) this.state = nextState;
+  }
+}
 
 /**
  * @typedef {Object} Options Keyboard camera options
@@ -146,6 +459,12 @@ export class BlenderCamera extends Control {
   _tmpVec3_2 = vec3.create();
 
   /**
+   * @type {TouchStateMachine}
+   * @private
+   */
+  _touchStateMachine;
+
+  /**
    * @private
    */
   _keyboardHandler;
@@ -201,6 +520,7 @@ export class BlenderCamera extends Control {
     this.touchPanning = opts.touchPanning ?? 0.02;
     this.touchRotating = opts.touchRotating;
     this.forwardLimitZoneRadius = opts.forwardLimitRadius ?? 0.25;
+    this._touchStateMachine = new TouchStateMachine(this);
 
     const upVector = opts.up ?? vec3.set(this._tmpVec3_2, 0, 1, 0);
     if (opts.direction) {
@@ -539,267 +859,27 @@ export class BlenderCamera extends Control {
   }
 
   /**
-   * @type {number[] | undefined}
    * @private
+   * @param {TouchEvent} event
    */
-  _previousTouchPosition;
-
-  /**
-   * @type {number[][] | undefined}
-   * @private
-   */
-  _previousTowTouchesPositions;
-
-  /**
-   * @type {number | undefined}
-   * @private
-   */
-  _previousTowTouchesCalibre;
-
-  /**
-   * @type {number | undefined}
-   * @private
-   */
-  _touchHoldingTimer;
-
-  /**
-   * @type {number}
-   * @private
-   */
-  _touchHoldingTimeout = 250;
-
-  /**
-   * @type {number}
-   * @private
-   */
-  _touchHoldingLimitRadius = 5;
-
-  /**
-   * @type {number | undefined}
-   * @private
-   */
-  _touchHoldingIdentifier;
-
-  /**
-   * Start touch holding detecting procedure.
-   *
-   * If procedure finished, two touches falls into ROTATING mode.
-   * Otherwise, two touches falls into FORWARDING mode.
-   * @private
-   * @param {number} identifier
-   */
-  startTouchHoldTimer(identifier) {
-    this._touchHoldingTimer = setTimeout(() => {
-      this._touchHoldingIdentifier = identifier;
-      this._touchHoldingTimer = undefined;
-    }, this._touchHoldingTimeout);
+  onTouchStart(event) {
+    this._touchStateMachine.updateState(event, TouchEventSource.Start);
   }
 
   /**
    * @private
+   * @param {TouchEvent} event
    */
-  stopTouchHoldTimer() {
-    if (this._touchHoldingTimer) {
-      clearTimeout(this._touchHoldingTimer);
-      this._touchHoldingTimer = undefined;
-    }
+  onTouchEnd(event) {
+    this._touchStateMachine.updateState(event, TouchEventSource.End);
   }
 
   /**
    * @private
-   * @param {TouchEvent} e
+   * @param {TouchEvent} event
    */
-  onTouch(e) {
-    if (e.touches.length === 1) {
-      // start touch holding detecting procedure
-      this.startTouchHoldTimer(e.touches[0].identifier);
-
-      this._previousTouchPosition = [
-        e.touches[0].identifier,
-        e.touches[0].clientX,
-        e.touches[0].clientY,
-      ];
-    } else if (e.touches.length === 2) {
-      this.stopTouchHoldTimer();
-
-      this._previousTowTouchesPositions = [
-        [e.touches[0].identifier, e.touches[0].clientX, e.touches[0].clientY],
-        [e.touches[1].identifier, e.touches[1].clientX, e.touches[1].clientY],
-      ];
-
-      const dx = e.touches[1].clientX - e.touches[0].clientX;
-      const dy = e.touches[1].clientY - e.touches[0].clientY;
-      this._previousTowTouchesCalibre = Math.hypot(dx, dy);
-      this._previousTowTouchesAngle = Math.atan2(dy, dx);
-    } else {
-      this.stopTouchHoldTimer();
-
-      this._previousTouchPosition = undefined;
-      this._previousTowTouchesPositions = undefined;
-      this._previousTowTouchesCalibre = undefined;
-      this._touchHoldingIdentifier = undefined;
-      return;
-    }
-
-    e.preventDefault();
-  }
-
-  /**
-   * SHOULD REFACTOR THIS DOUBLE CLICK USING STATE MACHINE
-   */
-  /**
-   * @type {number}
-   * @private
-   */
-  _doubleTouchTimeout = 250;
-  /**
-   * @type {number | undefined}
-   * @private
-   */
-  _doubleTouchStartTime = undefined;
-  /**
-   * @type {number}
-   * @private
-   */
-  _doubleTouchStartCount = 0;
-  /**
-   * @type {number}
-   * @private
-   */
-  _doubleTouchEndCount = 0;
-
-  /**
-   * @private
-   */
-  clearDoubleTouch() {
-    this._doubleTouchStartTime = undefined;
-    this._doubleTouchStartCount = 0;
-    this._doubleTouchEndCount = 0;
-  }
-
-  /**
-   * @private
-   * @param {TouchEvent} e
-   */
-  onTouchStart(e) {
-    if (e.changedTouches.length === 1 && e.touches.length === 1) {
-      if (this._doubleTouchStartCount === 0) this._doubleTouchStartTime = new Date().getTime();
-      this._doubleTouchStartCount++;
-    } else {
-      this.clearDoubleTouch();
-    }
-
-    this.onTouch(e);
-  }
-
-  /**
-   * @private
-   * @param {TouchEvent} e
-   */
-  onTouchEnd(e) {
-    if (e.changedTouches.length === 1 && e.touches.length === 0) {
-      this._doubleTouchEndCount++;
-      if (this._doubleTouchEndCount >= 2 && this._doubleTouchStartCount >= 2) {
-        if (new Date().getTime() - this._doubleTouchStartTime <= this._doubleTouchTimeout) {
-          this.forward(30 * this.touchForwarding);
-        }
-
-        this.clearDoubleTouch();
-      }
-    } else {
-      this.clearDoubleTouch();
-    }
-
-    this.onTouch(e);
-  }
-
-  /**
-   * @private
-   * @param {TouchEvent} e
-   */
-  onTouchMove(e) {
-    if (e.touches.length === 1) {
-      // single touch
-      const touch = e.touches[0];
-
-      const offsetX = touch.clientX - this._previousTouchPosition[1];
-      const offsetY = touch.clientY - this._previousTouchPosition[2];
-
-      /**
-       * If holding detecting procedure running,
-       * check whether movement radius exceed the holding limit radius.
-       * If true, stop holding detecting procedure and set two touches mode to FORWARDING mode,
-       * and do panning.
-       * If false, stop panning and continue holding detecting procedure.
-       */
-      if (this._touchHoldingTimer) {
-        const radius = Math.hypot(offsetX, offsetY);
-        if (radius > this._touchHoldingLimitRadius) {
-          this.stopTouchHoldTimer();
-        } else {
-          return;
-        }
-      }
-
-      // PANNING
-      this.left(offsetX * this.touchPanning);
-      this.up(offsetY * this.touchPanning);
-
-      this._previousTouchPosition[0] = touch.identifier;
-      this._previousTouchPosition[1] = touch.clientX;
-      this._previousTouchPosition[2] = touch.clientY;
-    } else if (e.touches.length === 2) {
-      //  touches
-      if (this._touchHoldingIdentifier === undefined) {
-        // FORWARDING mode
-        const dx = e.touches[1].clientX - e.touches[0].clientX;
-        const dy = e.touches[1].clientY - e.touches[0].clientY;
-
-        const calibre = Math.hypot(dx, dy);
-        const calibreOffset = calibre - this._previousTowTouchesCalibre;
-        if (calibreOffset > 0) {
-          this.forward(calibreOffset * this.touchForwarding);
-        } else {
-          this.backward(-calibreOffset * this.touchForwarding);
-        }
-        this._previousTowTouchesCalibre = calibre;
-      } else {
-        // ROTATING mode
-        const previousChangedTouch =
-          this._previousTowTouchesPositions[0][0] === this._touchHoldingIdentifier
-            ? this._previousTowTouchesPositions[1]
-            : this._previousTowTouchesPositions[0];
-        const currentChangedTouch =
-          e.touches[0].identifier === this._touchHoldingIdentifier ? e.touches[1] : e.touches[0];
-
-        const offsetX = currentChangedTouch.clientX - previousChangedTouch[1];
-        const offsetY = currentChangedTouch.clientY - previousChangedTouch[2];
-
-        if (this.touchRotating === undefined) {
-          const ratioX = offsetX / e.target.clientWidth;
-          const horizontalAngle = ratioX * 2 * Math.PI;
-          this.horizontalRotate(-horizontalAngle);
-
-          const ratioY = offsetY / e.target.clientHeight;
-          const verticalAngle = ratioY * 2 * Math.PI;
-          this.verticalRotate(-verticalAngle);
-        } else {
-          this.horizontalRotate(-offsetX * this.touchRotating);
-          this.verticalRotate(-offsetY * this.touchRotating);
-        }
-
-        this._previousTowTouchesPositions[0][0] = e.touches[0].identifier;
-        this._previousTowTouchesPositions[0][1] = e.touches[0].clientX;
-        this._previousTowTouchesPositions[0][2] = e.touches[0].clientY;
-        this._previousTowTouchesPositions[1][0] = e.touches[1].identifier;
-        this._previousTowTouchesPositions[1][1] = e.touches[1].clientX;
-        this._previousTowTouchesPositions[1][2] = e.touches[1].clientY;
-      }
-    } else {
-      return;
-    }
-
-    e.preventDefault();
+  onTouchMove(event) {
+    this._touchStateMachine.updateState(event, TouchEventSource.Move);
   }
 
   /**
