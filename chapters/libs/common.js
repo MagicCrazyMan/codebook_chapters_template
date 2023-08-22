@@ -240,7 +240,7 @@ export const watchInput = (id, callback, immediate = true) => {
 
 /**
  * Watches multiples dom input and collects them into single callback.
- * @param {string[]} ids Element ids
+ * @param {(string | boolean)[]} ids Element ids
  * @param {(values: string[]) => void} callback callback
  * @param {boolean} [immediate] Invokes callback immediately, default `true`
  */

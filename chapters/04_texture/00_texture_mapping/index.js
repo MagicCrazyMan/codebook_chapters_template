@@ -13,6 +13,8 @@ import {
   Material,
   MaterialUniformBinding,
 } from "../../libs/material/Material";
+import { Uniform } from "../../libs/Uniform";
+import { UniformType } from "../../libs/Constants";
 
 class TextureMapping extends Material {
   name() {
@@ -25,12 +27,19 @@ class TextureMapping extends Material {
       attribute vec2 a_TexCoord;
 
       uniform mat4 u_MvpMatrix;
+      uniform bool u_UseMvpTexCoord;
 
       varying vec2 v_TexCoord;
+      varying vec2 v_MvpTexCoord;
 
       void main() {
         gl_Position = u_MvpMatrix * a_Position;
-        v_TexCoord = a_TexCoord;
+
+        if (u_UseMvpTexCoord) {
+          v_MvpTexCoord = vec2(gl_Position);
+        } else {
+          v_TexCoord = a_TexCoord;
+        }
       }
     `;
   }
@@ -44,11 +53,17 @@ class TextureMapping extends Material {
       #endif
 
       uniform sampler2D u_Sampler;
+      uniform bool u_UseMvpTexCoord;
 
       varying vec2 v_TexCoord;
+      varying vec2 v_MvpTexCoord;
 
       void main() {
-        gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+        if (u_UseMvpTexCoord) {
+          gl_FragColor = texture2D(u_Sampler, v_MvpTexCoord);
+        } else {
+          gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+        }
       }
     `;
   }
@@ -64,6 +79,7 @@ class TextureMapping extends Material {
     return [
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
       new MaterialUniformBinding("u_Sampler", false),
+      new MaterialUniformBinding("u_UseMvpTexCoord"),
     ];
   }
 
@@ -110,6 +126,12 @@ class TextureMapping extends Material {
   wrapT = "REPEAT";
 
   /**
+   * Sample texture using Model-View transformed position
+   * @type {boolean}
+   */
+  useMvpTexCoord = new Uint8Array(1)
+
+  /**
    * Constructs a texture mapping material.
    * @param {Uint8Array} image
    * @param {number} imageWidth
@@ -121,6 +143,8 @@ class TextureMapping extends Material {
     this.image = image;
     this.imageWidth = imageWidth;
     this.imageHeight = imageHeight;
+
+    this.uniforms.set("u_UseMvpTexCoord", new Uniform(UniformType.IntVector1, this.useMvpTexCoord))
   }
 
   _texture;
@@ -348,5 +372,19 @@ watchInput("planeMagnification", (value) => {
  */
 watchInput("planeMinification", (value) => {
   planeTextureMapping.minificationFilter = value;
+  scene.renderFrame();
+});
+/**
+ * Setups MVP texture coord of cube
+ */
+watchInput("cubeUseMvpTextureCoords", (checked) => {
+  cubeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0
+  scene.renderFrame();
+});
+/**
+ * Setups MVP texture coord of plane
+ */
+watchInput("planeUseMvpTextureCoords", (checked) => {
+  planeTextureMapping.useMvpTexCoord[0] = checked ? 1 : 0
   scene.renderFrame();
 });

@@ -580,15 +580,19 @@ export class MaterialItem {
     // gets attribute and uniform locations
     this.attributesBindings.forEach((binding) => {
       const location = gl.getAttribLocation(program, binding.name);
-      if (location < 0) throw new Error(`failed to get attribute location of ${binding.name}`);
-
-      this.attributes.set(binding.name, new MaterialAttribute(location, binding));
+      if (location < 0) {
+        console.warn(`failed to get attribute location of ${binding.name}`);
+      } else {
+        this.attributes.set(binding.name, new MaterialAttribute(location, binding));
+      }
     });
     this.uniformBindings.forEach((binding) => {
       const location = gl.getUniformLocation(program, binding.name);
-      if (location === null) throw new Error(`failed to get uniform location of ${binding.name}`);
-
-      this.uniforms.set(binding.name, new MaterialUniform(location, binding));
+      if (location === null) {
+        console.warn(`failed to get uniform location of ${binding.name}`);
+      } else {
+        this.uniforms.set(binding.name, new MaterialUniform(location, binding));
+      }
     });
 
     this.program = program;

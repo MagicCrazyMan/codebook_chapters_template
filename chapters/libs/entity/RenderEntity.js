@@ -29,6 +29,7 @@ export const EntityUniformNames = {
   ModelMatrix: "u_ModelMatrix",
   NormalMatrix: "u_NormalMatrix",
   MvpMatrix: "u_MvpMatrix",
+  MvMatrix: "u_MvMatrix",
 };
 
 /**
@@ -104,6 +105,10 @@ export class RenderEntity extends BaseEntity {
     this.uniforms.set(
       EntityUniformNames.MvpMatrix,
       new Uniform(UniformType.Mat4, this.composedMvpMatrix)
+    );
+    this.uniforms.set(
+      EntityUniformNames.MvMatrix,
+      new Uniform(UniformType.Mat4, this.composedMvMatrix)
     );
   }
 }
