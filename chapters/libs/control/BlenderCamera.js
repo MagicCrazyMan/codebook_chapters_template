@@ -291,7 +291,7 @@ class Rotating extends TouchState {
 class TouchStateMachine {
   static DOUBLE_CLICK_PERIOD = 250;
   static HOLDING_PERIOD = 150;
-  static PANNING_MIN_RADIUS = 5;
+  static PANNING_MIN_RADIUS = 15;
 
   /**
    * @type {TouchState}
