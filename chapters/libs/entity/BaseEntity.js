@@ -81,13 +81,13 @@ export class BaseEntity {
    * Composed Model-View-Projection matrix of the entity in tree in last render frame.
    * @readonly
    */
-  composedMvpMatrix = mat4.create();
+  composedModelViewProjectionMatrix = mat4.create();
 
   /**
    * Composed Model-View matrix of the entity in tree in last render frame.
    * @readonly
    */
-  composedMvMatrix = mat4.create();
+  composedModelViewMatrix = mat4.create();
 
   /**
    * Parent object.
@@ -166,14 +166,14 @@ export class BaseEntity {
       mat4.copy(this.composedModelMatrix, this.modelMatrix);
     }
     mat4.mul(
-      this.composedMvMatrix,
+      this.composedModelViewMatrix,
       frameState.scene.mainCamera.viewMatrix,
       this.composedModelMatrix
     );
     mat4.mul(
-      this.composedMvpMatrix,
+      this.composedModelViewProjectionMatrix,
       frameState.scene.mainCamera.projectionMatrix,
-      this.composedMvMatrix
+      this.composedModelViewMatrix
     );
 
     // normal matrix

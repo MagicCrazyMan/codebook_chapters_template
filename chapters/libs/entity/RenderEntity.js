@@ -104,11 +104,11 @@ export class RenderEntity extends BaseEntity {
     );
     this.uniforms.set(
       EntityUniformNames.MvpMatrix,
-      new Uniform(UniformType.Mat4, this.composedMvpMatrix)
+      new Uniform(UniformType.Mat4, this.composedModelViewProjectionMatrix)
     );
     this.uniforms.set(
       EntityUniformNames.MvMatrix,
-      new Uniform(UniformType.Mat4, this.composedMvMatrix)
+      new Uniform(UniformType.Mat4, this.composedModelViewMatrix)
     );
   }
 }
