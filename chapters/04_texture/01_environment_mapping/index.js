@@ -1,4 +1,4 @@
-import { vec3 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import { Scene } from "../../libs/Scene";
 import { CameraUniformNames } from "../../libs/camera/Camera";
 import { getCanvas, watchInput } from "../../libs/common";
@@ -6,6 +6,7 @@ import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
 import { Axes } from "../../libs/geom/Axes";
 import { Sphere } from "../../libs/geom/Sphere";
+import { Cube } from "../../libs/geom/Cube";
 import {
   EntityAttributeBinding,
   EntityUniformBinding,
@@ -217,6 +218,9 @@ scene.root.addChild(new Axes(2));
 let environmentMapping;
 const sphere = new Sphere(1, 24, 48);
 scene.root.addChild(sphere);
+const cube = new Cube();
+cube.setModelMatrix(mat4.fromTranslation(mat4.create(), vec3.fromValues(0, 0, 2)), true);
+scene.root.addChild(cube);
 
 scene.renderFrame();
 
@@ -260,6 +264,7 @@ const loadImages = async (source) => {
   ).value;
   environmentMapping.minificationFilter = document.getElementById("environmentMinification").value;
   sphere.material = environmentMapping;
+  cube.material = environmentMapping;
 };
 
 /**
