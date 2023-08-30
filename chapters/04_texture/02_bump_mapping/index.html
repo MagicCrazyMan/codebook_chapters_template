@@ -1,0 +1,48 @@
+<div class="controllers">
+  <!-- Ambient Light -->
+  <div class="controller__title">Ambient Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(51, 51, 51)" id="ambientLightColor">
+        </sl-color-picker>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diffuse Light -->
+  <div class="controller__title">Diffuse Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="diffuseLightColor">
+        </sl-color-picker>
+      </div>
+      <div class="component">
+        <div class="component__title">Intensity</div>
+        <sl-range min="0" max="100" step="5" value="80" tooltip="bottom" id="diffuseLightIntensity"></sl-range>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attenuation Factors -->
+  <div class="controller__title">Attenuations</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">A</div>
+        <sl-range min="0" max="10" step="0.1" value="0.5" tooltip="top" id="attenuationA"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">B</div>
+        <sl-range min="0" max="10" step="0.1" value="0" tooltip="top" id="attenuationB"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">C</div>
+        <sl-range min="0" max="10" step="0.1" value="1" tooltip="top" id="attenuationC"></sl-range>
+      </div>
+    </div>
+  </div>
+</div>

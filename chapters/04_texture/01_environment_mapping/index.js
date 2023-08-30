@@ -5,8 +5,8 @@ import { getCanvas, watchInput } from "../../libs/common";
 import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
 import { Axes } from "../../libs/geom/Axes";
-import { Sphere } from "../../libs/geom/Sphere";
 import { Cube } from "../../libs/geom/Cube";
+import { Sphere } from "../../libs/geom/Sphere";
 import {
   EntityAttributeBinding,
   EntityUniformBinding,
@@ -45,7 +45,7 @@ class EnvironmentMapping extends Material {
       #endif
 
       uniform vec3 u_CameraPosition;
-      uniform samplerCube u_CubeMapSampler;
+      uniform samplerCube u_CubeMappingSampler;
 
       varying vec3 v_Position;
 
@@ -53,7 +53,7 @@ class EnvironmentMapping extends Material {
         vec3 normal = normalize(v_Position);  // position of sphere can be used as normal after normalized
         vec3 incident = v_Position - u_CameraPosition;
         vec3 reflection = reflect(incident, normal);
-        gl_FragColor = textureCube(u_CubeMapSampler, reflection);
+        gl_FragColor = textureCube(u_CubeMappingSampler, reflection);
       }
     `;
   }
@@ -67,7 +67,7 @@ class EnvironmentMapping extends Material {
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
       new EntityUniformBinding(EntityUniformNames.ModelMatrix),
       new MainCameraUniformBinding(CameraUniformNames.Position),
-      new MaterialUniformBinding("u_CubeMapSampler", false),
+      new MaterialUniformBinding("u_CubeMappingSampler", false),
     ];
   }
 
@@ -196,7 +196,7 @@ class EnvironmentMapping extends Material {
     // active texture unit 0
     gl.activeTexture(gl.TEXTURE0);
     // tells webgl sampler named u_Sampler should use texture in unit 0
-    gl.uniform1i(uniforms.get("u_CubeMapSampler").location, 0);
+    gl.uniform1i(uniforms.get("u_CubeMappingSampler").location, 0);
   }
 
   /**

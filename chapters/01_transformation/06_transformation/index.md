@@ -214,6 +214,8 @@ $$
 
 $$
 C = 
+T^{-1}
+=
 \begin{bmatrix}
 u & v & n & p
 \end{bmatrix}
