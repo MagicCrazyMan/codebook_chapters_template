@@ -93,7 +93,7 @@ class PhongShading extends Material {
       /**
        * Calculates specular reflection color
        */
-      vec3 specular(float attenuation, vec3 normal, vec3 reflectionDirection, vec3 cameraDirection) {
+      vec3 specular(float attenuation, vec3 reflectionDirection, vec3 cameraDirection) {
         float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
         float power = pow(cosine, u_SpecularLightShininessExponent);
         return attenuation * u_SpecularLightIntensity * u_SpecularLightColor * u_SpecularReflection * power;
@@ -112,7 +112,7 @@ class PhongShading extends Material {
         float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
         
         vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
-        vec3 specularColor = specular(attenuation, normal, reflectionDirection, cameraDirection);
+        vec3 specularColor = specular(attenuation, reflectionDirection, cameraDirection);
     
         gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
       }

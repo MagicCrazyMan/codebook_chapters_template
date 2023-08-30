@@ -70,13 +70,17 @@ class BumpMapping extends Material {
     
       uniform vec3 u_LightPosition;
       uniform vec3 u_DiffuseLightColor;
+      uniform vec3 u_SpecularLightColor;
+      uniform float u_SpecularLightShininessExponent;
     
       uniform float u_DiffuseLightIntensity;
+      uniform float u_SpecularLightIntensity;
       uniform vec3 u_LightAttenuations;
     
       uniform vec3 u_CameraPosition;
     
       uniform vec3 u_DiffuseReflection;
+      uniform vec3 u_SpecularReflection;
       varying vec3 v_AmbientColor;
     
       varying vec3 v_Position;
@@ -88,6 +92,15 @@ class BumpMapping extends Material {
       vec3 diffuse(float attenuation, vec3 normal, vec3 lightDirection) {
         float cosine = max(dot(normal, lightDirection), 0.0);
         return attenuation * u_DiffuseLightIntensity * u_DiffuseLightColor * u_DiffuseReflection * cosine;
+      }
+    
+      /**
+       * Calculates specular reflection color
+       */
+      vec3 specular(float attenuation, vec3 reflectionDirection, vec3 cameraDirection) {
+        float cosine = max(dot(reflectionDirection, cameraDirection), 0.0);
+        float power = pow(cosine, u_SpecularLightShininessExponent);
+        return attenuation * u_SpecularLightIntensity * u_SpecularLightColor * u_SpecularReflection * power;
       }
     
       void main() {
@@ -107,8 +120,9 @@ class BumpMapping extends Material {
         float attenuation = attenuationComponent == 0.0 ? 1.0 : 1.0 / attenuationComponent;
         
         vec3 diffuseColor = diffuse(attenuation, normal, lightDirection);
+        vec3 specularColor = specular(attenuation, reflectionDirection, cameraDirection);
     
-        gl_FragColor = vec4(v_AmbientColor + diffuseColor, 1.0);
+        gl_FragColor = vec4(v_AmbientColor + diffuseColor + specularColor, 1.0);
       }
     `;
   }
@@ -126,12 +140,16 @@ class BumpMapping extends Material {
       new EntityUniformBinding(EntityUniformNames.NormalMatrix),
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
       new MaterialUniformBinding("u_BumpMappingSampler", false),
+      new MaterialUniformBinding("u_SpecularLightShininessExponent"),
       new MaterialUniformBinding("u_AmbientReflection"),
       new MaterialUniformBinding("u_DiffuseReflection"),
+      new MaterialUniformBinding("u_SpecularReflection"),
       new MaterialUniformBinding("u_LightPosition"),
       new MaterialUniformBinding("u_AmbientLightColor"),
       new MaterialUniformBinding("u_DiffuseLightColor"),
+      new MaterialUniformBinding("u_SpecularLightColor"),
       new MaterialUniformBinding("u_DiffuseLightIntensity"),
+      new MaterialUniformBinding("u_SpecularLightIntensity"),
       new MaterialUniformBinding("u_LightAttenuations"),
       new MainCameraUniformBinding(CameraUniformNames.Position),
     ];
@@ -147,11 +165,15 @@ class BumpMapping extends Material {
   lightPosition = vec3.create();
   ambientLightColor = vec3.create();
   diffuseLightColor = vec3.create();
+  specularLightColor = vec3.create();
 
   ambientReflection = vec3.fromValues(1, 1, 1);
   diffuseReflection = vec3.fromValues(1, 1, 1);
+  specularReflection = vec3.fromValues(1, 1, 1);
+  specularLightShininessExponent = new Float32Array(1);
 
   diffuseLightIntensity = new Float32Array(1);
+  specularLightIntensity = new Float32Array(1);
 
   lightAttenuations = vec3.create();
 
@@ -168,12 +190,24 @@ class BumpMapping extends Material {
       new Uniform(UniformType.FloatVector3, this.diffuseLightColor)
     );
     this.uniforms.set(
+      "u_SpecularLightColor",
+      new Uniform(UniformType.FloatVector3, this.specularLightColor)
+    );
+    this.uniforms.set(
       "u_DiffuseLightIntensity",
       new Uniform(UniformType.FloatVector1, this.diffuseLightIntensity)
     );
     this.uniforms.set(
+      "u_SpecularLightIntensity",
+      new Uniform(UniformType.FloatVector1, this.specularLightIntensity)
+    );
+    this.uniforms.set(
       "u_LightAttenuations",
       new Uniform(UniformType.FloatVector3, this.lightAttenuations)
+    );
+    this.uniforms.set(
+      "u_SpecularLightShininessExponent",
+      new Uniform(UniformType.FloatVector1, this.specularLightShininessExponent)
     );
     this.uniforms.set(
       "u_AmbientReflection",
@@ -182,6 +216,10 @@ class BumpMapping extends Material {
     this.uniforms.set(
       "u_DiffuseReflection",
       new Uniform(UniformType.FloatVector3, this.diffuseReflection)
+    );
+    this.uniforms.set(
+      "u_SpecularReflection",
+      new Uniform(UniformType.FloatVector3, this.specularReflection)
     );
   }
 
@@ -299,10 +337,29 @@ fetch("/resources/normal_mapping.png")
       vec3.set(bumpMapping.diffuseLightColor, r, g, b);
     });
     /**
+     * Setups specular light color
+     */
+    watchInput("specularLightColor", (color) => {
+      const [r, g, b] = colorToFloat(color);
+      vec3.set(bumpMapping.specularLightColor, r, g, b);
+    });
+    /**
      * Setups diffuse light intensity
      */
     watchInput("diffuseLightIntensity", (value) => {
       bumpMapping.diffuseLightIntensity[0] = parseFloat(value);
+    });
+    /**
+     * Setups specular light intensity
+     */
+    watchInput("specularLightIntensity", (value) => {
+      bumpMapping.specularLightIntensity[0] = parseFloat(value);
+    });
+    /**
+     * Setups light specular shininess exponent
+     */
+    watchInput("specularLightShininessExponent", (value) => {
+      bumpMapping.specularLightShininessExponent[0] = parseFloat(value);
     });
     /**
      * Setups light attenuations

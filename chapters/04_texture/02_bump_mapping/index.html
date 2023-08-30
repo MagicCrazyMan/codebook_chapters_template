@@ -27,6 +27,27 @@
     </div>
   </div>
 
+  <!-- Specular Light -->
+  <div class="controller__title">Specular Light</div>
+  <div class="controller">
+    <div class="components">
+      <div class="component">
+        <div class="component__title">Color</div>
+        <sl-color-picker size="small" format="rgb" value="rgb(255, 255, 255)" id="specularLightColor">
+        </sl-color-picker>
+      </div>
+      <div class="component">
+        <div class="component__title">Intensity</div>
+        <sl-range min="0" max="100" step="5" value="60" tooltip="bottom" id="specularLightIntensity"></sl-range>
+      </div>
+      <div class="component">
+        <div class="component__title">Shininess Exponent</div>
+        <sl-range min="5" max="1000" step="16" value="128" tooltip="bottom" id="specularLightShininessExponent">
+        </sl-range>
+      </div>
+    </div>
+  </div>
+
   <!-- Attenuation Factors -->
   <div class="controller__title">Attenuations</div>
   <div class="controller">
