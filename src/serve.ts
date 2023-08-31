@@ -3,6 +3,8 @@ import chalk from "chalk";
 import chokidar from "chokidar";
 import Koa, { ParameterizedContext } from "koa";
 import mime from "mime-types";
+import { AddressInfo } from "net";
+import { networkInterfaces } from "os";
 import { extname, join, posix } from "path";
 import { PassThrough } from "stream";
 import { options } from "./args.js";
@@ -13,8 +15,6 @@ import {
   distributionFs,
 } from "./index.js";
 import { log } from "./log.js";
-import { AddressInfo } from "net";
-import { networkInterfaces } from "os";
 
 enum SSEEvent {
   Rebuild = 0,
@@ -218,7 +218,7 @@ export const serve = async () => {
   });
 
   // logs
-  let { port, address } = server.address() as AddressInfo;
+  const { port, address } = server.address() as AddressInfo;
   if (address === "0.0.0.0") {
     // logs all address of interfaces
     const interfaces = networkInterfaces();

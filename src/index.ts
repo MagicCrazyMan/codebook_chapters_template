@@ -1,12 +1,12 @@
+import chalk from "chalk";
 import * as fs from "fs";
 import { fs as memfs } from "memfs";
 import { join, resolve } from "node:path";
 import { basename } from "path";
 import { options } from "./args.js";
 import { resolvePrelude } from "./chapter.js";
-import { serve } from "./serve.js";
 import { log } from "./log.js";
-import chalk from "chalk";
+import { serve } from "./serve.js";
 
 // Filesystem for source directory
 export const sourceFs = fs;
@@ -19,7 +19,7 @@ export const SOURCE_DIRECTORY_PATH = resolve(options.src);
 const MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH = "/dist";
 // Distribution directory
 export const DISTRIBUTION_DIRECTORY_PATH = options.serve
-  ? MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH
+  ? resolve(MEMORY_FS_DISTRIBUTION_DIRECTORY_PATH)
   : resolve(options.dist);
 
 // Source directory hint JSON filename
