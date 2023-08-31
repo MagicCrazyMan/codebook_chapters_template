@@ -13,6 +13,8 @@ import {
   distributionFs,
 } from "./index.js";
 import { log } from "./log.js";
+import { AddressInfo } from "net";
+import { networkInterfaces } from "os";
 
 enum SSEEvent {
   Rebuild = 0,
@@ -194,37 +196,63 @@ const watch = (sseStreams: PassThrough[]) => {
 
   log("start watching source files for modification");
 
-  return { watcher, timer };
+  const stopWatcher = async () => {
+    await watcher.close();
+    clearInterval(timer);
+  };
+
+  return stopWatcher;
 };
 
 /**
  * Build and start serving
  */
 export const serve = async () => {
-  await build();
-  const { koa, sseStreams } = createServer();
-  const { watcher, timer } = watch(sseStreams);
-  const server = koa.listen(LISTEN_PORT, LISTEN_ADDRESS);
-  await new Promise((resolve) => {
+  const { koa, sseStreams } = createServer(); // creates server
+  const stopWatcher = watch(sseStreams); // starts watching files change
+  const server = koa.listen(LISTEN_PORT, LISTEN_ADDRESS); // starts listening server
+  // waits for server up
+  await new Promise((resolve, reject) => {
     server?.addListener("listening", resolve);
+    server?.addListener("error", reject);
   });
 
-  log(
-    "server start serving on: " +
-      chalk.greenBright(`http://${LISTEN_ADDRESS}:${LISTEN_PORT}${BASE_URL}`)
-  );
+  // logs
+  let { port, address } = server.address() as AddressInfo;
+  if (address === "0.0.0.0") {
+    // logs all address of interfaces
+    const interfaces = networkInterfaces();
+    Object.values(interfaces).forEach((infos) => {
+      if (!infos) return;
+      infos.forEach(({ address, family }) => {
+        if (family === "IPv6") return;
+        log(
+          "server start serving on: " + chalk.greenBright(`http://${address}:${port}${BASE_URL}`)
+        );
+      });
+    });
+  } else {
+    log("server start serving on: " + chalk.greenBright(`http://${address}:${port}${BASE_URL}`));
+  }
 
+  // build for first time
+  await build();
+
+  // waits for server down
   await new Promise((resolve) => {
     process.on("SIGINT", resolve);
     server?.on("close", resolve);
   });
 
-  await watcher.close();
-  clearInterval(timer);
+  // stops watching files change
+  await stopWatcher();
+
+  // closes server
   await new Promise((resolve) => {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    server!.close(resolve);
+    server?.close(resolve);
   });
+
+  // remove distribution files
   distributionFs.rmdirSync(DISTRIBUTION_DIRECTORY_PATH, { recursive: true });
 
   log("server stopped");

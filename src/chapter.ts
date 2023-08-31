@@ -1,5 +1,5 @@
-import { basename, extname, join, resolve as resolvePath } from "node:path";
 import parseImports from "parse-imports";
+import { basename, extname, join, resolve as resolvePath } from "path";
 import {
   DESCRIPTION_FILENAME,
   DISTRIBUTION_DIRECTORY_PATH,
