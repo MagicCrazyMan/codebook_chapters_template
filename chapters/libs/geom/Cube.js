@@ -97,11 +97,11 @@ export class Cube extends RenderEntity {
 
 /**
  * Creates a indexed cube with specified width, height and length
- * @param {number} width Cube width, along X axis
+ * @param {number} [width] Cube width, along X axis
  * @param {number} [height] Cube height, along Y axis
  * @param {number} [length] Cube length, along Z axis
  */
-export const createCubeIndexed = (width, height = width, length = width) => {
+export const createCubeIndexed = (width = 1, height = width, length = width) => {
   const x = width / 2;
   const y = height / 2;
   const z = length / 2;
@@ -177,14 +177,14 @@ export class IndexedCube extends RenderEntity {
 
   /**
    * Constructs a cube geometry
-   * @param {number} width Cube width
+   * @param {number} [width] Cube width
    * @param {number} [height] Cube height
    * @param {number} [length] Cube length
    * @param {import("gl-matrix").ReadonlyVec3} [translation] Geometry translation
    * @param {import("gl-matrix").ReadonlyVec3} [rotation] Geometry rotation
    * @param {import("gl-matrix").ReadonlyVec3} [scaling] Geometry scaling
    */
-  constructor(width, height = width, length = width, translation, rotation, scaling) {
+  constructor(width = 1, height = width, length = width, translation, rotation, scaling) {
     super({ translation, rotation, scaling });
     this.width = width;
     this.height = height;

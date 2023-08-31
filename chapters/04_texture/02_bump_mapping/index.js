@@ -8,7 +8,7 @@ import { colorToFloat, getCanvas, watchInput, watchInputs } from "../../libs/com
 import { BlenderCamera } from "../../libs/control/BlenderCamera";
 import { EntityAttributeNames, EntityUniformNames } from "../../libs/entity/RenderEntity";
 import { Axes } from "../../libs/geom/Axes";
-import { Plane } from "../../libs/geom/Plane";
+import { IndexedCube } from "../../libs/geom/Cube";
 import {
   EntityAttributeBinding,
   EntityUniformBinding,
@@ -26,6 +26,7 @@ class BumpMapping extends Material {
     return `
       attribute vec4 a_Position;
       attribute vec2 a_TexCoord;
+      attribute float a_FaceId;
       
       uniform vec3 u_AmbientReflection;
 
@@ -39,6 +40,8 @@ class BumpMapping extends Material {
       varying vec3 v_Normal;
       varying vec3 v_Position;
       varying vec2 v_TexCoord;
+      varying mat4 v_TangentSpaceMatrix;
+      varying float v_FaceId;
 
       /**
        * Calculates ambient reflection color
@@ -51,6 +54,7 @@ class BumpMapping extends Material {
         gl_Position = u_MvpMatrix * a_Position;
         v_Position = vec3(u_ModelMatrix * a_Position);
         v_TexCoord = a_TexCoord;
+        v_FaceId = a_FaceId;
 
         v_AmbientColor = ambient();
       }
@@ -67,6 +71,7 @@ class BumpMapping extends Material {
 
       uniform sampler2D u_BumpMappingSampler;
       uniform mat4 u_NormalMatrix;
+      uniform mat4 u_TangentSpaceMatrices[6];
     
       uniform vec3 u_LightPosition;
       uniform vec3 u_DiffuseLightColor;
@@ -85,6 +90,7 @@ class BumpMapping extends Material {
     
       varying vec3 v_Position;
       varying vec2 v_TexCoord;
+      varying float v_FaceId;
     
       /**
        * Calculates diffuse reflection color
@@ -104,9 +110,24 @@ class BumpMapping extends Material {
       }
     
       void main() {
+        mat4 tangentSpaceMatrix;
+        int faceId = int(v_FaceId);
+        if (faceId == 0) {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[0];
+        } else if (faceId == 1) {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[1];
+        } else if (faceId == 2) {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[2];
+        } else if (faceId == 3) {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[3];
+        } else if (faceId == 4) {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[4];
+        } else {
+          tangentSpaceMatrix = u_TangentSpaceMatrices[5];
+        }
         vec4 N = texture2D(u_BumpMappingSampler, v_TexCoord);
         N = normalize(2.0 * N - 1.0);
-        N = u_NormalMatrix * N;
+        N = u_NormalMatrix * tangentSpaceMatrix * N;
         vec3 normal = vec3(N);
 
         vec3 lightDirection = normalize(u_LightPosition - v_Position);
@@ -131,6 +152,7 @@ class BumpMapping extends Material {
     return [
       new EntityAttributeBinding(EntityAttributeNames.Position),
       new EntityAttributeBinding(EntityAttributeNames.TexCoord),
+      new EntityAttributeBinding("a_FaceId"),
     ];
   }
 
@@ -139,6 +161,7 @@ class BumpMapping extends Material {
       new EntityUniformBinding(EntityUniformNames.ModelMatrix),
       new EntityUniformBinding(EntityUniformNames.NormalMatrix),
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
+      new EntityUniformBinding("u_TangentSpaceMatrices"),
       new MaterialUniformBinding("u_BumpMappingSampler", false),
       new MaterialUniformBinding("u_SpecularLightShininessExponent"),
       new MaterialUniformBinding("u_AmbientReflection"),
@@ -224,7 +247,7 @@ class BumpMapping extends Material {
   }
 
   rps = glMatrix.toRadian(20);
-  lightBasePosition = vec3.fromValues(0, 5, 5);
+  lightBasePosition = vec3.fromValues(0, 0, 5);
   lightPositionModelMatrix = mat4.create();
 
   /**
@@ -248,7 +271,6 @@ class BumpMapping extends Material {
       gl.bindTexture(gl.TEXTURE_2D, null);
       this._texture = texture;
     }
-
     /**
      * Binds bump mapping texture
      */
@@ -263,6 +285,7 @@ class BumpMapping extends Material {
      */
     const rotationOffset = ((time - previousTime) / 1000) * this.rps;
     mat4.rotateY(this.lightPositionModelMatrix, this.lightPositionModelMatrix, rotationOffset);
+    0;
     vec3.transformMat4(this.lightPosition, this.lightBasePosition, this.lightPositionModelMatrix);
   }
 
@@ -278,13 +301,60 @@ class BumpMapping extends Material {
   }
 }
 
-const plane = new Plane();
-plane.setModelMatrix(mat4.fromXRotation(mat4.create(), glMatrix.toRadian(-90)));
+const createTangentSpaceMatrix = (normal, tangent) => {
+  const N = vec3.normalize(normal, normal);
+  const T = vec3.normalize(tangent, tangent);
+  const B = vec3.cross(vec3.create(), N, T);
+  vec3.normalize(B, B);
+  // prettier-ignore
+  const fromTangentSpace = mat4.fromValues(
+    T[0], B[0], N[0], 0,
+    T[1], B[1], N[1], 0,
+    T[2], B[2], N[2], 0,
+    0, 0, 0, 1,
+  );
+  console.log(vec3.transformMat4(vec3.create(), vec3.fromValues(0, 0, 1), fromTangentSpace));
+  const toTangentSpace = mat4.invert(fromTangentSpace, fromTangentSpace);
+  console.log(vec3.transformMat4(vec3.create(), vec3.fromValues(0, 0, 1), fromTangentSpace));
+  return toTangentSpace;
+};
+
+const cube = new IndexedCube();
 // prettier-ignore
-plane.attributes.set("a_TexCoord", new BufferAttribute(new BufferDescriptor(new Float32Array([
-  1, 1,  0, 1,  0, 0,
-  1, 1,  0, 0,  1, 0,
+cube.attributes.set("a_TexCoord", new BufferAttribute(new BufferDescriptor(new Float32Array([
+  1, 1,  0, 1,  0, 0,  1, 0,
+  1, 1,  0, 1,  0, 0,  1, 0,
+  1, 1,  0, 1,  0, 0,  1, 0,
+  1, 1,  0, 1,  0, 0,  1, 0,
+  1, 1,  0, 1,  0, 0,  1, 0,
+  1, 1,  0, 1,  0, 0,  1, 0,
 ])), 2));
+
+/**
+ * Setups tangent space matrix for each face of cube
+ */
+const front = createTangentSpaceMatrix(vec3.fromValues(0, 0, 1), vec3.fromValues(0, 1, 0));
+const top = createTangentSpaceMatrix(vec3.fromValues(0, 1, 0), vec3.fromValues(0, 0, 1));
+const back = createTangentSpaceMatrix(vec3.fromValues(0, 0, -1), vec3.fromValues(0, 1, 0));
+const bottom = createTangentSpaceMatrix(vec3.fromValues(0, -1, 0), vec3.fromValues(0, 0, 1));
+const left = createTangentSpaceMatrix(vec3.fromValues(-1, 0, 0), vec3.fromValues(0, 1, 0));
+const right = createTangentSpaceMatrix(vec3.fromValues(1, 0, 0), vec3.fromValues(0, 1, 0));
+// prettier-ignore
+cube.attributes.set("a_FaceId", new BufferAttribute(new BufferDescriptor(new Float32Array([
+  0, 0, 0, 0,
+  1, 1, 1, 1,
+  2, 2, 2, 2,
+  3, 3, 3, 3,
+  4, 4, 4, 4,
+  5, 5, 5, 5,
+])), 1))
+cube.uniforms.set(
+  "u_TangentSpaceMatrices",
+  new Uniform(
+    UniformType.Mat4,
+    new Float32Array([...front, ...top, ...back, ...bottom, ...left, ...right])
+  )
+);
 
 /**
  * Create scene
@@ -297,7 +367,7 @@ scene.addControl(
   })
 );
 
-scene.root.addChild(plane);
+scene.root.addChild(cube);
 scene.root.addChild(new Axes(4));
 
 scene.startRendering();
@@ -320,7 +390,7 @@ fetch("/resources/normal_mapping.png")
   )
   .then((img) => {
     const bumpMapping = new BumpMapping(img);
-    plane.material = bumpMapping;
+    cube.material = bumpMapping;
 
     /**
      * Setups ambient light color
