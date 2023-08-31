@@ -247,7 +247,7 @@ class BumpMapping extends Material {
   }
 
   rps = glMatrix.toRadian(20);
-  lightBasePosition = vec3.fromValues(0, 0, 5);
+  lightBasePosition = vec3.fromValues(0, 5, 5);
   lightPositionModelMatrix = mat4.create();
 
   /**
@@ -271,6 +271,7 @@ class BumpMapping extends Material {
       gl.bindTexture(gl.TEXTURE_2D, null);
       this._texture = texture;
     }
+
     /**
      * Binds bump mapping texture
      */
@@ -285,7 +286,6 @@ class BumpMapping extends Material {
      */
     const rotationOffset = ((time - previousTime) / 1000) * this.rps;
     mat4.rotateY(this.lightPositionModelMatrix, this.lightPositionModelMatrix, rotationOffset);
-    0;
     vec3.transformMat4(this.lightPosition, this.lightBasePosition, this.lightPositionModelMatrix);
   }
 
@@ -301,22 +301,26 @@ class BumpMapping extends Material {
   }
 }
 
+/**
+ * Creates transform matrix from tangent space to texture space
+ * @param {import("gl-matrix").ReadonlyVec3} normal Normal vector of tangent space
+ * @param {import("gl-matrix").ReadonlyVec3} tangent Tangent vector in tangent space
+ * @returns {mat4} Transform matrix from tangent space to texture space
+ */
 const createTangentSpaceMatrix = (normal, tangent) => {
-  const N = vec3.normalize(normal, normal);
-  const T = vec3.normalize(tangent, tangent);
+  const N = vec3.normalize(vec3.create(), normal);
+  const T = vec3.normalize(vec3.create(), tangent);
   const B = vec3.cross(vec3.create(), N, T);
   vec3.normalize(B, B);
   // prettier-ignore
-  const fromTangentSpace = mat4.fromValues(
+  const toTangentSpace = mat4.fromValues(
     T[0], B[0], N[0], 0,
     T[1], B[1], N[1], 0,
     T[2], B[2], N[2], 0,
     0, 0, 0, 1,
   );
-  console.log(vec3.transformMat4(vec3.create(), vec3.fromValues(0, 0, 1), fromTangentSpace));
-  const toTangentSpace = mat4.invert(fromTangentSpace, fromTangentSpace);
-  console.log(vec3.transformMat4(vec3.create(), vec3.fromValues(0, 0, 1), fromTangentSpace));
-  return toTangentSpace;
+  const fromTangentSpace = mat4.invert(toTangentSpace, toTangentSpace);
+  return fromTangentSpace;
 };
 
 const cube = new IndexedCube();
@@ -324,8 +328,8 @@ const cube = new IndexedCube();
 cube.attributes.set("a_TexCoord", new BufferAttribute(new BufferDescriptor(new Float32Array([
   1, 1,  0, 1,  0, 0,  1, 0,
   1, 1,  0, 1,  0, 0,  1, 0,
-  1, 1,  0, 1,  0, 0,  1, 0,
-  1, 1,  0, 1,  0, 0,  1, 0,
+  0, 1,  1, 1,  1, 0,  0, 0,
+  0, 1,  1, 1,  1, 0,  0, 0,
   1, 1,  0, 1,  0, 0,  1, 0,
   1, 1,  0, 1,  0, 0,  1, 0,
 ])), 2));
@@ -333,12 +337,12 @@ cube.attributes.set("a_TexCoord", new BufferAttribute(new BufferDescriptor(new F
 /**
  * Setups tangent space matrix for each face of cube
  */
-const front = createTangentSpaceMatrix(vec3.fromValues(0, 0, 1), vec3.fromValues(0, 1, 0));
-const top = createTangentSpaceMatrix(vec3.fromValues(0, 1, 0), vec3.fromValues(0, 0, 1));
-const back = createTangentSpaceMatrix(vec3.fromValues(0, 0, -1), vec3.fromValues(0, 1, 0));
-const bottom = createTangentSpaceMatrix(vec3.fromValues(0, -1, 0), vec3.fromValues(0, 0, 1));
-const left = createTangentSpaceMatrix(vec3.fromValues(-1, 0, 0), vec3.fromValues(0, 1, 0));
-const right = createTangentSpaceMatrix(vec3.fromValues(1, 0, 0), vec3.fromValues(0, 1, 0));
+const front = createTangentSpaceMatrix(vec3.fromValues(0, 0, 1), vec3.fromValues(1, 0, 0));
+const top = createTangentSpaceMatrix(vec3.fromValues(0, 1, 0), vec3.fromValues(1, 0, 0));
+const back = createTangentSpaceMatrix(vec3.fromValues(0, 0, -1), vec3.fromValues(-1, 0, 0));
+const bottom = createTangentSpaceMatrix(vec3.fromValues(0, -1, 0), vec3.fromValues(-1, 0, 0));
+const left = createTangentSpaceMatrix(vec3.fromValues(-1, 0, 0), vec3.fromValues(0, 0, 1));
+const right = createTangentSpaceMatrix(vec3.fromValues(1, 0, 0), vec3.fromValues(0, 0, -1));
 // prettier-ignore
 cube.attributes.set("a_FaceId", new BufferAttribute(new BufferDescriptor(new Float32Array([
   0, 0, 0, 0,
