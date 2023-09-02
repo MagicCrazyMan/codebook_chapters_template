@@ -40,7 +40,7 @@ class BumpMapping extends Material {
       varying vec3 v_Normal;
       varying vec3 v_Position;
       varying vec2 v_TexCoord;
-      varying mat4 v_TangentSpaceMatrix;
+      varying mat4 v_textureSpaceToTangentSpaceMatrix;
       varying float v_FaceId;
 
       /**
@@ -71,7 +71,7 @@ class BumpMapping extends Material {
 
       uniform sampler2D u_BumpMappingSampler;
       uniform mat4 u_NormalMatrix;
-      uniform mat4 u_TangentSpaceMatrices[6];
+      uniform mat4 u_TextureSpaceToTangentSpaceMatrices[6];
     
       uniform vec3 u_LightPosition;
       uniform vec3 u_DiffuseLightColor;
@@ -110,24 +110,24 @@ class BumpMapping extends Material {
       }
     
       void main() {
-        mat4 tangentSpaceMatrix;
+        mat4 textureSpaceToTangentSpaceMatrix;
         int faceId = int(v_FaceId);
         if (faceId == 0) {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[0];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[0];
         } else if (faceId == 1) {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[1];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[1];
         } else if (faceId == 2) {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[2];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[2];
         } else if (faceId == 3) {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[3];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[3];
         } else if (faceId == 4) {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[4];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[4];
         } else {
-          tangentSpaceMatrix = u_TangentSpaceMatrices[5];
+          textureSpaceToTangentSpaceMatrix = u_TextureSpaceToTangentSpaceMatrices[5];
         }
         vec4 N = texture2D(u_BumpMappingSampler, v_TexCoord);
         N = normalize(2.0 * N - 1.0);
-        N = u_NormalMatrix * tangentSpaceMatrix * N;
+        N = u_NormalMatrix * textureSpaceToTangentSpaceMatrix * N;
         vec3 normal = vec3(N);
 
         vec3 lightDirection = normalize(u_LightPosition - v_Position);
@@ -161,7 +161,7 @@ class BumpMapping extends Material {
       new EntityUniformBinding(EntityUniformNames.ModelMatrix),
       new EntityUniformBinding(EntityUniformNames.NormalMatrix),
       new EntityUniformBinding(EntityUniformNames.MvpMatrix),
-      new EntityUniformBinding("u_TangentSpaceMatrices"),
+      new EntityUniformBinding("u_TextureSpaceToTangentSpaceMatrices"),
       new MaterialUniformBinding("u_BumpMappingSampler", false),
       new MaterialUniformBinding("u_SpecularLightShininessExponent"),
       new MaterialUniformBinding("u_AmbientReflection"),
@@ -307,20 +307,23 @@ class BumpMapping extends Material {
  * @param {import("gl-matrix").ReadonlyVec3} tangent Tangent vector in tangent space
  * @returns {mat4} Transform matrix from tangent space to texture space
  */
-const createTangentSpaceMatrix = (normal, tangent) => {
+const createTextureSpaceToTangentSpaceMatrix = (normal, tangent) => {
   const N = vec3.normalize(vec3.create(), normal);
   const T = vec3.normalize(vec3.create(), tangent);
   const B = vec3.cross(vec3.create(), N, T);
   vec3.normalize(B, B);
   // prettier-ignore
-  const toTangentSpace = mat4.fromValues(
+  const tangentSpaceToTextureSpace = mat4.fromValues(
     T[0], B[0], N[0], 0,
     T[1], B[1], N[1], 0,
     T[2], B[2], N[2], 0,
     0, 0, 0, 1,
   );
-  const fromTangentSpace = mat4.invert(toTangentSpace, toTangentSpace);
-  return fromTangentSpace;
+  const textureSpaceToTangentSpace = mat4.invert(
+    tangentSpaceToTextureSpace,
+    tangentSpaceToTextureSpace
+  );
+  return textureSpaceToTangentSpace;
 };
 
 const cube = new IndexedCube();
@@ -337,12 +340,30 @@ cube.attributes.set("a_TexCoord", new BufferAttribute(new BufferDescriptor(new F
 /**
  * Setups tangent space matrix for each face of cube
  */
-const front = createTangentSpaceMatrix(vec3.fromValues(0, 0, 1), vec3.fromValues(1, 0, 0));
-const top = createTangentSpaceMatrix(vec3.fromValues(0, 1, 0), vec3.fromValues(1, 0, 0));
-const back = createTangentSpaceMatrix(vec3.fromValues(0, 0, -1), vec3.fromValues(-1, 0, 0));
-const bottom = createTangentSpaceMatrix(vec3.fromValues(0, -1, 0), vec3.fromValues(-1, 0, 0));
-const left = createTangentSpaceMatrix(vec3.fromValues(-1, 0, 0), vec3.fromValues(0, 0, 1));
-const right = createTangentSpaceMatrix(vec3.fromValues(1, 0, 0), vec3.fromValues(0, 0, -1));
+const front = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(0, 0, 1),
+  vec3.fromValues(1, 0, 0)
+);
+const top = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(0, 1, 0),
+  vec3.fromValues(1, 0, 0)
+);
+const back = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(0, 0, -1),
+  vec3.fromValues(-1, 0, 0)
+);
+const bottom = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(0, -1, 0),
+  vec3.fromValues(-1, 0, 0)
+);
+const left = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(-1, 0, 0),
+  vec3.fromValues(0, 0, 1)
+);
+const right = createTextureSpaceToTangentSpaceMatrix(
+  vec3.fromValues(1, 0, 0),
+  vec3.fromValues(0, 0, -1)
+);
 // prettier-ignore
 cube.attributes.set("a_FaceId", new BufferAttribute(new BufferDescriptor(new Float32Array([
   0, 0, 0, 0,
@@ -353,7 +374,7 @@ cube.attributes.set("a_FaceId", new BufferAttribute(new BufferDescriptor(new Flo
   5, 5, 5, 5,
 ])), 1))
 cube.uniforms.set(
-  "u_TangentSpaceMatrices",
+  "u_TextureSpaceToTangentSpaceMatrices",
   new Uniform(
     UniformType.Mat4,
     new Float32Array([...front, ...top, ...back, ...bottom, ...left, ...right])
