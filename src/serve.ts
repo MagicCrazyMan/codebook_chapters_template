@@ -167,15 +167,13 @@ const createServer = () => {
  */
 const watch = (sseStreams: PassThrough[]) => {
   // startup a interval timer to rebuild chapters
-  let rebuildMarker = false;
+  let shouldRebuild = false;
   const timer = setInterval(() => {
-    if (!rebuildMarker) return;
+    if (!shouldRebuild) return;
 
     log(chalk.greenBright("source files modified, rebuilding..."));
     build()
       .then(() => {
-        rebuildMarker = false;
-
         sseStreams.forEach((stream) => {
           sendSSEMessage(stream, { type: SSEEvent.Rebuild });
         });
@@ -186,12 +184,15 @@ const watch = (sseStreams: PassThrough[]) => {
         console.error(err);
 
         log(chalk.redBright(`rebuild failed ${err instanceof Error ? err.message : err}`));
+      })
+      .finally(() => {
+        shouldRebuild = false;
       });
   }, 200);
 
   const watcher = chokidar.watch(SOURCE_DIRECTORY_PATH);
   watcher.on("all", () => {
-    rebuildMarker = true;
+    shouldRebuild = true;
   });
 
   log("start watching source files for modification");
