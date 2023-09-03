@@ -61,9 +61,9 @@ export class Scene {
   /**
    * WebGL rendering context
    * @type {WebGL2RenderingContext}
-   * @private
+   * @readonly
    */
-  _webglRenderingContext;
+  gl;
 
   /**
    * Renderer
@@ -109,25 +109,25 @@ export class Scene {
   constructor(target, opts = {}) {
     this.canvas = target instanceof HTMLCanvasElement ? target : document.getElementById(target);
 
-    this._webglRenderingContext = this.canvas.getContext("webgl2", {
+    this.gl = this.canvas.getContext("webgl2", {
       preserveDrawingBuffer: true,
       ...opts.contextAttributes,
     });
-    this._renderer = new WebGLRenderer(this._webglRenderingContext, opts);
+    this._renderer = new WebGLRenderer(this.gl, opts);
 
     this.mainCamera = opts.camera ?? this.getDefaultCamera();
 
     this._resizeObserver = new ResizeObserver(() => {
       this.canvas.width = this.canvas.clientWidth;
       this.canvas.height = this.canvas.clientHeight;
-      this._webglRenderingContext.viewport(
+      this.gl.viewport(
         0,
         0,
-        this._webglRenderingContext.canvas.width,
-        this._webglRenderingContext.canvas.height
+        this.gl.canvas.width,
+        this.gl.canvas.height
       );
       this.mainCamera.setAspect(
-        this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
+        this.gl.canvas.width / this.gl.canvas.height,
         true
       );
       this.renderFrame();
@@ -141,7 +141,7 @@ export class Scene {
   getDefaultCamera() {
     return new PerspectiveCamera(
       glMatrix.toRadian(60),
-      this._webglRenderingContext.canvas.width / this._webglRenderingContext.canvas.height,
+      this.gl.canvas.width / this.gl.canvas.height,
       0.1,
       null
     );
@@ -156,7 +156,7 @@ export class Scene {
       time,
       previousTime: this._lastRenderTime,
       scene: this,
-      gl: this._webglRenderingContext,
+      gl: this.gl,
     };
 
     this.event.dispatchEvent(new FrameEvent("prerender", frameState));
