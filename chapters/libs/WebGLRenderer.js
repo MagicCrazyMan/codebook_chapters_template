@@ -166,7 +166,7 @@ export class WebGLRenderer {
     /**@type {import("./entity/BaseEntity.js").BaseEntity[]} */
     const rollings = [frameState.scene.root];
     for (;;) {
-      const entity = rollings.pop();
+      const entity = rollings.shift();
       if (!entity) break;
 
       if (frameState.scene.mainCamera.shouldUpdateFrameState || entity.shouldUpdateFrameState) {
