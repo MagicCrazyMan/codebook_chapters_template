@@ -231,10 +231,6 @@ const material3 = new CompositionMaterial(new Float32Array([
   0.4,1.0,0.4,0.75,  0.4,1.0,0.4,0.75,  0.4,1.0,0.4,0.75,  0.4,1.0,0.4,0.75,
 ]));
 
-const cube0 = new IndexedCube();
-cube0.material = material0;
-scene.root.addChild(cube0);
-
 const cube1 = new IndexedCube();
 cube1.setModelMatrix(mat4.fromTranslation(mat4.create(), vec3.fromValues(0, 0, 2)));
 cube1.material = material1;
@@ -249,6 +245,10 @@ const cube3 = new IndexedCube();
 cube3.setModelMatrix(mat4.fromTranslation(mat4.create(), vec3.fromValues(2, 0, 2)));
 cube3.material = material3;
 scene.root.addChild(cube3);
+
+const cube0 = new IndexedCube();
+cube0.material = material0;
+scene.root.addChild(cube0);
 
 /**
  * Setups depth mask of material1
